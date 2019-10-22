@@ -3,11 +3,11 @@
 mkdir deps
 mkdir local-source
 cd deps
-git clone https://github.com/Neuralia/Neuralia.Blockchains.Tools
 git clone https://github.com/Neuralia/Neuralia.Data.HashFunction.xxHash
-git clone https://github.com/Neuralia/Neuralia.Blockchain
-git clone https://github.com/Neuralia/Neuralia.BouncyCastle
 git clone https://github.com/Neuralia/Neuralia.STUN
+git clone https://github.com/Neuralia/Neuralia.Blockchains.Tools
+git clone https://github.com/Neuralia/Neuralia.BouncyCastle
+git clone https://github.com/Neuralia/Neuralia.Blockchain
 
 cd Neuralia.Data.HashFunction.xxHash
 
