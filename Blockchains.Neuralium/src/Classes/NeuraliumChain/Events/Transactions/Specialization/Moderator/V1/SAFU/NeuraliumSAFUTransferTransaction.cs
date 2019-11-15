@@ -45,9 +45,10 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 			jsonDeserializer.SetProperty("Note", this.Note);
 
 			jsonDeserializer.SetArray("Recipients", this.Recipients, (ds, e) => {
-
-				ds.SetProperty("Recipient", e.Recipient.ToString());
-				ds.SetProperty("Amount", e.Amount.Value);
+				ds.WriteObject((s) => {
+					s.SetProperty("Recipient", e.Recipient.ToString());
+					s.SetProperty("Amount", e.Amount.Value);
+				});
 			});
 		}
 

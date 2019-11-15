@@ -6,11 +6,20 @@ using Neuralia.Blockchains.Core.General.Types;
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Tools {
 	public class NeuraliumSystemEventGenerator : SystemEventGenerator {
 
+		public static SystemEventGenerator NeuraliumBountyAllocated(long blockId, decimal bounty, decimal TransactionTip, AccountId delegateAccountId) {
+			NeuraliumSystemEventGenerator generator = new NeuraliumSystemEventGenerator();
+
+			generator.EventType = NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.NeuraliumMiningBountyAllocated;
+			generator.Parameters = new object[] {blockId, bounty, TransactionTip, delegateAccountId?.ToString()};
+
+			return generator;
+		}
+		
 		public static SystemEventGenerator NeuraliumMiningPrimeElected(long blockId, decimal bounty, decimal TransactionTip, AccountId delegateAccountId) {
 			NeuraliumSystemEventGenerator generator = new NeuraliumSystemEventGenerator();
 
 			generator.EventType = NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.NeuraliumMiningPrimeElected;
-			generator.Parameters = new object[] {new {blockId, bounty, TransactionTip, delegateAccountId = delegateAccountId?.ToString()}};
+			generator.Parameters = new object[] {blockId, bounty, TransactionTip,  delegateAccountId?.ToString()};
 
 			return generator;
 		}

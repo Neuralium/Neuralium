@@ -71,7 +71,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 					// make sure that the amount spent and tip are less than what we have in total
 					if((balance - (amount + tip)) < 0) {
 						//TODO: what to do here?
-						throw new InvalidOperationException("We don't have enough to transfer");
+						throw new InvalidOperationException("We don't have enough to transfer"); 
 					}
 				});
 

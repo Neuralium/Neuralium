@@ -29,10 +29,11 @@ using Neuralia.Blockchains.Core.General.Types;
 using Neuralia.Blockchains.Core.P2p.Connections;
 using Neuralia.Blockchains.Core.Services;
 using Neuralia.Blockchains.Tools.Data;
+using Neuralia.Blockchains.Tools.Data.Arrays;
 using Neuralia.Blockchains.Tools.Serialization;
 using Neuralium.Core.Classes.Configuration;
 using Neuralium.Core.Classes.Services;
-using Newtonsoft.Json;
+using System.Text.Json;
 using Serilog;
 
 namespace Neuralium.Core.Classes.Runtime {
@@ -216,9 +217,9 @@ namespace Neuralium.Core.Classes.Runtime {
 				long password = 181818;
 				byte[] bytes = new byte[8];
 				TypeSerializer.Serialize(password, bytes.AsSpan());
-				string sdas = ((ByteArray)bytes).ToBase64();
+				string sdas = (ByteArray.Wrap(bytes)).ToBase64();
 
-				var signature = await this.neuraliumBlockChainInterface.SignXmssMessage(Guid.Empty, bytes).awaitableTask;
+				var signature = await this.neuraliumBlockChainInterface.SignXmssMessage(Guid.Empty, ByteArray.WrapAndOwn(bytes)).awaitableTask;
 
 				Console.WriteLine(signature.Entry.ToBase64());
 
@@ -313,13 +314,10 @@ namespace Neuralium.Core.Classes.Runtime {
 					veee.FinalElectionResults.Add(res);
 				}
 
-				JsonSerializerSettings settingseee = JsonUtils.CreatePrettySerializerSettings();
-				settingseee.TypeNameHandling = TypeNameHandling.None;
-				settingseee.NullValueHandling = NullValueHandling.Include;
-				settingseee.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
-				settingseee.PreserveReferencesHandling = PreserveReferencesHandling.None;
+				var settingseee = JsonUtils.CreatePrettySerializerSettings();
 
-				string resulssst = JsonConvert.SerializeObject(veee, settingseee);
+
+				string resulssst = JsonSerializer.Serialize(veee, settingseee);
 
 				File.WriteAllText("/home/jdb/genesis.json", resulssst);
 			}
@@ -363,7 +361,7 @@ namespace Neuralium.Core.Classes.Runtime {
 
 				IBlock results = await this.neuraliumBlockChainInterface.LoadBlock(1).awaitableTask;
 
-				ByteArray previousHash = new byte[] {1, 2, 3, 4, 5};
+				ByteArray previousHash = ByteArray.WrapAndOwn(new byte[] {1, 2, 3, 4, 5});
 				SafeArrayHandle hash1 = BlockchainHashingUtils.GenerateBlockHash(results, previousHash);
 
 				Console.WriteLine("Key load done...");

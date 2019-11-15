@@ -2,7 +2,7 @@
   "AppSettings": {
     "port": 33888,
     "rpcPort": 12033,
-    "EnableHubs": false,
+    "EnableHubs": true,
     "NeuraliumChainConfiguration" : {
      
     },

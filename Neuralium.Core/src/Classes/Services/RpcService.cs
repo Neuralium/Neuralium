@@ -30,7 +30,7 @@ using Serilog;
 
 namespace Neuralium.Core.Classes.Services {
 
-	public interface IRpcService : IDisposable2 {
+	public interface IRpcService : IDisposableExtended {
 
 		INeuraliumBlockChainInterface NeuraliumBlockChainInterface { get; }
 
@@ -152,11 +152,11 @@ namespace Neuralium.Core.Classes.Services {
 
 		protected IHost BuildRpcHost(string[] args) {
 			IConfigurationRoot config = this.GetAspnetCoreConfiguration(args);
-			int port = config.GetValue<int?>("port") ?? 5050;
+			int port = config.GetValue<int?>("port") ?? 12033;
 
 			IHostBuilder builder = Host.CreateDefaultBuilder(args).ConfigureWebHostDefaults(webBuilder => {
 				webBuilder.UseConfiguration(config).UseContentRoot(Directory.GetCurrentDirectory()).UseKestrel(options => {
-
+					
 					options.AddServerHeader = false;
 					IPAddress listenAddress = IPAddress.Loopback;
 
@@ -194,7 +194,7 @@ namespace Neuralium.Core.Classes.Services {
 						}
 					});
 
-					options.Limits.MaxConcurrentConnections = 2;
+					options.Limits.MaxConcurrentConnections = 10;
 
 				});
 
@@ -243,6 +243,7 @@ namespace Neuralium.Core.Classes.Services {
 						endpoints.MapHub<RPC_HUB>("/signal", option => {
 							option.ApplicationMaxBufferSize = 0;
 							option.TransportMaxBufferSize = 0;
+							option.WebSockets.CloseTimeout = TimeSpan.FromDays(7);
 							option.Transports = HttpTransportType.WebSockets;
 						});
 					}

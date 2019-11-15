@@ -43,7 +43,7 @@
     <PackageReference Include="Neuralia.Data.HashFunction.xxHash" Version="1.0.0" />
 
 
-    <PackageReference Include="Moq" Version="4.13.0" />
+     <PackageReference Include="Moq" Version="4.13.1" />
     <PackageReference Include="morelinq" Version="3.2.0" />
     <PackageReference Include="CommandLineParser" Version="2.6.0" />
     <PackageReference Include="LiteDB" Version="4.1.4" />
@@ -55,8 +55,8 @@
     <PackageReference Include="Serilog.Settings.Configuration" Version="3.1.0" />
     <PackageReference Include="Serilog.Sinks.Async" Version="1.4.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
-    <PackageReference Include="Serilog.Sinks.File" Version="4.0.0" />
-    <PackageReference Include="System.IO.Abstractions" Version="7.0.5" />
+    <PackageReference Include="Serilog.Sinks.File" Version="4.1.0" />
+    <PackageReference Include="System.IO.Abstractions" Version="7.0.7" />
   </ItemGroup>
   <ItemGroup>
        <None Remove="bin\**" />

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.IO.Abstractions;
 using System.Net.Sockets;
+using System.Threading;
 using Blockchains.Neuralium.Classes;
 using Blockchains.Neuralium.Classes.NeuraliumChain;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions;
@@ -19,6 +20,7 @@ using Neuralia.Blockchains.Core.Network.Exceptions;
 using Neuralia.Blockchains.Core.Services;
 using Neuralia.Blockchains.Core.Tools;
 using Neuralia.Blockchains.Tools.Data;
+using Neuralia.Blockchains.Tools.Data.Arrays;
 using Neuralia.Blockchains.Tools.Serialization;
 using Neuralia.Blockchains.Tools.Threading;
 using Neuralium.Core.Classes.Configuration;
@@ -150,7 +152,7 @@ namespace Neuralium.Core.Classes.Runtime {
 					this.neuraliumBlockChainInterface.StopChain();
 					this.globalService.SupportedChains[NeuraliumBlockchainTypes.NeuraliumInstance.Neuralium].Started = false;
 				} catch(Exception ex) {
-					throw new ApplicationException("Failed to start neuralium chain", ex);
+					throw new ApplicationException("Failed to stop neuralium chain", ex);
 				}
 			}
 		}
@@ -171,7 +173,7 @@ namespace Neuralium.Core.Classes.Runtime {
 			// thats our current version. manually set for now.
 
 			//FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(Assembly.GetAssembly(typeof(NeuraliumApp)).Location);
-			parameters.softwareVersion = new SoftwareVersion(0, 0, 1, 4, "TESTNET trial run IV", this.VersionValidationCallback);
+			parameters.softwareVersion = new SoftwareVersion(0, 0, 1, 5, "TESTNET trial run V", this.VersionValidationCallback);
 			parameters.appSettings = this.appSettings;
 			parameters.cmdOptions = this.CmdOptions;
 			parameters.peerType = Enums.PeerTypes.FullNode;
@@ -194,7 +196,7 @@ namespace Neuralium.Core.Classes.Runtime {
 		/// <param name="other"></param>
 		/// <returns></returns>
 		private bool VersionValidationCallback(SoftwareVersion localVersion, SoftwareVersion other) {
-			SoftwareVersion minimumAcceptable = new SoftwareVersion(0, 0, 1, 4);
+			SoftwareVersion minimumAcceptable = new SoftwareVersion(0, 0, 1, 5);
 
 			return (other <= localVersion) && (other >= minimumAcceptable);
 		}
@@ -230,6 +232,8 @@ namespace Neuralium.Core.Classes.Runtime {
 
 				this.InitializeChains();
 
+				this.InitEnvironment();
+
 				this.StartChains();
 
 				if(this.appSettings.P2PEnabled) {
@@ -253,6 +257,12 @@ namespace Neuralium.Core.Classes.Runtime {
 			}
 		}
 
+		protected virtual void InitEnvironment() {
+			if(!GlobalSettings.ApplicationSettings.MobileMode) {
+				ThreadPool.SetMaxThreads(100, 200);
+			}
+		}
+
 #if TESTNET	
 		protected virtual void DeleteObsoleteWallets() {
 			
@@ -262,7 +272,7 @@ namespace Neuralium.Core.Classes.Runtime {
 			bool deleteObsoleteFolder = false;
 			try {
 				if(File.Exists(testnetFlagFilePath)) {
-					using(SafeArrayHandle data = (ByteArray) File.ReadAllBytes(testnetFlagFilePath)) {
+					using(SafeArrayHandle data = ByteArray.WrapAndOwn(File.ReadAllBytes(testnetFlagFilePath))) {
 
 						using(var rehydrator = DataSerializationFactory.CreateRehydrator(data)) {
 
@@ -356,7 +366,7 @@ namespace Neuralium.Core.Classes.Runtime {
 		}
 
 		protected virtual void RunPreLaunchCode() {
-
+			
 		}
 
 		protected virtual void InitRpc() {

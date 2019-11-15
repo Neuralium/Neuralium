@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Blockchains.Neuralium.Classes.Configuration;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Dal;
@@ -18,7 +19,6 @@ using Neuralium.Core.Classes.Services;
 using Neuralium.Core.Controllers;
 using Neuralium.Core.Resources;
 
-using Newtonsoft.Json.Converters;
 using Serilog;
 
 namespace Neuralium.Core.Classes.Runtime {
@@ -154,7 +154,7 @@ namespace Neuralium.Core.Classes.Runtime {
 				logging.AddConsole();
 			}).UseSerilog((hostingContext, loggerConfiguration) => {
 				loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration);
-			});
+			}).UseConsoleLifetime();
 		}
 
 		protected virtual void ConfigureAppSettings(string configSection, IServiceCollection services, IConfiguration configuration) {

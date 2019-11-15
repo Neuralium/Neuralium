@@ -3,6 +3,7 @@ using Blockchains.Neuralium.Classes.NeuraliumChain.Providers;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.DataStructures.Validation;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Envelopes;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Identifiers;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Workflows.Creation;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Workflows.Creation.Transactions;
 using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.General.Types;
@@ -40,6 +41,20 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Creation.Transa
 
 		protected override ITransactionEnvelope AssembleEvent() {
 			return this.centralCoordinator.ChainComponentProvider.AssemblyProvider.GenerateNeuraliumTransferTransaction(this.accountUuid, this.targetAccountId, this.amount, this.tip, this.correlationContext);
+		}
+
+		protected override void PerformSanityChecks() {
+			base.PreTransaction();
+
+			if(this.targetAccountId == null) {
+				throw new EventGenerationException("A valid target account Id must be set.");
+			}
+
+			var accountId = this.centralCoordinator.ChainComponentProvider.WalletProvider.GetPublicAccountId(this.accountUuid);
+
+			if(this.targetAccountId == accountId) {
+				throw new EventGenerationException("We cannot send a transaction to the same account Id.");
+			}
 		}
 	}
 }

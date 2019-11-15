@@ -29,7 +29,7 @@ using Neuralia.Blockchains.Core.Cryptography.Passphrases;
 using Neuralia.Blockchains.Core.General.Types;
 using Neuralia.Blockchains.Core.General.Versions;
 using Neuralia.Blockchains.Core.Services;
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 
@@ -56,7 +56,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		protected override ICardUtils CardUtils => NeuraliumCardsUtils.Instance;
 
 		public override IWalletElectionsHistory InsertElectionsHistoryEntry(SynthesizedBlock.SynthesizedElectionResult electionResult, AccountId electedAccountId) {
-			this.EnsureWalletLoaded();
+			this.EnsureWalletIsLoaded();
 			IWalletElectionsHistory historyEntry = base.InsertElectionsHistoryEntry(electionResult, electedAccountId);
 
 			// now let's add a neuralium timeline entry
@@ -72,7 +72,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 					NeuraliumWalletTimeline neuraliumWalletTimeline = new NeuraliumWalletTimeline();
 					INeuraliumWalletTimelineFileInfo neuraliumWalletTimelineFileInfo = neuraliumAccountFileInfo.WalletTimelineFileInfo;
 
-					neuraliumWalletTimeline.Timestamp = neuraliumSynthesizedElectionResult.Timestamp;
+					neuraliumWalletTimeline.Timestamp = neuraliumSynthesizedElectionResult.Timestamp.ToUniversalTime();
 					neuraliumWalletTimeline.Amount = neuraliumSynthesizedElectionResult.ElectedGains[electedAccountId].bountyShare;
 					neuraliumWalletTimeline.Tips = neuraliumSynthesizedElectionResult.ElectedGains[electedAccountId].tips;
 
@@ -90,7 +90,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		}
 
 		public override IWalletTransactionHistoryFileInfo UpdateLocalTransactionHistoryEntry(TransactionId transactionId, WalletTransactionHistory.TransactionStatuses status) {
-			this.EnsureWalletLoaded();
+			this.EnsureWalletIsLoaded();
 			IWalletTransactionHistoryFileInfo historyEntry = base.UpdateLocalTransactionHistoryEntry(transactionId, status);
 
 			IWalletAccount account = this.WalletFileInfo.WalletBase.Accounts.Values.SingleOrDefault(a => (a.GetAccountId() == transactionId.Account) || (a.PresentationTransactionId == transactionId));
@@ -116,7 +116,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		}
 
 		public override IWalletTransactionHistory InsertTransactionHistoryEntry(ITransaction transaction, AccountId targetAccountId, string note) {
-			this.EnsureWalletLoaded();
+			this.EnsureWalletIsLoaded();
 			IWalletTransactionHistory historyEntry = base.InsertTransactionHistoryEntry(transaction, targetAccountId, note);
 
 			if(historyEntry is INeuraliumWalletTransactionHistory neuraliumWalletTransactionHistory) {
@@ -128,7 +128,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		}
 
 		public override List<WalletTransactionHistoryHeaderAPI> APIQueryWalletTransactionHistory(Guid accountUuid) {
-			this.EnsureWalletLoaded();
+			this.EnsureWalletIsLoaded();
 
 			if(!this.IsWalletLoaded) {
 				throw new ApplicationException("Wallet is not loaded");
@@ -145,7 +145,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 				var version = new ComponentVersion<TransactionType>(t.Version);
 
 				return new NeuraliumWalletTransactionHistoryHeaderAPI {
-					TransactionId = t.TransactionId, Sender = transactionId.Account.ToString(), Timestamp = t.Timestamp.ToString(), Status = t.Status,
+					TransactionId = t.TransactionId, Sender = transactionId.Account.ToString(), Timestamp = TimeService.FormatDateTimeStandardUtc(t.Timestamp), Status = t.Status,
 					Version = new VersionAPI{TransactionType = version.Type.Value.Value, Major = version.Major.Value, Minor = version.Minor.Value}, Recipient = t.Recipient, Local = t.Local, Amount = t.Amount,
 					Tip = t.Tip, Note = t.Note
 				};
@@ -156,7 +156,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		}
 
 		public override WalletTransactionHistoryDetailsAPI APIQueryWalletTransationHistoryDetails(Guid accountUuid, string transactionId) {
-			this.EnsureWalletLoaded();
+			this.EnsureWalletIsLoaded();
 
 			if(!this.IsWalletLoaded) {
 				throw new ApplicationException("Wallet is not loaded");
@@ -171,7 +171,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 				var version = new ComponentVersion<TransactionType>(t.Version);
 
 				return new NeuraliumWalletTransactionHistoryDetailsAPI {
-					TransactionId = t.TransactionId, Sender = new TransactionId(t.TransactionId).Account.ToString(), Timestamp = t.Timestamp.ToString(), Status = t.Status,
+					TransactionId = t.TransactionId, Sender = new TransactionId(t.TransactionId).Account.ToString(), Timestamp = TimeService.FormatDateTimeStandardUtc(t.Timestamp), Status = t.Status,
 					Version = new VersionAPI{TransactionType = version.Type.Value.Value, Major = version.Major.Value, Minor = version.Minor.Value}, Recipient = t.Recipient, Contents = t.Contents, Local = t.Local,
 					Amount = t.Amount, Tip = t.Tip, Note = t.Note
 				};
@@ -191,7 +191,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		}
 
 		public TotalAPI GetAccountBalance(Guid accountUuid, bool includeReserved) {
-			this.EnsureWalletLoaded();
+			this.EnsureWalletIsLoaded();
 
 			TotalAPI result = new TotalAPI();
 
@@ -272,7 +272,15 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 				neuraliumWalletTimeline.SenderAccountId = transaction.TransactionId.Account;
 				neuraliumWalletTimeline.RecipientAccountId = targetAccountId;
 
-				decimal total = this.GetAccountBalance(targetAccountId, false).Total;
+				decimal total = 0;
+				decimal? lastTotal = neuraliumWalletTimelineFileInfo.GetLastTotal();
+
+				if(lastTotal.HasValue) {
+					total = lastTotal.Value;
+				} else {
+					// we dont have anything in the timeline, so lets take it from the wallet
+					total = this.GetAccountBalance(targetAccountId, false).Total;
+				}
 
 				if(local) {
 
@@ -318,7 +326,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		}
 
 		protected override void FillWalletTransactionHistoryEntry(IWalletTransactionHistory walletAccountTransactionHistory, ITransaction transaction, AccountId targetAccountId, string note) {
-			this.EnsureWalletLoaded();
+			this.EnsureWalletIsLoaded();
 			base.FillWalletTransactionHistoryEntry(walletAccountTransactionHistory, transaction, targetAccountId, note);
 
 			if(walletAccountTransactionHistory is INeuraliumWalletTransactionHistory neuraliumWalletTransactionHistory) {
@@ -357,7 +365,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		}
 
 		protected override void FillWalletTransactionCacheEntry(IWalletTransactionCache walletAccountTransactionCache, ITransactionEnvelope transactionEnvelope, AccountId targetAccountId) {
-			this.EnsureWalletLoaded();
+			this.EnsureWalletIsLoaded();
 			base.FillWalletTransactionCacheEntry(walletAccountTransactionCache, transactionEnvelope, targetAccountId);
 
 			ITransaction transaction = transactionEnvelope.Contents.RehydratedTransaction;
@@ -403,7 +411,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		}
 
 		protected override void PrepareAccountInfos(IAccountFileInfo accountFileInfo) {
-			this.EnsureWalletLoaded();
+			this.EnsureWalletIsLoaded();
 
 			base.PrepareAccountInfos(accountFileInfo);
 
@@ -414,7 +422,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		}
 
 		protected override void CreateNewAccountInfoContents(IAccountFileInfo accountFileInfo, IWalletAccount account) {
-			this.EnsureWalletLoaded();
+			this.EnsureWalletIsLoaded();
 
 			base.CreateNewAccountInfoContents(accountFileInfo, account);
 
@@ -426,7 +434,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 	#region external API methods
 
 		public TimelineHeader GetTimelineHeader(Guid accountUuid) {
-			this.EnsureWalletLoaded();
+			this.EnsureWalletIsLoaded();
 
 			if(accountUuid == Guid.Empty) {
 				accountUuid = this.GetAccountUuid();
@@ -446,7 +454,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		}
 
 		public List<TimelineDay> GetTimelineSection(Guid accountUuid, DateTime firstday, int skip = 0, int take = 1) {
-			this.EnsureWalletLoaded();
+			this.EnsureWalletIsLoaded();
 
 			if(accountUuid == Guid.Empty) {
 				accountUuid = this.GetAccountUuid();
@@ -490,7 +498,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 					NeuraliumSynthesizedBlock.NeuraliumSynthesizedElectionResult neuraliumSynthesizedElectionResult = new NeuraliumSynthesizedBlock.NeuraliumSynthesizedElectionResult();
 
 					neuraliumSynthesizedElectionResult.BlockId = synthesizedBlockApi.BlockId;
-					neuraliumSynthesizedElectionResult.Timestamp = DateTime.Parse(synthesizedBlockApi.Timestamp);
+					neuraliumSynthesizedElectionResult.Timestamp = DateTime.ParseExact(synthesizedBlockApi.Timestamp, "o", CultureInfo.InvariantCulture,  DateTimeStyles.AdjustToUniversal).ToUniversalTime();
 
 					AccountId delegateAccountId = null;
 
@@ -514,7 +522,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		}
 
 		public override SynthesizedBlockAPI DeserializeSynthesizedBlockAPI(string synthesizedBlock) {
-			return JsonConvert.DeserializeObject<NeuraliumSynthesizedBlockApi>(synthesizedBlock);
+			return JsonSerializer.Deserialize<NeuraliumSynthesizedBlockApi>(synthesizedBlock);
 		}
 
 	#endregion

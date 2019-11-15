@@ -4,6 +4,7 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Seria
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Specialization.Elections.Contexts.V1;
 using Neuralia.Blockchains.Core.General.Types;
 using Neuralia.Blockchains.Core.General.Types.Specialized;
+using Neuralia.Blockchains.Core.Serialization;
 using Neuralia.Blockchains.Tools.Serialization;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specialization.Elections.Contexts.V1 {
@@ -46,6 +47,12 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specializat
 		public ITransactionTipsAllocationMethod TransactionTipsAllocationMethod {
 			get => this.neuraliumElectionContextImplementation.TransactionTipsAllocationMethod;
 			set => this.neuraliumElectionContextImplementation.TransactionTipsAllocationMethod = value;
+		}
+		
+		public override void JsonDehydrate(JsonDeserializer jsonDeserializer) {
+			base.JsonDehydrate(jsonDeserializer);
+
+			this.neuraliumElectionContextImplementation.JsonDehydrate(jsonDeserializer);
 		}
 	}
 }

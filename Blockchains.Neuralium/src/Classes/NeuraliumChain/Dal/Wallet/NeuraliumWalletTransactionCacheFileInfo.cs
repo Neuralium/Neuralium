@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Blockchains.Neuralium.Classes.Configuration;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Wallet.Account;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal.Wallet;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Wallet.Account;
@@ -10,7 +11,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 
 	public class NeuraliumWalletTransactionCacheFileInfo : WalletTransactionCacheFileInfo<NeuraliumWalletTransactionCache> {
 
-		public NeuraliumWalletTransactionCacheFileInfo(IWalletAccount account, string filename, BlockchainServiceSet serviceSet, IWalletSerialisationFal serialisationFal, WalletPassphraseDetails walletSecurityDetails) : base(account, filename, serviceSet, serialisationFal, walletSecurityDetails) {
+		public NeuraliumWalletTransactionCacheFileInfo(IWalletAccount account, string filename, NeuraliumBlockChainConfigurations chainConfiguration, BlockchainServiceSet serviceSet, IWalletSerialisationFal serialisationFal, WalletPassphraseDetails walletSecurityDetails) : base(account, filename, chainConfiguration, serviceSet, serialisationFal, walletSecurityDetails) {
 		}
 
 		/// <summary>

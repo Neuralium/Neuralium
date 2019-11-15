@@ -8,11 +8,11 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Managers;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Managers {
-	public interface INeuraliumValidationManager : IValidationManager<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> {
+	public interface INeuraliumChainValidationProvider : IChainValidationProvider<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> {
 	}
 
-	public class NeuraliumValidationManager : ValidationManager<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider>, INeuraliumValidationManager {
-		public NeuraliumValidationManager(INeuraliumCentralCoordinator centralCoordinator) : base(centralCoordinator) {
+	public class NeuraliumChainValidationProvider : ChainValidationProvider<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider>, INeuraliumChainValidationProvider {
+		public NeuraliumChainValidationProvider(INeuraliumCentralCoordinator centralCoordinator) : base(centralCoordinator) {
 		}
 
 		protected override ValidationResult PerformBasicTransactionValidation(ITransaction transaction, ITransactionEnvelope envelope, bool? accreditationCertificateValid) {

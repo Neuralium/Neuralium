@@ -62,7 +62,7 @@ namespace Neuralium.Core.Controllers {
 
 	#region Global Queries
 
-		public Task ToggleServerMessages(bool enable) {
+		public Task<bool> ToggleServerMessages(bool enable) {
 			return this.rpcProvider.ToggleServerMessages(enable);
 		}
 
@@ -151,6 +151,10 @@ namespace Neuralium.Core.Controllers {
 			return this.rpcProvider.QueryChainStatus(chainType);
 		}
 
+		public Task<object> QueryWalletInfo(ushort chainType) {
+			return this.rpcProvider.QueryWalletInfo(chainType);
+		}
+
 		public Task<object> QueryBlockChainInfo(ushort chainType) {
 			return this.rpcProvider.QueryBlockChainInfo(chainType);
 		}
@@ -163,7 +167,7 @@ namespace Neuralium.Core.Controllers {
 			return this.rpcProvider.WalletExists(chainType);
 		}
 
-		public Task<int> LoadWallet(ushort chainType) {
+		public Task<int> LoadWallet(ushort chainType, string passphrase = null) {
 			return this.rpcProvider.LoadWallet(chainType);
 		}
 
@@ -273,6 +277,10 @@ namespace Neuralium.Core.Controllers {
 
 		public Task<List<object>> QueryMiningHistory(ushort chainType) {
 			return this.rpcProvider.QueryMiningHistory(chainType);
+		}
+
+		public Task<bool> RestoreWalletBackup(string source, string dest) {
+			return this.rpcProvider.RestoreWalletBackup(source, dest);
 		}
 
 		public Task<object> QueryAccountTotalNeuraliums(Guid accountId) {

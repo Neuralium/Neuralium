@@ -7,7 +7,7 @@ namespace Neuralium.Api.Common {
 
 	public interface INeuraliumApiMethods {
 
-		Task ToggleServerMessages(bool enable);
+		Task<bool> ToggleServerMessages(bool enable);
 		Task EnterWalletPassphrase(int correlationId, ushort chainType, int keyCorrelationCode, string passphrase);
 		Task EnterKeyPassphrase(int correlationId, ushort chainType, int keyCorrelationCode, string passphrase);
 		Task WalletKeyFileCopied(int correlationId, ushort chainType, int keyCorrelationCode);
@@ -29,10 +29,14 @@ namespace Neuralium.Api.Common {
 		Task<int> QueryTotalConnectedPeersCount();
 		Task<bool> QueryMiningPortConnectable();
 		Task<object> QueryChainStatus(ushort chainType);
+		Task<object> QueryWalletInfo(ushort chainType);
+		
 		Task<object> QueryBlockChainInfo(ushort chainType);
+		
+		
 		Task<bool> IsWalletLoaded(ushort chainType);
 		Task<bool> WalletExists(ushort chainType);
-		Task<int> LoadWallet(ushort chainType);
+		Task<int> LoadWallet(ushort chainType, string passphrase = null);
 		Task<long> QueryBlockHeight(ushort chainType);
 
 		Task<string> QueryBlock(ushort chainType, long blockId);
@@ -77,5 +81,7 @@ namespace Neuralium.Api.Common {
 		Task<List<object>> QueryNeuraliumTransactionPool();
 
 		Task<List<object>> QueryMiningHistory(ushort chainType);
+		
+		Task<bool> RestoreWalletBackup(string source, string dest);
 	}
 }

@@ -1,3 +1,4 @@
+using Blockchains.Neuralium.Classes.Configuration;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Wallet;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal.Wallet;
 using Neuralia.Blockchains.Common.Classes.Tools;
@@ -10,7 +11,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 
 	public class NeuraliumUserWalletFileInfo : UserWalletFileInfo<NeuraliumUserWallet>, INeuraliumUserWalletFileInfo {
 
-		public NeuraliumUserWalletFileInfo(string filename, BlockchainServiceSet serviceSet, IWalletSerialisationFal serialisationFal, WalletPassphraseDetails walletSecurityDetails) : base(filename, serviceSet, serialisationFal, walletSecurityDetails) {
+		public NeuraliumUserWalletFileInfo(string filename, NeuraliumBlockChainConfigurations chainConfiguration, BlockchainServiceSet serviceSet, IWalletSerialisationFal serialisationFal, WalletPassphraseDetails walletSecurityDetails) : base(filename, chainConfiguration, serviceSet, serialisationFal, walletSecurityDetails) {
 		}
 	}
 }

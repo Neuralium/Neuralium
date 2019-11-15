@@ -26,8 +26,8 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Factories {
 
 		public override INeuraliumBlockChainInterface CreateNewChain(IServiceProvider serviceProvider, ChainRuntimeConfiguration chainRuntimeConfiguration = null, IFileSystem fileSystem = null) {
 
-			chainRuntimeConfiguration = chainRuntimeConfiguration ?? new ChainRuntimeConfiguration();
-			fileSystem = fileSystem ?? new FileSystem();
+			chainRuntimeConfiguration ??= new ChainRuntimeConfiguration();
+			fileSystem ??= new FileSystem();
 
 			DIService.Instance.AddServiceProvider(NeuraliumBlockchainTypes.NeuraliumInstance.Neuralium, serviceProvider);
 			BlockchainServiceSet serviceSet = new BlockchainServiceSet(NeuraliumBlockchainTypes.NeuraliumInstance.Neuralium);
@@ -81,21 +81,19 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Factories {
 
 			INeuraliumChainNetworkingProvider chainNetworkingProvider = new NeuraliumChainNetworkingProvider(DIService.Instance.GetService<IBlockchainNetworkingService>(), centralCoordinator);
 
+			INeuraliumChainValidationProvider chainValidationProvider = new NeuraliumChainValidationProvider(centralCoordinator);
+			
 			INeuraliumAssemblyProvider assemblyProvider = new NeuraliumAssemblyProvider(centralCoordinator);
 
 			// build the final component
 			NeuraliumChainComponentsInjection componentsInjector = new NeuraliumChainComponentsInjection();
 
-			componentsInjector.ChainComponentProvider = new NeuraliumChainComponentProvider(walletProviderProxy, assemblyProvider, chainFactoryProvider, chainStateProvider, chainConfigurationProvider, chainMiningProvider, chainDataLoadProvider, accreditationCertificateProvider, accountSnapshotsProvider, chainNetworkingProvider, interpretationProvider);
+			componentsInjector.ChainComponentProvider = new NeuraliumChainComponentProvider(walletProviderProxy, assemblyProvider, chainFactoryProvider, chainStateProvider, chainConfigurationProvider, chainValidationProvider, chainMiningProvider, chainDataLoadProvider, accreditationCertificateProvider, accountSnapshotsProvider, chainNetworkingProvider, interpretationProvider);
 
 			NeuraliumBlockchainManager transactionBlockchainManager = new NeuraliumBlockchainManager(centralCoordinator);
-			NeuraliumSerializationManager serializationManager = new NeuraliumSerializationManager(centralCoordinator);
-			NeuraliumValidationManager validationManager = new NeuraliumValidationManager(centralCoordinator);
 			NeuraliumGossipManager gossipManager = new NeuraliumGossipManager(centralCoordinator);
 
 			componentsInjector.blockchainManager = transactionBlockchainManager;
-			componentsInjector.serializationManager = serializationManager;
-			componentsInjector.validationManager = validationManager;
 			componentsInjector.gossipManager = gossipManager;
 
 			componentsInjector.chainInterface = chainInterface;

@@ -5,6 +5,7 @@ using Neuralia.Blockchains.Core.Cryptography.Encryption.Symetrical;
 using Neuralia.Blockchains.Core.Tools;
 using Neuralia.Blockchains.Tools.Cryptography;
 using Neuralia.Blockchains.Tools.Data;
+using Neuralia.Blockchains.Tools.Data.Arrays;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Wallet.Account {
 	public interface INeuraliumWalletAccount : IWalletAccount {
@@ -15,10 +16,10 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Wallet.Account {
 		public IEncryptorParameters NeuraliumTimelineFileEncryptionParameters { get; set; }
 		public ByteArray NeuraliumTimelineFileSecret { get; set; }
 
-		public override void InitializeNewEncryptionParameters(BlockchainServiceSet serviceSet) {
-			base.InitializeNewEncryptionParameters(serviceSet);
+		public override void InitializeNewEncryptionParameters(BlockchainServiceSet serviceSet, ChainConfigurations chainConfiguration) {
+			base.InitializeNewEncryptionParameters(serviceSet, chainConfiguration);
 
-			this.InitializeNewNeuraliumTimelineEncryptionParameters(serviceSet);
+			this.InitializeNewNeuraliumTimelineEncryptionParameters(serviceSet, chainConfiguration);
 		}
 
 		public override void ClearEncryptionParameters() {
@@ -32,13 +33,13 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Wallet.Account {
 			this.NeuraliumTimelineFileSecret = null;
 		}
 
-		public virtual void InitializeNewNeuraliumTimelineEncryptionParameters(BlockchainServiceSet serviceSet) {
+		public virtual void InitializeNewNeuraliumTimelineEncryptionParameters(BlockchainServiceSet serviceSet, ChainConfigurations chainConfiguration) {
 			// create those no matter what
 			if(this.NeuraliumTimelineFileEncryptionParameters == null) {
-				this.NeuraliumTimelineFileEncryptionParameters = FileEncryptorUtils.GenerateEncryptionParameters(GlobalSettings.ApplicationSettings);
+				this.NeuraliumTimelineFileEncryptionParameters = FileEncryptorUtils.GenerateEncryptionParameters(chainConfiguration);
 				var secretKey = new byte[333];
 				GlobalRandom.GetNextBytes(secretKey);
-				this.NeuraliumTimelineFileSecret = secretKey;
+				this.NeuraliumTimelineFileSecret = ByteArray.WrapAndOwn(secretKey);
 			}
 		}
 	}

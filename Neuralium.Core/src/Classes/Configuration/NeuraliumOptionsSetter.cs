@@ -1,6 +1,7 @@
 using Blockchains.Neuralium.Classes;
 using Neuralia.Blockchains.Core.Configuration;
 using Neuralia.Blockchains.Tools.Data;
+using Neuralia.Blockchains.Tools.Data.Arrays;
 
 namespace Neuralium.Core.Classes.Configuration {
 	public class NeuraliumOptionsSetter<A, O> : OptionsSetter<A, O>

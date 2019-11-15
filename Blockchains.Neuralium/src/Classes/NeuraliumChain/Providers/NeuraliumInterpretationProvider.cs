@@ -102,8 +102,8 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 
 		protected override ICardUtils CardUtils => NeuraliumCardsUtils.Instance;
 
-		public override void InterpretGenesisBlockSnapshots(IGenesisBlock genesisBlock, IRoutedTaskRoutingHandler routedTaskRoutingHandler) {
-			base.InterpretGenesisBlockSnapshots(genesisBlock, routedTaskRoutingHandler);
+		public override void InterpretGenesisBlockSnapshots(IGenesisBlock genesisBlock) {
+			base.InterpretGenesisBlockSnapshots(genesisBlock);
 
 			var otherModeratorAccounts = genesisBlock.ConfirmedKeyedTransactions.OfType<INeuraliumGenesisAccountPresentationTransaction>();
 

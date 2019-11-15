@@ -110,34 +110,32 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain {
 
 			return this.RunTaskMethod(() => {
 
-				AutoResetEvent resetEvent = new AutoResetEvent(false);
-				ICreateNeuraliumTransferTransactionWorkflow workflow = this.NeuraliumChainFactoryProvider.WorkflowFactory.CreateSendNeuraliumsWorkflow(accountUuid, new AccountId(targetAccountId), amount, tip, note, correlationContext);
+				using(ManualResetEventSlim resetEvent = new ManualResetEventSlim(false)) {
+					ICreateNeuraliumTransferTransactionWorkflow workflow = this.NeuraliumChainFactoryProvider.WorkflowFactory.CreateSendNeuraliumsWorkflow(accountUuid, new AccountId(targetAccountId), amount, tip, note, correlationContext);
 
-				workflow.Success += w => {
-					resetEvent.Set();
-				};
+					workflow.Success += w => {
+						resetEvent.Set();
+					};
 
-				this.centralCoordinator.PostWorkflow(workflow);
+					this.centralCoordinator.PostWorkflow(workflow);
 
-				resetEvent.WaitOne();
+					resetEvent.Wait();
 
-				return true;
+					return true;
+				}
 			});
 
 		}
 
 		public Task<TimelineHeader> QueryNeuraliumTimelineHeader(Guid accountUuid) {
-			var task = new Task<TimelineHeader>(() => this.centralCoordinator.ChainComponentProvider.WalletProvider.GetTimelineHeader(accountUuid));
-
-			task.Start();
+			var task = Task<TimelineHeader>.Factory.StartNew(() => this.centralCoordinator.ChainComponentProvider.WalletProvider.GetTimelineHeader(accountUuid));
+;
 
 			return task;
 		}
 
 		public Task<List<TimelineDay>> QueryNeuraliumTimelineSection(Guid accountUuid, DateTime firstday, int skip, int take) {
-			var task = new Task<List<TimelineDay>>(() => this.centralCoordinator.ChainComponentProvider.WalletProvider.GetTimelineSection(accountUuid, firstday, skip, take));
-
-			task.Start();
+			var task = Task<List<TimelineDay>>.Factory.StartNew(() => this.centralCoordinator.ChainComponentProvider.WalletProvider.GetTimelineSection(accountUuid, firstday, skip, take));
 
 			return task;
 		}
@@ -150,18 +148,19 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain {
 
 			return this.RunTaskMethod(() => {
 
-				AutoResetEvent resetEvent = new AutoResetEvent(false);
-				ICreateNeuraliumRefillTransactionWorkflow workflow = this.NeuraliumChainFactoryProvider.WorkflowFactory.CreateRefillNeuraliumsWorkflow(accountUuid, correlationContext);
+				using(ManualResetEventSlim resetEvent = new ManualResetEventSlim(false)) {
+					ICreateNeuraliumRefillTransactionWorkflow workflow = this.NeuraliumChainFactoryProvider.WorkflowFactory.CreateRefillNeuraliumsWorkflow(accountUuid, correlationContext);
 
-				workflow.Success += w => {
-					resetEvent.Set();
-				};
+					workflow.Success += w => {
+						resetEvent.Set();
+					};
 
-				this.centralCoordinator.PostWorkflow(workflow);
+					this.centralCoordinator.PostWorkflow(workflow);
 
-				resetEvent.WaitOne();
+					resetEvent.Wait();
 
-				return true;
+					return true;
+				}
 			});
 		}
 #endif

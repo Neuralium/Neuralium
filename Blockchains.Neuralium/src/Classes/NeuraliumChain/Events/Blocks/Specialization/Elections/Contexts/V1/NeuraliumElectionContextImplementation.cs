@@ -4,6 +4,7 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Seria
 using Neuralia.Blockchains.Core.Cryptography.Trees;
 using Neuralia.Blockchains.Core.General.Types;
 using Neuralia.Blockchains.Core.General.Types.Specialized;
+using Neuralia.Blockchains.Core.Serialization;
 using Neuralia.Blockchains.Tools.Serialization;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specialization.Elections.Contexts.V1 {
@@ -33,7 +34,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specializat
 		///     A polite service fees applied on this block and returned to the moderators to help fund maintenance and expansion
 		///     of the network
 		/// </summary>
-		public SimplePercentage MaintenanceServiceFees { get; set; }
+		public SimplePercentage MaintenanceServiceFees { get; set; } = new SimplePercentage();
 
 		/// <summary>
 		///     What heuristic method will we use to allocate the bounties
@@ -53,6 +54,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specializat
 			nodeList.Add(this.MaintenanceServiceFees);
 
 			nodeList.Add(this.BountyAllocationMethod);
+			nodeList.Add(this.TransactionTipsAllocationMethod);
 
 			return nodeList;
 		}
@@ -65,6 +67,16 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specializat
 
 			this.BountyAllocationMethod = BountyAllocationMethodRehydrator.Rehydrate(rehydrator);
 			this.TransactionTipsAllocationMethod = TransactionTipsAllocationMethodRehydrator.Rehydrate(rehydrator);
+		}
+		
+		public void JsonDehydrate(JsonDeserializer jsonDeserializer) {
+
+			jsonDeserializer.SetProperty("Bounty", this.Bounty);
+			
+			jsonDeserializer.SetProperty("MaintenanceServiceFeesEnabled", this.MaintenanceServiceFeesEnabled);
+			jsonDeserializer.SetProperty("MaintenanceServiceFees", this.MaintenanceServiceFees?.Value??0);
+			
+			jsonDeserializer.SetProperty("TransactionTipsAllocationMethod", this.TransactionTipsAllocationMethod);
 		}
 	}
 }

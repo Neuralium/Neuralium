@@ -5,6 +5,7 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal.Wallet;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Identifiers;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Wallet.Account;
 using Neuralia.Blockchains.Common.Classes.Tools;
+using Neuralia.Blockchains.Core.Configuration;
 using Neuralia.Blockchains.Core.Cryptography.Passphrases;
 using Neuralia.Blockchains.Core.DataAccess.Dal;
 
@@ -15,27 +16,48 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 		void RemoveLocalTimelineEntry(TransactionId transactionId);
 		int GetDaysCount();
 		DateTime GetFirstDay();
+		decimal? GetLastTotal();
 	}
 
 	public class NeuraliumWalletTimelineFileInfo : WalletFileInfo, INeuraliumWalletTimelineFileInfo {
 
 		private readonly IWalletAccount account;
 
-		public NeuraliumWalletTimelineFileInfo(IWalletAccount account, string filename, BlockchainServiceSet serviceSet, IWalletSerialisationFal serialisationFal, WalletPassphraseDetails walletSecurityDetails) : base(filename, serviceSet, serialisationFal, walletSecurityDetails) {
+		public NeuraliumWalletTimelineFileInfo(IWalletAccount account, string filename, ChainConfigurations chainConfiguration, BlockchainServiceSet serviceSet, IWalletSerialisationFal serialisationFal, WalletPassphraseDetails walletSecurityDetails) : base(filename, chainConfiguration, serviceSet, serialisationFal, walletSecurityDetails) {
 			this.account = account;
 		}
 
+		public decimal? GetLastTotal() {
+			lock(this.locker) {
+				return this.RunDbOperation(litedbDal => {
+					
+					if(litedbDal.CollectionExists<NeuraliumWalletTimelineDay>() && litedbDal.Any<NeuraliumWalletTimelineDay>()) {
+						int maxId = litedbDal.All<NeuraliumWalletTimelineDay>().Max(dayEntry => dayEntry.Id);
+
+						var timelineDay = litedbDal.GetOne<NeuraliumWalletTimelineDay>(k => k.Id == maxId);
+
+						if(timelineDay != null) {
+							return timelineDay.Total;
+						}
+
+					}
+
+					return (decimal?)null;
+				});
+			}
+		}
+		
 		public void InsertTimelineEntry(NeuraliumWalletTimeline entry) {
 			lock(this.locker) {
 				this.RunDbOperation(litedbDal => {
-
-					DateTime day = DateTime.SpecifyKind(new DateTime(entry.Timestamp.Year, entry.Timestamp.Month, entry.Timestamp.Day), DateTimeKind.Utc);
-
-					NeuraliumWalletTimelineDay dayEntry = null;
-
-					if(litedbDal.CollectionExists<NeuraliumWalletTimelineDay>() && (entry.Id != 0) && litedbDal.Exists<NeuraliumWalletTimeline>(k => k.Id == entry.Id)) {
+					
+					if(litedbDal.CollectionExists<NeuraliumWalletTimelineDay>() && (entry.Id != 0) && litedbDal.Exists<NeuraliumWalletTimeline>(k => k.Id == entry.Id || k.TransactionId == entry.TransactionId)) {
 						return;
 					}
+
+					DateTime day = entry.Timestamp.ToUniversalTime().Date;
+
+					NeuraliumWalletTimelineDay dayEntry = null;
 
 					// first, lets enter the day if required, otherwise update it
 					if(!litedbDal.CollectionExists<NeuraliumWalletTimelineDay>() || !litedbDal.Exists<NeuraliumWalletTimelineDay>(k => k.Timestamp == day)) {
@@ -148,11 +170,11 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 				if(this.EncryptionInfo == null) {
 					this.EncryptionInfo = new EncryptionInfo();
 
-					this.EncryptionInfo.encrypt = this.WalletSecurityDetails.EncryptWallet;
+					this.EncryptionInfo.Encrypt = this.WalletSecurityDetails.EncryptWallet;
 
-					if(this.EncryptionInfo.encrypt) {
+					if(this.EncryptionInfo.Encrypt) {
 
-						this.EncryptionInfo.encryptionParameters = this.account.KeyLogFileEncryptionParameters;
+						this.EncryptionInfo.EncryptionParameters = this.account.KeyLogFileEncryptionParameters;
 						this.EncryptionInfo.Secret = () => this.account.KeyLogFileSecret;
 					}
 				}

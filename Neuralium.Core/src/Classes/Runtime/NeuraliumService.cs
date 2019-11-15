@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
@@ -10,7 +11,7 @@ using Neuralium.Core.Resources;
 using Serilog;
 
 namespace Neuralium.Core.Classes.Runtime {
-	public interface INeuraliumService : IHostedService, IDisposable2 {
+	public interface INeuraliumService : IHostedService, IDisposableExtended {
 	}
 
 	public class NeuraliumService : INeuraliumService {
@@ -75,7 +76,7 @@ namespace Neuralium.Core.Classes.Runtime {
 				this.applicationLifetime.ApplicationStarted.Register(this.OnStarted);
 				this.applicationLifetime.ApplicationStopping.Register(this.OnStopping);
 				this.applicationLifetime.ApplicationStopped.Register(this.OnStopped);
-
+				AppDomain.CurrentDomain.ProcessExit += this.CurrentDomainOnProcessExit;
 				this.neuraliumApp.Error += (app, exception) => {
 					Log.Error(exception, "Failed to run neuralium app. exception occured");
 
@@ -104,6 +105,11 @@ namespace Neuralium.Core.Classes.Runtime {
 			}
 		}
 
+		private void CurrentDomainOnProcessExit(object sender, EventArgs e) {
+			Log.Information("Daemon shutdown requested...");
+			this.applicationLifetime.StopApplication();
+		}
+		
 		public Task StopAsync(CancellationToken cancellationNeuralium) {
 
 			Log.Information("Daemon shutdown in progress...");
@@ -113,7 +119,7 @@ namespace Neuralium.Core.Classes.Runtime {
 #endif
 
 			this.neuraliumApp.Stop();
-			this.neuraliumApp.WaitStop(TimeSpan.FromSeconds(20));
+			this.neuraliumApp.WaitStop(TimeSpan.FromSeconds(30));
 
 			this.neuraliumApp.Dispose();
 
@@ -188,7 +194,7 @@ namespace Neuralium.Core.Classes.Runtime {
 #if TESTNET
 		private Timer pollingTimer;
 
-		private readonly AutoResetEvent autoResetEvent = new AutoResetEvent(false);
+		private readonly ManualResetEventSlim autoResetEvent = new ManualResetEventSlim(false);
 		protected virtual void CheckTestnetDelay() {
 			
 			//TODO: this needs review
@@ -199,7 +205,7 @@ namespace Neuralium.Core.Classes.Runtime {
 			
 			//TimeSpan elapsed = DateTime.UtcNow - ;
 
-			var limit = new DateTime(2019, 10, 20, 23, 0, 0, DateTimeKind.Utc);
+			var limit = new DateTime(2019, 11, 17, 23, 0, 0, DateTimeKind.Utc);
 			if(DateTime.UtcNow > limit) {
 			
 				Console.BackgroundColor = ConsoleColor.Black;
@@ -252,7 +258,7 @@ namespace Neuralium.Core.Classes.Runtime {
 
 				try {
 					try {
-
+					this.autoResetEvent?.Dispose();
 					} catch(Exception ex) {
 						Log.Verbose("error occured", ex);
 					}

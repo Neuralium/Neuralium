@@ -14,7 +14,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specializat
 
 		public override ITransactionSelectionMethod CreateTransactionSelectionMethod(TransactionSelectionMethodType type, long blockId, BlockElectionDistillate blockElectionDistillate, IWalletProvider walletProvider, BlockChainConfigurations blockChainConfigurations, BlockchainServiceSet serviceSet) {
 
-			if(blockElectionDistillate.electionContext is INeuraliumElectionContext neuraliumElectionContext) {
+			if(blockElectionDistillate.ElectionContext is INeuraliumElectionContext neuraliumElectionContext) {
 
 				if(type == TransactionSelectionMethodTypes.Instance.Automatic) {
 					// ok, this one is meant to be automatic. we wlil try to find the best method
@@ -30,7 +30,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specializat
 				if(type == NeuraliumTransactionSelectionMethodTypes.Instance.HighestTips) {
 
 					// ok, nothing special here, lets just maximize profits by choosing the highest paying transactions
-					return new NeuraliumHighestTipTransactionSelectionMethod(blockId, neuraliumElectionContext.TransactionTipsAllocationMethod, (INeuraliumWalletProviderProxy) walletProvider, blockElectionDistillate.electionContext.MaximumElectedTransactionCount, ((NeuraliumBlockChainConfigurations) blockChainConfigurations).HighestTipTransactionSelectionStrategySettings, serviceSet.BlockchainTimeService);
+					return new NeuraliumHighestTipTransactionSelectionMethod(blockId, neuraliumElectionContext.TransactionTipsAllocationMethod, (INeuraliumWalletProviderProxy) walletProvider, blockElectionDistillate.ElectionContext.MaximumElectedTransactionCount, ((NeuraliumBlockChainConfigurations) blockChainConfigurations).HighestTipTransactionSelectionStrategySettings, serviceSet.BlockchainTimeService);
 
 				}
 			}
