@@ -34,6 +34,14 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Widgets {
 		public readonly RejectionCode NEGATIVE_TIP;
 
 		public readonly RejectionCode ZERO_AMOUNT;
+		public readonly RejectionCode TOS_NOT_ACCEPTED;
+		
+		public readonly RejectionCode SAFU_START_TIME_INVALID;
+		public readonly RejectionCode LOWER_THAN_MINIMUM_SAFU_PROTECTION;
+		public readonly RejectionCode HIGHER_THAN_MAXIMUM_SAFU_DAYS;
+		
+		public readonly RejectionCode FEES_HIGHER_THAN_TRANSFER;
+		
 
 		static NeuraliumRejectionCodes() {
 		}
@@ -43,6 +51,12 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Widgets {
 			this.NEGATIVE_AMOUNT = this.CreateChildConstant();
 			this.ZERO_AMOUNT = this.CreateChildConstant();
 			this.NEGATIVE_TIP = this.CreateChildConstant();
+			this.TOS_NOT_ACCEPTED = this.CreateChildConstant();
+			
+			this.SAFU_START_TIME_INVALID = this.CreateChildConstant();
+			this.LOWER_THAN_MINIMUM_SAFU_PROTECTION = this.CreateChildConstant();
+			this.HIGHER_THAN_MAXIMUM_SAFU_DAYS = this.CreateChildConstant();
+			this.FEES_HIGHER_THAN_TRANSFER = this.CreateChildConstant();
 
 			//this.PrintValues(";");
 		}

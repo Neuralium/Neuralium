@@ -1,4 +1,7 @@
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
+using Blockchains.Neuralium.Classes.NeuraliumChain.Tools;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Serialization.Blockchain.Utils;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Serialization;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions;
@@ -35,8 +38,29 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 		public ushort FreezeId { get; set; }
 		public Text EventDescription { get; set; } = new Text();
 
+		/// <summary>
+		/// the ones that have funds they should not have
+		/// </summary>
 		public List<AccountUnwindImpact> AccountUnwindImpacts { get; } = new List<AccountUnwindImpact>();
+		
+		/// <summary>
+		/// the ones that were wronged and have been robbed
+		/// </summary>
 		public List<AccountRestoreImpact> AccountRestoreImpacts { get; } = new List<AccountRestoreImpact>();
+
+		private ImmutableList<AccountId> accountIds = null;
+
+		protected override void Sanitize() {
+			base.Sanitize();
+
+			foreach(var entry in AccountUnwindImpacts) {
+				entry.UnwoundAmount = NeuraliumUtilities.CapAndRound(entry.UnwoundAmount);
+			}
+			
+			foreach(var entry in AccountRestoreImpacts) {
+				entry.RestoreAmount = NeuraliumUtilities.CapAndRound(entry.RestoreAmount);
+			}
+		}
 
 		public override void JsonDehydrate(JsonDeserializer jsonDeserializer) {
 			base.JsonDehydrate(jsonDeserializer);
@@ -82,6 +106,20 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 			dataChannels.ContentsData.Write(this.AccountRestoreImpacts);
 		}
 
+		public override ImmutableList<AccountId> TargetAccounts {
+			get {
+				if(this.accountIds == null) {
+
+					var combinedAccounts = this.AccountRestoreImpacts.Select(a => a.AccountId).ToList();
+					combinedAccounts.AddRange( this.AccountUnwindImpacts.Select(a => a.AccountId));
+					
+					this.accountIds = combinedAccounts.ToImmutableList();
+				}
+				
+				return this.accountIds;
+			}
+		}
+
 		public class AccountUnwindImpact : ISerializableCombo {
 			public AccountId AccountId { get; set; } = new AccountId();
 			public Amount UnwoundAmount { get; set; } = new Amount();
@@ -115,8 +153,9 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 				jsonDeserializer.SetProperty("UnwoundAmount", this.UnwoundAmount);
 				jsonDeserializer.SetProperty("Notes", this.Notes);
 			}
+			
 		}
-
+		
 		public class AccountRestoreImpact : ISerializableCombo {
 			public AccountId AccountId { get; set; } = new AccountId();
 			public Amount RestoreAmount { get; set; } = new Amount();
@@ -150,6 +189,9 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 				jsonDeserializer.SetProperty("RestoreAmount", this.RestoreAmount);
 				jsonDeserializer.SetProperty("Notes", this.Notes);
 			}
+			
 		}
+
+		
 	}
 }

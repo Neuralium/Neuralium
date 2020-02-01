@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Blockchains.Neuralium.Classes.Configuration;
@@ -20,6 +21,7 @@ using Neuralium.Core.Controllers;
 using Neuralium.Core.Resources;
 
 using Serilog;
+using Serilog.Enrichers;
 
 namespace Neuralium.Core.Classes.Runtime {
 	public class Bootstrap {
@@ -27,14 +29,18 @@ namespace Neuralium.Core.Classes.Runtime {
 		protected const string prefix = "NEURALIUM_";
 		protected const string appsettings = "config/config.json";
 		protected const string docker_appsettings = "config/docker.config.json";
-
+		protected const string ConfigSectionName = "AppSettings";
+		
 		protected const string hostsettings = "hostsettings.json";
-		public static RpcProvider<RpcHub<IRpcClient>, IRpcClient> RpcProvider;
 		protected NeuraliumOptions cmdOptions;
+
+		protected string configSectionName = ConfigSectionName;
+		
+		public IServiceProvider ServiceProvider { get; private set; }
 
 		static Bootstrap() {
 
-			RpcProvider = new RpcProvider<RpcHub<IRpcClient>, IRpcClient>();
+
 		}
 
 		protected virtual void ConfigureServices(IServiceCollection services, IConfiguration configuration) {
@@ -55,7 +61,7 @@ namespace Neuralium.Core.Classes.Runtime {
 			services.AddSingleton<IGlobalsService, GlobalsService>();
 
 			services.AddSingleton<IRpcService, RpcService<RpcHub<IRpcClient>, IRpcClient>>();
-			services.AddSingleton<IRpcProvider>(x => RpcProvider);
+			services.AddSingleton<IRpcProvider>(x => new RpcProvider<RpcHub<IRpcClient>, IRpcClient>());
 
 			services.AddSingleton<NeuraliumOptions, NeuraliumOptions>(x => this.cmdOptions);
 
@@ -126,18 +132,18 @@ namespace Neuralium.Core.Classes.Runtime {
 
 				this.BuildConfiguration(hostingContext, configApp);
 			}).ConfigureServices((hostContext, services) => {
+				
 				services.AddOptions<HostOptions>().Configure(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(10));
 
-				string configSection = "AppSettings";
-
+				
 				if(!string.IsNullOrWhiteSpace(this.cmdOptions?.ConfigSection)) {
-					configSection = this.cmdOptions.ConfigSection;
+					this.configSectionName = this.cmdOptions.ConfigSection;
 				}
 
-				Log.Verbose($"Loading config section {configSection}");
+				Log.Verbose($"Loading config section {this.configSectionName}");
 
-				this.ConfigureAppSettings(configSection, services, hostContext.Configuration);
-
+				this.ConfigureAppSettings(this.configSectionName, services, hostContext.Configuration);
+				
 				this.ConfigureServices(services, hostContext.Configuration);
 
 				// allow children to add their own overridable services
@@ -152,8 +158,40 @@ namespace Neuralium.Core.Classes.Runtime {
 
 				logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
 				logging.AddConsole();
+				
+
 			}).UseSerilog((hostingContext, loggerConfiguration) => {
 				loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration);
+
+				if(!this.cmdOptions.NoRPC) {
+
+					var section = hostingContext.Configuration.GetSection(this.configSectionName);
+
+					var appSettingsTemplate = new AppSettings();
+					AppSettingsBase.RpcModes rpcMode = appSettingsTemplate.RpcMode;
+
+					string rpcModeName = nameof(appSettingsTemplate.RpcMode);
+					if(section.GetSection(rpcModeName).Exists()) {
+						rpcMode = section.GetValue<AppSettingsBase.RpcModes>(rpcModeName);
+					}
+					
+					if(rpcMode != AppSettingsBase.RpcModes.None) {
+						// now we configure the RPC logger
+						
+						var entry = loggerConfiguration.MinimumLevel;
+						
+						var loggingLevel = section.GetValue<AppSettingsBase.RpcLoggingLevels>(nameof(appSettingsTemplate.RpcLoggingLevel));
+						
+						if(loggingLevel == AppSettingsBase.RpcLoggingLevels.Verbose) {
+							loggerConfiguration = entry.Verbose();
+						} else {
+							loggerConfiguration = entry.Information();
+						}
+
+						loggerConfiguration.Enrich.With(new ThreadIdEnricher()).WriteTo.RpcEventLogSink(this);
+					}
+				}
+
 			}).UseConsoleLifetime();
 		}
 
@@ -163,11 +201,14 @@ namespace Neuralium.Core.Classes.Runtime {
 
 		public virtual async Task<int> Run() {
 
-			IHostBuilder host = this.BuildHost().UseConsoleLifetime();
+			IHostBuilder hostBuilder = this.BuildHost().UseConsoleLifetime();
+
+			var host = hostBuilder.Build();
+			this.ServiceProvider = host.Services;
 
 			try {
 				Log.Information("Starting host");
-				await host.RunConsoleAsync();
+				await host.RunAsync();
 
 			} catch(OperationCanceledException) {
 				// thats fine, lets just exit

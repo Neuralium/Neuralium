@@ -2,9 +2,9 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.General.V1.Structures {
 
-	public interface INeuraliumTransactionAccountFeature : ITransactionAccountFeature {
+	public interface INeuraliumTransactionAccountAttribute : ITransactionAccountAttribute {
 	}
 
-	public class NeuraliumTransactionAccountFeature : TransactionAccountFeature, INeuraliumTransactionAccountFeature {
+	public class NeuraliumTransactionAccountAttribute : TransactionAccountAttribute, INeuraliumTransactionAccountAttribute {
 	}
 }

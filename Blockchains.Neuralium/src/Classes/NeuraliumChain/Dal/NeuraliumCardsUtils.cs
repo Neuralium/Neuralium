@@ -15,9 +15,8 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal {
 		void Copy(INeuraliumJointAccountSnapshot source, INeuraliumJointAccountSnapshot destination);
 		void Copy(INeuraliumStandardAccountSnapshot source, INeuraliumStandardAccountSnapshot destination);
 		void Copy(INeuraliumAccountSnapshot source, INeuraliumAccountSnapshot destination);
-		void Copy(INeuraliumAccountFeature source, INeuraliumAccountFeature destination);
+		void Copy(INeuraliumAccountAttribute source, INeuraliumAccountAttribute destination);
 		void Copy(INeuraliumSnapshot source, INeuraliumSnapshot destination);
-		void Copy(INeuraliumAccountFreeze source, INeuraliumAccountFreeze other);
 
 		INeuraliumChainOptionsSnapshot Clone(INeuraliumChainOptionsSnapshot source);
 		INeuraliumAccreditationCertificateSnapshot Clone(INeuraliumAccreditationCertificateSnapshot source);
@@ -26,9 +25,8 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal {
 		INeuraliumJointAccountSnapshot Clone(INeuraliumJointAccountSnapshot source);
 		INeuraliumStandardAccountSnapshot Clone(INeuraliumStandardAccountSnapshot source);
 		INeuraliumAccountSnapshot Clone(INeuraliumAccountSnapshot source);
-		INeuraliumAccountFeature Clone(INeuraliumAccountFeature source);
+		INeuraliumAccountAttribute Clone(INeuraliumAccountAttribute source);
 		INeuraliumSnapshot Clone(INeuraliumSnapshot source);
-		INeuraliumAccountFreeze Clone(INeuraliumAccountFreeze source);
 	}
 
 	//<INeuraliumAccountSnapshot, INeuraliumAccountFeature, INeuraliumStandardAccountSnapshot, INeuraliumJointAccountSnapshot, INeuraliumStandardAccountKeysSnapshot, INeuraliumAccreditationCertificateSnapshot, INeuraliumAccreditationCertificateSnapshotAccount, INeuraliumChainOptionsSnapshot>
@@ -44,6 +42,11 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal {
 		}
 
 		public void Copy(INeuraliumChainOptionsSnapshot source, INeuraliumChainOptionsSnapshot destination) {
+
+			destination.SAFUDailyRatio = source.SAFUDailyRatio;
+			destination.MinimumSAFUQuantity = source.MinimumSAFUQuantity;
+			destination.MaximumAmountDays = source.MaximumAmountDays;
+			
 			base.Copy(source, destination);
 		}
 
@@ -65,7 +68,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal {
 
 		public override void Copy(IAccreditationCertificateSnapshotAccount source, IAccreditationCertificateSnapshotAccount destination) {
 
-			if(source is IAccreditationCertificateSnapshotAccount castedSource && destination is IAccreditationCertificateSnapshotAccount castedDestination) {
+			if(source is INeuraliumAccreditationCertificateSnapshotAccount castedSource && destination is INeuraliumAccreditationCertificateSnapshotAccount castedDestination) {
 				this.Copy(castedSource, castedDestination);
 			} else {
 				base.Copy(source, destination);
@@ -100,9 +103,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal {
 
 		public void Copy(INeuraliumAccountSnapshot source, INeuraliumAccountSnapshot destination) {
 			destination.Balance = source.Balance;
-
-			this.CopyArray<INeuraliumAccountFreeze>(source, destination);
-
+			
 			base.Copy(source, destination);
 		}
 
@@ -140,21 +141,22 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal {
 		}
 
 		public void Copy(INeuraliumStandardAccountSnapshot source, INeuraliumStandardAccountSnapshot destination) {
+			//TODO: review this class and test it, there is some overlap in calls.
 			base.Copy(source, destination);
 
 			this.Copy(source, (INeuraliumAccountSnapshot) destination);
 		}
 
-		public override void Copy(IAccountFeature source, IAccountFeature destination) {
+		public override void Copy(IAccountAttribute source, IAccountAttribute destination) {
 
-			if(source is INeuraliumAccountFeature castedSource && destination is INeuraliumAccountFeature castedDestination) {
+			if(source is INeuraliumAccountAttribute castedSource && destination is INeuraliumAccountAttribute castedDestination) {
 				this.Copy(castedSource, castedDestination);
 			} else {
 				base.Copy(source, destination);
 			}
 		}
 
-		public void Copy(INeuraliumAccountFeature source, INeuraliumAccountFeature destination) {
+		public void Copy(INeuraliumAccountAttribute source, INeuraliumAccountAttribute destination) {
 			base.Copy(source, destination);
 		}
 
@@ -178,25 +180,17 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal {
 				this.Copy(castedSource4, castedDestination4);
 			} else if(source is INeuraliumChainOptionsSnapshot castedSource5 && destination is INeuraliumChainOptionsSnapshot castedDestination5) {
 				this.Copy(castedSource5, castedDestination5);
-			} else if(source is INeuraliumAccountFeature castedSource6 && destination is INeuraliumAccountFeature castedDestination6) {
+			} else if(source is INeuraliumAccountAttribute castedSource6 && destination is INeuraliumAccountAttribute castedDestination6) {
 				this.Copy(castedSource6, castedDestination6);
 			} else if(source is INeuraliumJointMemberAccount castedSource7 && destination is INeuraliumJointMemberAccount castedDestination7) {
 				this.Copy(castedSource7, castedDestination7);
-			} else if(source is INeuraliumAccountFreeze castedSource8 && destination is INeuraliumAccountFreeze castedDestination8) {
-				this.Copy(castedSource8, castedDestination8);
 			} else if(source is INeuraliumAccreditationCertificateSnapshotAccount castedSource9 && destination is INeuraliumAccreditationCertificateSnapshotAccount castedDestination9) {
 				this.Copy(castedSource9, castedDestination9);
 			} else {
 				throw new InvalidOperationException();
 			}
 		}
-
-		public void Copy(INeuraliumAccountFreeze source, INeuraliumAccountFreeze destination) {
-			destination.FreezeId = source.FreezeId;
-			destination.Amount = source.Amount;
-
-		}
-
+		
 		public INeuraliumChainOptionsSnapshot Clone(INeuraliumChainOptionsSnapshot source) {
 			return this.CopyClone(source);
 		}
@@ -225,15 +219,11 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal {
 			return this.CopyClone(source);
 		}
 
-		public INeuraliumAccountFeature Clone(INeuraliumAccountFeature source) {
+		public INeuraliumAccountAttribute Clone(INeuraliumAccountAttribute source) {
 			return this.CopyClone(source);
 		}
 
 		public INeuraliumSnapshot Clone(INeuraliumSnapshot source) {
-			return this.CopyClone(source);
-		}
-
-		public INeuraliumAccountFreeze Clone(INeuraliumAccountFreeze source) {
 			return this.CopyClone(source);
 		}
 

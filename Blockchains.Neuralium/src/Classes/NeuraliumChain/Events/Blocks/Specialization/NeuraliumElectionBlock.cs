@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Specialization.Elections;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specialization {
@@ -5,6 +6,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specializat
 	public interface INeuraliumElectionBlock : IElectionBlock, INeuraliumBlock {
 	}
 
+	[DebuggerDisplay("BlockId: {BlockId}")]
 	public class NeuraliumElectionBlock : ElectionBlock, INeuraliumElectionBlock {
 	}
 }

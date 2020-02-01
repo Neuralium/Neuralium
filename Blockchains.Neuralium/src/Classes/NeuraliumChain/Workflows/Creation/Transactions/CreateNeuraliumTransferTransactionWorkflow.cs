@@ -22,7 +22,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Creation.Transa
 		private readonly AccountId targetAccountId;
 		private readonly Amount tip;
 
-		public CreateNeuraliumTransferTransactionWorkflow(Guid accountUuid, AccountId targetAccountId, Amount amount, Amount tip, string note, INeuraliumCentralCoordinator centralCoordinator, CorrelationContext correlationContext) : base(centralCoordinator, note, correlationContext) {
+		public CreateNeuraliumTransferTransactionWorkflow(Guid accountUuid, AccountId targetAccountId, Amount amount, Amount tip, byte expiration, string note, INeuraliumCentralCoordinator centralCoordinator, CorrelationContext correlationContext) : base(centralCoordinator, expiration, note, correlationContext) {
 			this.accountUuid = accountUuid;
 			this.targetAccountId = targetAccountId;
 			this.amount = amount;

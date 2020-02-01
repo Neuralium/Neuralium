@@ -5,10 +5,13 @@ using Blockchains.Neuralium.Classes.Configuration.TransactionSelectionStrategies
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specialization.Elections.Contexts.TransactionTipsAllocationMethods;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Providers;
 using MoreLinq;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Specialization.Elections.Contexts;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Specialization.Elections.Contexts.TransactionSelectionMethods;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Identifiers;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Providers;
 using Neuralia.Blockchains.Common.Classes.Services;
+using Neuralia.Blockchains.Core;
+using Neuralia.Blockchains.Core.Configuration;
 using Neuralia.Blockchains.Core.General.Versions;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specialization.Elections.Contexts.TransactionSelectionMethods.V1 {
@@ -22,7 +25,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specializat
 
 		private readonly ITransactionTipsAllocationMethod transactionSelectionMethod;
 
-		public NeuraliumHighestTipTransactionSelectionMethod(long blockId, ITransactionTipsAllocationMethod transactionSelectionMethod, INeuraliumWalletProviderProxy walletProvider, ushort maximumTransactionCount, HighestTipTransactionSelectionStrategySettings highestTipTransactionSelectionStrategySettings, IBlockchainTimeService timeService) : base(blockId, walletProvider, maximumTransactionCount) {
+		public NeuraliumHighestTipTransactionSelectionMethod(long blockId, ITransactionTipsAllocationMethod transactionSelectionMethod, IChainStateProvider chainStateProvider, INeuraliumWalletProviderProxy walletProvider, IElectionContext electionContext, HighestTipTransactionSelectionStrategySettings highestTipTransactionSelectionStrategySettings, IBlockchainTimeService timeService, Enums.ChainSharingTypes blockSavingModes) : base(blockId, chainStateProvider, walletProvider,  electionContext, blockSavingModes) {
 			this.transactionSelectionMethod = transactionSelectionMethod;
 			this.highestTipTransactionSelectionStrategySettings = highestTipTransactionSelectionStrategySettings;
 			this.timeService = timeService;
@@ -109,7 +112,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specializat
 
 		protected List<TransactionId> SelectSelection(List<(TransactionId transactionId, decimal tip)> transactionIds) {
 
-			return transactionIds.OrderByDescending(t => t.tip).ThenBy(t => t.transactionId.Timestamp).Take(this.maximumTransactionCount).Select(t => t.transactionId).ToList();
+			return transactionIds.OrderByDescending(t => t.tip).ThenBy(t => t.transactionId.Timestamp).Take(this.MaximumTransactionCount).Select(t => t.transactionId).ToList();
 		}
 	}
 }

@@ -6,9 +6,8 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Interfaces.AccountSna
 	public interface INeuraliumStandardAccountSnapshotEntry : INeuraliumStandardAccountSnapshot, INeuraliumAccountSnapshotEntry, IStandardAccountSnapshotEntry {
 	}
 
-	public interface INeuraliumStandardAccountSnapshotEntry<ACCOUNT_FEATURE, ACCOUNT_FREEZE> : INeuraliumStandardAccountSnapshot<ACCOUNT_FEATURE, ACCOUNT_FREEZE>, INeuraliumAccountSnapshotEntry<ACCOUNT_FEATURE, ACCOUNT_FREEZE>, IStandardAccountSnapshotEntry<ACCOUNT_FEATURE>, INeuraliumStandardAccountSnapshotEntry
-		where ACCOUNT_FEATURE : INeuraliumAccountFeatureEntry
-		where ACCOUNT_FREEZE : INeuraliumAccountFreezeEntry {
+	public interface INeuraliumStandardAccountSnapshotEntry<ACCOUNT_ATTRIBUTE> : INeuraliumStandardAccountSnapshot<ACCOUNT_ATTRIBUTE>, INeuraliumAccountSnapshotEntry<ACCOUNT_ATTRIBUTE>, IStandardAccountSnapshotEntry<ACCOUNT_ATTRIBUTE>, INeuraliumStandardAccountSnapshotEntry
+		where ACCOUNT_ATTRIBUTE : INeuraliumAccountAttributeEntry {
 	}
 
 }

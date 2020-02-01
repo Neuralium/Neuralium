@@ -21,6 +21,7 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common;
 using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.Configuration;
 using Neuralia.Blockchains.Core.Cryptography.TLS;
+using Neuralia.Blockchains.Core.Services;
 using Neuralia.Blockchains.Tools;
 using Neuralium.Core.Classes.Configuration;
 using Neuralium.Core.Classes.General;
@@ -152,7 +153,7 @@ namespace Neuralium.Core.Classes.Services {
 
 		protected IHost BuildRpcHost(string[] args) {
 			IConfigurationRoot config = this.GetAspnetCoreConfiguration(args);
-			int port = config.GetValue<int?>("port") ?? 12033;
+			int port = config.GetValue<int?>("port") ?? GlobalsService.DEFAULT_RPC_PORT;
 
 			IHostBuilder builder = Host.CreateDefaultBuilder(args).ConfigureWebHostDefaults(webBuilder => {
 				webBuilder.UseConfiguration(config).UseContentRoot(Directory.GetCurrentDirectory()).UseKestrel(options => {

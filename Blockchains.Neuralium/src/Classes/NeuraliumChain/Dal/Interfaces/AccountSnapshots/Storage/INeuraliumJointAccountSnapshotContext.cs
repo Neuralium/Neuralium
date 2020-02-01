@@ -7,12 +7,10 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Interfaces.AccountSna
 	public interface INeuraliumJointAccountSnapshotContext : IJointAccountSnapshotContext, INeuraliumAccountSnapshotContext {
 	}
 
-	public interface INeuraliumJointAccountSnapshotContext<ACCOUNT_SNAPSHOT, ACCOUNT_FEATURE_SNAPSHOT, ACCOUNT_MEMBERS_SNAPSHOT, ACCOUNT_FREEZE_SNAPSHOT> : INeuraliumAccountSnapshotContext<ACCOUNT_SNAPSHOT, ACCOUNT_FEATURE_SNAPSHOT, ACCOUNT_FREEZE_SNAPSHOT>, IJointAccountSnapshotContext<ACCOUNT_SNAPSHOT, ACCOUNT_FEATURE_SNAPSHOT, ACCOUNT_MEMBERS_SNAPSHOT>, INeuraliumJointAccountSnapshotContext
-		where ACCOUNT_SNAPSHOT : class, INeuraliumJointAccountSnapshotEntry<ACCOUNT_FEATURE_SNAPSHOT, ACCOUNT_MEMBERS_SNAPSHOT, ACCOUNT_FREEZE_SNAPSHOT>, new()
-		where ACCOUNT_FEATURE_SNAPSHOT : class, INeuraliumAccountFeatureEntry, new()
-		where ACCOUNT_MEMBERS_SNAPSHOT : class, INeuraliumJointMemberAccountEntry, new()
-		where ACCOUNT_FREEZE_SNAPSHOT : class, INeuraliumAccountFreezeEntry, new() {
+	public interface INeuraliumJointAccountSnapshotContext<ACCOUNT_SNAPSHOT, ACCOUNT_ATTRIBUTE_SNAPSHOT, ACCOUNT_MEMBERS_SNAPSHOT> : INeuraliumAccountSnapshotContext<ACCOUNT_SNAPSHOT, ACCOUNT_ATTRIBUTE_SNAPSHOT>, IJointAccountSnapshotContext<ACCOUNT_SNAPSHOT, ACCOUNT_ATTRIBUTE_SNAPSHOT, ACCOUNT_MEMBERS_SNAPSHOT>, INeuraliumJointAccountSnapshotContext
+		where ACCOUNT_SNAPSHOT : class, INeuraliumJointAccountSnapshotEntry<ACCOUNT_ATTRIBUTE_SNAPSHOT, ACCOUNT_MEMBERS_SNAPSHOT>, new()
+		where ACCOUNT_ATTRIBUTE_SNAPSHOT : class, INeuraliumAccountAttributeEntry, new()
+		where ACCOUNT_MEMBERS_SNAPSHOT : class, INeuraliumJointMemberAccountEntry, new() {
 
-		DbSet<ACCOUNT_FREEZE_SNAPSHOT> JointAccountFreezes { get; set; }
 	}
 }

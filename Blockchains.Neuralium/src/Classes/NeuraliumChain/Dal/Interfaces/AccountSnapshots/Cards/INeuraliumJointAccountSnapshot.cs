@@ -5,9 +5,8 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Interfaces.AccountSna
 	public interface INeuraliumJointAccountSnapshot : IJointAccountSnapshot, INeuraliumAccountSnapshot {
 	}
 
-	public interface INeuraliumJointAccountSnapshot<ACCOUNT_FEATURE, JOINT_MEMBER_FEATURE, ACCOUNT_FREEZE> : IJointAccountSnapshot<ACCOUNT_FEATURE, JOINT_MEMBER_FEATURE>, INeuraliumAccountSnapshot<ACCOUNT_FEATURE, ACCOUNT_FREEZE>, INeuraliumJointAccountSnapshot
-		where ACCOUNT_FEATURE : INeuraliumAccountFeature
-		where JOINT_MEMBER_FEATURE : IJointMemberAccount
-		where ACCOUNT_FREEZE : INeuraliumAccountFreeze {
+	public interface INeuraliumJointAccountSnapshot<ACCOUNT_ATTRIBUTE, JOINT_MEMBER_FEATURE> : IJointAccountSnapshot<ACCOUNT_ATTRIBUTE, JOINT_MEMBER_FEATURE>, INeuraliumAccountSnapshot<ACCOUNT_ATTRIBUTE>, INeuraliumJointAccountSnapshot
+		where ACCOUNT_ATTRIBUTE : INeuraliumAccountAttribute
+		where JOINT_MEMBER_FEATURE : IJointMemberAccount {
 	}
 }

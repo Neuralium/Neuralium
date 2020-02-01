@@ -7,6 +7,7 @@ using Blockchains.Neuralium.Classes;
 using Blockchains.Neuralium.Classes.NeuraliumChain;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Factories;
+using Blockchains.Neuralium.Classes.NeuraliumChain.Tools;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common;
@@ -19,6 +20,7 @@ using Neuralia.Blockchains.Core.General.Versions;
 using Neuralia.Blockchains.Core.Network.Exceptions;
 using Neuralia.Blockchains.Core.Services;
 using Neuralia.Blockchains.Core.Tools;
+using Neuralia.Blockchains.Core.Types;
 using Neuralia.Blockchains.Tools.Data;
 using Neuralia.Blockchains.Tools.Data.Arrays;
 using Neuralia.Blockchains.Tools.Serialization;
@@ -176,7 +178,7 @@ namespace Neuralium.Core.Classes.Runtime {
 			parameters.softwareVersion = new SoftwareVersion(0, 0, 1, 5, "TESTNET trial run V", this.VersionValidationCallback);
 			parameters.appSettings = this.appSettings;
 			parameters.cmdOptions = this.CmdOptions;
-			parameters.peerType = Enums.PeerTypes.FullNode;
+			parameters.nodeInfo = new NodeInfo(Enums.GossipSupportTypes.Full, Enums.PeerTypes.FullNode);
 
 #if TESTNET
 			parameters.networkId = NeuraliumConstants.TEST_NETWORK_ID;
@@ -258,7 +260,7 @@ namespace Neuralium.Core.Classes.Runtime {
 		}
 
 		protected virtual void InitEnvironment() {
-			if(!GlobalSettings.ApplicationSettings.MobileMode) {
+			if(!GlobalSettings.ApplicationSettings.SynclessMode) {
 				ThreadPool.SetMaxThreads(100, 200);
 			}
 		}

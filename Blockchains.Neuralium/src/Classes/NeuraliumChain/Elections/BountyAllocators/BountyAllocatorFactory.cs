@@ -9,7 +9,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Elections.BountyAllocator
 		public static BountyAllocator GetRepresentativeSelector(IBountyAllocationMethod bountyAllocationMethod) {
 			if(bountyAllocationMethod.Version == BountyAllocationMethodTypes.Instance.EqualSplit) {
 				if(bountyAllocationMethod.Version == (1, 0)) {
-					return new EqualSplitBountyAllocator(bountyAllocationMethod);
+					return new TieredEqualSplitBountyAllocator(bountyAllocationMethod);
 				}
 			}
 
@@ -21,7 +21,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Elections.BountyAllocator
 
 			if(version == BountyAllocationMethodTypes.Instance.EqualSplit) {
 				if(version == (1, 0)) {
-					return new EqualSplitBountyAllocator();
+					return new TieredEqualSplitBountyAllocator();
 				}
 			}
 

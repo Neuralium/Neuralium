@@ -1,18 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
 
-    <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
+  <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <NoWarn>NU1605</NoWarn>
     <OutputType>Exe</OutputType>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <StartupObject>Neuralium.Program</StartupObject>
     <DefineConstants>$(DefineConstants);SILENT_EXCEPTIONS</DefineConstants>
     <LangVersion>latest</LangVersion>
     <RootNamespace>Neuralium</RootNamespace>
     <AssemblyName>Neuralium</AssemblyName>
-    <Deterministic>false</Deterministic>
 <!--    <PublishTrimmed>true</PublishTrimmed>-->
 <!--    <PublishReadyToRun>true</PublishReadyToRun>-->
 <!--    <PublishSingleFile>true</PublishSingleFile>-->
@@ -24,13 +23,7 @@
     <ThreadPoolMinThreads>4</ThreadPoolMinThreads>
     <ThreadPoolMaxThreads>25</ThreadPoolMaxThreads>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-    <DebugType>full</DebugType>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
 
-    <DebugType>none</DebugType>
-  </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
@@ -43,20 +36,20 @@
     <PackageReference Include="Neuralia.Data.HashFunction.xxHash" Version="1.0.0" />
 
 
-     <PackageReference Include="Moq" Version="4.13.1" />
-    <PackageReference Include="morelinq" Version="3.2.0" />
-    <PackageReference Include="CommandLineParser" Version="2.6.0" />
+    <PackageReference Include="Moq" Version="4.13.1" />
+    <PackageReference Include="morelinq" Version="3.3.2" />
+    <PackageReference Include="CommandLineParser" Version="2.7.82" />
     <PackageReference Include="LiteDB" Version="4.1.4" />
-    <PackageReference Include="RestSharp" Version="106.6.10" />
+    <PackageReference Include="RestSharp" Version="106.10.1" />
     <PackageReference Include="RT.Comb" Version="2.3.0" />
     <PackageReference Include="Serilog.Enrichers.Thread" Version="3.1.0" />
-    <PackageReference Include="Serilog.Exceptions" Version="5.3.1" />
+    <PackageReference Include="Serilog.Exceptions" Version="5.4.0" />
     <PackageReference Include="Serilog.Extensions.Hosting" Version="3.0.0" />
     <PackageReference Include="Serilog.Settings.Configuration" Version="3.1.0" />
     <PackageReference Include="Serilog.Sinks.Async" Version="1.4.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="4.1.0" />
-    <PackageReference Include="System.IO.Abstractions" Version="7.0.7" />
+    <PackageReference Include="System.IO.Abstractions" Version="8.0.3" />
   </ItemGroup>
   <ItemGroup>
        <None Remove="bin\**" />
@@ -75,8 +68,5 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Neuralium.Core\src\Neuralium.Core.csproj" />
   </ItemGroup>
-  <PropertyGroup Condition="'$(SolutionDir)' == '' or&#xA;                     '$(SolutionDir)' == '*undefined*'">
-    <SolutionDir>..\..\</SolutionDir>
-  </PropertyGroup>
-  <Import Project="$(SolutionDir)CommonSettings.targets" />
+  <Import Project="$(MSBuildProjectDirectory)/../../CommonSettings.targets" />
 </Project>

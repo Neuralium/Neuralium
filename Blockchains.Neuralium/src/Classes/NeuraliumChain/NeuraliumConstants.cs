@@ -9,6 +9,10 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain {
 		public const int DEFAULT_NEURALIUM_ELECTION_POOL_ACCOUNT_ID = 4;
 		public const int DEFAULT_NEURALIUM_SAFU_ACCOUNT_ID = 5;
 
+		public const int DEFAULT_NEURALIUM_GATED_VERIFIER_ACCOUNT_ID = 6;
+		public const int DEFAULT_NEURALIUM_ESCROW_ACCOUNT_ID = 7;
+		
+		
 		/// <summary>
 		///     the id of the first account that will be publicly assigned.
 		/// </summary>
@@ -22,6 +26,9 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain {
 		public const int TEST_NETWORK_ID = 0x10B62354;
 		public const int DEV_NETWORK_ID = 0x10A61253;
 
+		public const int ELECTION_POOL_ACCREDITATION_CERTIFICATE_ID = 6;
+		public const int ESCROW_ACCREDITATION_CERTIFICATE_ID = 7;
+		public const int GATED_VERIFIER_ACCREDITATION_CERTIFICATE_ID = 8;
 		public const int SAFU_ACCREDITATION_CERTIFICATE_ID = 9;
 	}
 }

@@ -6,5 +6,8 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Wallet.Keys {
 	}
 
 	public class NeuraliumSecretPentaWalletKey : SecretPentaWalletKey, INeuraliumSecretPentaWalletKey {
+		protected override WalletKeyHelper CreateWalletKeyHelper() {
+			return new NeuraliumWalletKeyHelper();
+		}
 	}
 }

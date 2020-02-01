@@ -2,7 +2,7 @@ using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Digests.Channels.Speci
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Digests.Channels.Specialization;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Digests.Channels.Specialization {
-	public interface INeuraliumChainOptionsDigestChannel : IChainOptionsDigestChannel, INeuraliumDigestChannel {
+	public interface INeuraliumChainOptionsDigestChannel : IChainOptionsDigestChannel<NeuraliumChainOptionsDigestChannelCard>, INeuraliumDigestChannel {
 	}
 
 	public class NeuraliumChainOptionsDigestChannel : ChainOptionsDigestChannel<NeuraliumChainOptionsDigestChannelCard>, INeuraliumChainOptionsDigestChannel {

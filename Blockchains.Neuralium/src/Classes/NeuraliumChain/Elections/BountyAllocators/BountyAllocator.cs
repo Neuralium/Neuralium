@@ -10,14 +10,14 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Elections.BountyAllocator
 
 		protected readonly IBountyAllocationMethod BountyAllocationMethod;
 
-		public BountyAllocator(IBountyAllocationMethod BountyAllocationMethod) {
-			this.BountyAllocationMethod = BountyAllocationMethod;
+		public BountyAllocator(IBountyAllocationMethod bountyAllocationMethod) {
+			this.BountyAllocationMethod = bountyAllocationMethod;
 		}
 
 		public BountyAllocator() {
 
 		}
 
-		public abstract void AllocateBounty(INeuraliumFinalElectionResults result, INeuraliumElectionContext electionContext, Dictionary<AccountId, (Enums.ElectedPeerShareTypes peerType, AccountId delegateAccountId)> electedPeers, Dictionary<AccountId, (decimal delegateBountyShare, decimal InfrastructureServiceFees)> delegateAllocations);
+		public abstract void AllocateBounty(INeuraliumFinalElectionResults result, INeuraliumElectionContext electionContext, Dictionary<AccountId, (Enums.MiningTiers electedTier, AccountId delegateAccountId)> electedPeers, Dictionary<AccountId, (decimal delegateBountyShare, decimal InfrastructureServiceFees)> delegateAllocations);
 	}
 }

@@ -28,6 +28,12 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 			return nodeList;
 		}
 
+		protected override void Sanitize() {
+			base.Sanitize();
+			
+			this.tipImplement.Sanitize();
+		}
+
 		public override void JsonDehydrate(JsonDeserializer jsonDeserializer) {
 			base.JsonDehydrate(jsonDeserializer);
 

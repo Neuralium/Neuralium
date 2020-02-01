@@ -24,7 +24,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Managers {
 
 				if(!validCertificate && transaction is ITipTransaction tipTransaction) {
 
-					byte scope = transaction.TransactionId.Scope;
+					ushort scope = transaction.TransactionId.Scope;
 
 					// we allow one transaction for free per second
 					if(scope >= 1) {
@@ -44,6 +44,11 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Managers {
 							if((scope <= 100) && (tip <= 0.001M)) {
 								return this.CreateTrasactionValidationResult(ValidationResult.ValidationResults.Invalid, NeuraliumTransactionValidationErrorCodes.Instance.INSUFFICIENT_TIP);
 							}
+							
+							if((scope > byte.MaxValue) && (tip <= 0.01M)) {
+								return this.CreateTrasactionValidationResult(ValidationResult.ValidationResults.Invalid, NeuraliumTransactionValidationErrorCodes.Instance.INSUFFICIENT_TIP);
+							}
+
 
 							if(tip <= 0.01M) {
 								return this.CreateTrasactionValidationResult(ValidationResult.ValidationResults.Invalid, NeuraliumTransactionValidationErrorCodes.Instance.INSUFFICIENT_TIP);

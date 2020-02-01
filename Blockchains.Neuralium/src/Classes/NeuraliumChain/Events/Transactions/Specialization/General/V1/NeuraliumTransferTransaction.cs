@@ -1,3 +1,7 @@
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
+using Blockchains.Neuralium.Classes.NeuraliumChain.Tools;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions;
 using Neuralia.Blockchains.Core.Cryptography.Trees;
 using Neuralia.Blockchains.Core.General.Types;
@@ -27,6 +31,12 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 			return nodeList;
 		}
 
+		protected override void Sanitize() {
+			base.Sanitize();
+			
+			this.Amount = NeuraliumUtilities.CapAndRound(this.Amount);
+		}
+
 		public override void JsonDehydrate(JsonDeserializer jsonDeserializer) {
 			base.JsonDehydrate(jsonDeserializer);
 
@@ -53,6 +63,8 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 
 			this.Amount.Dehydrate(dehydrator);
 		}
+		
+		public override ImmutableList<AccountId> TargetAccounts => new [] {this.Recipient}.ToImmutableList();
 	}
 
 }

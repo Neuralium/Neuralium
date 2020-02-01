@@ -5,10 +5,9 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Interfaces.AccountSna
 	public interface INeuraliumAccountSnapshotContext : IAccountSnapshotContext {
 	}
 
-	public interface INeuraliumAccountSnapshotContext<ACCOUNT_SNAPSHOT, ACCOUNT_FEATURE_SNAPSHOT, ACCOUNT_FREEZE_SNAPSHOT> : INeuraliumAccountSnapshotContext
-		where ACCOUNT_SNAPSHOT : class, INeuraliumAccountSnapshotEntry<ACCOUNT_FEATURE_SNAPSHOT, ACCOUNT_FREEZE_SNAPSHOT>, new()
-		where ACCOUNT_FEATURE_SNAPSHOT : class, INeuraliumAccountFeatureEntry, new()
-		where ACCOUNT_FREEZE_SNAPSHOT : class, INeuraliumAccountFreezeEntry, new() {
+	public interface INeuraliumAccountSnapshotContext<ACCOUNT_SNAPSHOT, ACCOUNT_ATTRIBUTE_SNAPSHOT> : INeuraliumAccountSnapshotContext
+		where ACCOUNT_SNAPSHOT : class, INeuraliumAccountSnapshotEntry<ACCOUNT_ATTRIBUTE_SNAPSHOT>, new()
+		where ACCOUNT_ATTRIBUTE_SNAPSHOT : class, INeuraliumAccountAttributeEntry, new() {
 	}
 
 }

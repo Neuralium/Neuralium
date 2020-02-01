@@ -3,9 +3,9 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal.Sqlite.AccountS
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Sqlite.AccountSnapshots {
 
-	public interface INeuraliumAccountFeatureSqliteEntry : IAccountFeatureSqliteEntry, INeuraliumAccountFeatureEntry {
+	public interface INeuraliumAccountAttributeSqliteEntry : IAccountAttributeSqliteEntry, INeuraliumAccountAttributeEntry {
 	}
 
-	public class NeuraliumAccountFeatureSqliteEntry : AccountFeatureSqliteEntry, INeuraliumAccountFeatureSqliteEntry {
+	public class NeuraliumAccountAttributeSqliteEntry : AccountAttributeSqliteEntry, INeuraliumAccountAttributeSqliteEntry {
 	}
 }

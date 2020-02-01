@@ -18,9 +18,19 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specializat
 			this.neuraliumElectionContextImplementation = new NeuraliumElectionContextImplementation();
 		}
 
-		public Amount Bounty {
-			get => this.neuraliumElectionContextImplementation.Bounty;
-			set => this.neuraliumElectionContextImplementation.Bounty = value;
+		public Amount FirstTierBounty {
+			get => this.neuraliumElectionContextImplementation.FirstTierBounty;
+			set => this.neuraliumElectionContextImplementation.FirstTierBounty = value;
+		}
+		
+		public Amount SecondTierBounty {
+			get => this.neuraliumElectionContextImplementation.SecondTierBounty;
+			set => this.neuraliumElectionContextImplementation.SecondTierBounty = value;
+		}
+		
+		public Amount ThirdTierBounty {
+			get => this.neuraliumElectionContextImplementation.ThirdTierBounty;
+			set => this.neuraliumElectionContextImplementation.ThirdTierBounty = value;
 		}
 
 		public override void Rehydrate(IDataRehydrator rehydrator, IElectionContextRehydrationFactory electionContextRehydrationFactory) {

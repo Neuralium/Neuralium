@@ -18,7 +18,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Creation.Transa
 		private readonly TransactionId guid;
 		private readonly SafeArrayHandle hash = SafeArrayHandle.Create();
 
-		public CreateNeuraliumRefillTransactionWorkflow(Guid accountUuid, string note, INeuraliumCentralCoordinator centralCoordinator, CorrelationContext correlationContext) : base(centralCoordinator, note, correlationContext) {
+		public CreateNeuraliumRefillTransactionWorkflow(Guid accountUuid, byte expiration, string note, INeuraliumCentralCoordinator centralCoordinator, CorrelationContext correlationContext) : base(centralCoordinator, expiration, note, correlationContext) {
 			this.accountUuid = accountUuid;
 		}
 

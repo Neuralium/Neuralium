@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.General.Structures;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions;
@@ -53,7 +54,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 		}
 
 		protected override ComponentVersion<TransactionType> SetIdentity() {
-			return (TOKEN_MULTI_TRANSFER: NeuraliumTransactionTypes.Instance.NEURALIUM_SAFU_TRANSFER, 1, 0);
+			return (NeuraliumTransactionTypes.Instance.NEURALIUM_SAFU_TRANSFER, 1, 0);
 		}
 
 		protected override void RehydrateHeader(IDataRehydrator rehydrator) {
@@ -92,5 +93,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 
 			AccountIdGroupSerializer.Dehydrate(this.Recipients.ToDictionary(e => e.Recipient, e => e), dehydrator, true, parameters);
 		}
+
+		public override ImmutableList<AccountId> TargetAccounts => this.Recipients.Select(e => e.Recipient).ToImmutableList();
 	}
 }

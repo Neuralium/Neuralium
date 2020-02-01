@@ -1,6 +1,7 @@
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Serialization.Blockchain.Utils;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Serialization;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Identifiers;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Specialization.General;
 using Neuralia.Blockchains.Core.General.Versions;
 using Neuralia.Blockchains.Tools.Serialization;
@@ -9,8 +10,12 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 
 	public class NeuraliumDebugTransaction : DebugTransaction, INeuraliumTransaction {
 
-		protected override ComponentVersion<TransactionType> SetIdentity() {
-			return (TransactionTypes.Instance.DEBUG, 1, 0);
+		public NeuraliumDebugTransaction() {
+
+		}
+		
+		public NeuraliumDebugTransaction(TransactionId trxId) {
+			this.TransactionId = trxId;
 		}
 
 		protected override void RehydrateContents(ChannelsEntries<IDataRehydrator> dataChannels, ITransactionRehydrationFactory rehydrationFactory) {
@@ -22,5 +27,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 			base.DehydrateContents(dataChannels);
 
 		}
+		
+		
 	}
 }

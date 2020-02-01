@@ -8,7 +8,8 @@
     <LangVersion>latest</LangVersion>
     <RootNamespace>Blockchains.Neuralium</RootNamespace>
     <AssemblyName>Blockchains.Neuralium</AssemblyName>
-    <TargetFrameworks>netstandard2.0;netcoreapp3.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.1;netcoreapp3.1</TargetFrameworks>
+
 
   </PropertyGroup>
   <PropertyGroup>
@@ -32,10 +33,7 @@
     <PackageReference Include="Neuralia.STUN" Version="1.0.0" />
     <PackageReference Include="Neuralia.Data.HashFunction.xxHash" Version="1.0.0" />
   </ItemGroup>
-    <PropertyGroup Condition="'$(SolutionDir)' == '' or&#xA;                     '$(SolutionDir)' == '*undefined*'">
-    <SolutionDir>..\..\</SolutionDir>
-  </PropertyGroup>
-  <Import Project="$(SolutionDir)CommonSettings.targets" />
+    <Import Project="$(MSBuildProjectDirectory)/../../CommonSettings.targets" />
 
 
 </Project>

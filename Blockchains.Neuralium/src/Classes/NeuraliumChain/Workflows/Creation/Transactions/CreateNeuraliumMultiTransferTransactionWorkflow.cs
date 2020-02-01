@@ -24,7 +24,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Creation.Transa
 		private readonly long targetAccountId;
 		private readonly Amount tip;
 
-		public CreateNeuraliumMultiTransferTransactionWorkflow(Guid accountUuid, List<RecipientSet> recipients, Amount tip, string note, INeuraliumCentralCoordinator centralCoordinator, CorrelationContext correlationContext) : base(centralCoordinator, note, correlationContext) {
+		public CreateNeuraliumMultiTransferTransactionWorkflow(Guid accountUuid, List<RecipientSet> recipients, Amount tip, byte expiration, string note, INeuraliumCentralCoordinator centralCoordinator, CorrelationContext correlationContext) : base(centralCoordinator, expiration, note, correlationContext) {
 			this.accountUuid = accountUuid;
 			this.recipients = recipients;
 			this.tip = tip;

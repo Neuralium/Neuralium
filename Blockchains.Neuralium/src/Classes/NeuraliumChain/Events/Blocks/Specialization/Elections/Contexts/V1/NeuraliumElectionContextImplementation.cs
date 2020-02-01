@@ -9,7 +9,9 @@ using Neuralia.Blockchains.Tools.Serialization;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specialization.Elections.Contexts.V1 {
 	public interface INeuraliumElectionContextImplementation {
-		Amount Bounty { get; set; }
+		Amount FirstTierBounty { get; set; }
+		Amount SecondTierBounty { get; set; }
+		Amount ThirdTierBounty { get; set; }
 
 		bool MaintenanceServiceFeesEnabled { get; set; }
 		SimplePercentage MaintenanceServiceFees { get; set; }
@@ -21,9 +23,19 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specializat
 	public class NeuraliumElectionContextImplementation : INeuraliumElectionContextImplementation {
 
 		/// <summary>
-		///     The bounty we offer to the miners for participating in this election
+		///     The bounty we offer to the miners for participating in this election. This is the first tier
 		/// </summary>
-		public Amount Bounty { get; set; } = new Amount();
+		public Amount FirstTierBounty { get; set; } = new Amount();
+		
+		/// <summary>
+		///     The bounty we offer to the miners for participating in this election. This is the second tier
+		/// </summary>
+		public Amount SecondTierBounty { get; set; } = new Amount();
+		
+		/// <summary>
+		///     The bounty we offer to the miners for participating in this election. This is the third tier
+		/// </summary>
+		public Amount ThirdTierBounty { get; set; } = new Amount();
 
 		/// <summary>
 		///     are network service fees enabled?
@@ -49,7 +61,10 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specializat
 		public HashNodeList GetStructuresArray() {
 			HashNodeList nodeList = new HashNodeList();
 
-			nodeList.Add(this.Bounty);
+			nodeList.Add(this.FirstTierBounty);
+			nodeList.Add(this.SecondTierBounty);
+			nodeList.Add(this.ThirdTierBounty);
+			
 			nodeList.Add(this.MaintenanceServiceFeesEnabled);
 			nodeList.Add(this.MaintenanceServiceFees);
 
@@ -61,7 +76,10 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specializat
 
 		public void Rehydrate(IDataRehydrator rehydrator, IElectionContextRehydrationFactory electionContextRehydrationFactory) {
 
-			this.Bounty.Rehydrate(rehydrator);
+			this.FirstTierBounty.Rehydrate(rehydrator);
+			this.SecondTierBounty.Rehydrate(rehydrator);
+			this.ThirdTierBounty.Rehydrate(rehydrator);
+			
 			this.MaintenanceServiceFeesEnabled = rehydrator.ReadBool();
 			this.MaintenanceServiceFees = rehydrator.ReadRehydratable<SimplePercentage>();
 
@@ -71,7 +89,9 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specializat
 		
 		public void JsonDehydrate(JsonDeserializer jsonDeserializer) {
 
-			jsonDeserializer.SetProperty("Bounty", this.Bounty);
+			jsonDeserializer.SetProperty("FirstTierBounty", this.FirstTierBounty);
+			jsonDeserializer.SetProperty("SecondTierBounty", this.SecondTierBounty);
+			jsonDeserializer.SetProperty("ThirdTierBounty", this.ThirdTierBounty);
 			
 			jsonDeserializer.SetProperty("MaintenanceServiceFeesEnabled", this.MaintenanceServiceFeesEnabled);
 			jsonDeserializer.SetProperty("MaintenanceServiceFees", this.MaintenanceServiceFees?.Value??0);

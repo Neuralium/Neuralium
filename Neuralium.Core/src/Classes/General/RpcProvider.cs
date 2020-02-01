@@ -40,10 +40,10 @@ namespace Neuralium.Core.Classes.General {
 
 		Task EnterWalletPassphrase(int correlationId, ushort chainType, int keyCorrelationCode, int attempt);
 		Task EnterKeysPassphrase(int correlationId, ushort chainType, int keyCorrelationCode, Guid accountID, string keyname, int attempt);
-		Task CopyWalletKeyFile(int correlationId, ushort chainType, int keyCorrelationCode, Guid accountID, string keyname, int attempt);
+		Task RequestCopyWalletKeyFile(int correlationId, ushort chainType, int keyCorrelationCode, Guid accountID, string keyname, int attempt);
 
 		Task AccountTotalUpdated(string accountId, object total);
-		Task RequestCopyWallet(byte chainType, string message);
+		Task RequestCopyWallet(int correlationId, ushort chainType);
 		Task PeerTotalUpdated(int total);
 
 		Task BlockchainSyncStatusChanged(ushort chainType, Enums.ChainSyncState syncStatus);
@@ -68,6 +68,7 @@ namespace Neuralium.Core.Classes.General {
 
 		Task AccountPublicationStarted(int correlationId);
 		Task AccountPublicationEnded(int correlationId);
+		Task RequireNodeUpdate(ushort chainType, string chainName);
 
 		Task AccountPublicationPOWNonceIteration(int correlationId, int nonce, int difficulty);
 		Task AccountPublicationPOWNonceFound(int correlationId, int nonce, int difficulty, List<int> powSolutions);
@@ -94,15 +95,17 @@ namespace Neuralium.Core.Classes.General {
 		Task TransactionError(int correlationId, string transactionId, List<ushort> errorCodes);
 
 		Task MiningStarted(ushort chainType);
-		Task MiningEnded(ushort chainType);
-		Task MiningElected(ushort chainType);
-		Task MiningPrimeElected(ushort chainType);
-		
+		Task MiningEnded(ushort chainType, int status);
+		Task MiningElected(ushort chainType, long electionBlockId, byte level);
+		Task MiningPrimeElected(ushort chainType, long electionBlockId, byte level);
+		Task MiningPrimeElectedMissed(ushort chainType, long publicationBlockId, long electionBlockId, byte level);
+
 		Task NeuraliumMiningBountyAllocated(ushort chainType, long blockId, decimal bounty, decimal transactionTip, string delegateAccountId);
-		Task NeuraliumMiningPrimeElected(ushort chainType, long blockId, decimal bounty, decimal transactionTip, string delegateAccountId);
-		
+		Task NeuraliumMiningPrimeElected(ushort chainType, long electionBlockId, decimal bounty, decimal transactionTip, string delegateAccountId, byte level);
 
 		Task BlockInserted(ushort chainType, long blockId, DateTime timestamp, string hash, long publicBlockId, int lifespan);
+		Task BlockInterpreted(ushort chainType, long blockId);
+
 		Task DigestInserted(ushort chainType, int digestId, DateTime timestamp, string hash);
 
 		Task Message(string message, DateTime timestamp, string level, object[] properties);
@@ -117,7 +120,6 @@ namespace Neuralium.Core.Classes.General {
 	}
 
 	public interface IRpcClientEventsExtended : IRpcClientEvents {
-		Task RequestCopyWallet(ushort chainType, string message);
 	}
 
 	public interface IRpcProvider : IRpcServerMethods, IRpcClientMethods {
@@ -127,6 +129,7 @@ namespace Neuralium.Core.Classes.General {
 		void ShutdownCompleted();
 		void ShutdownStarted();
 		void LogMessage(string message, DateTime timestamp, string level, object[] properties);
+		bool ConsoleMessagesEnabled { get; }
 	}
 
 	public interface IRpcProvider<RPC_HUB, RCP_CLIENT> : IRpcProvider
@@ -145,7 +148,7 @@ namespace Neuralium.Core.Classes.General {
 		private readonly object locker = new object();
 		private readonly Dictionary<int, LongRunningEvents> longRunningEvents = new Dictionary<int, LongRunningEvents>();
 
-		private bool consoleMessagesEnabled = false;
+		public bool ConsoleMessagesEnabled { get; private set; } = false;
 
 		//private Timer maintenanceTimer;
 
@@ -160,9 +163,9 @@ namespace Neuralium.Core.Classes.General {
 		public Task<bool> ToggleServerMessages(bool enable) {
 
 			return new TaskFactory().StartNew(() => {
-				this.consoleMessagesEnabled = enable;
+				this.ConsoleMessagesEnabled = enable;
 
-				return this.consoleMessagesEnabled;
+				return this.ConsoleMessagesEnabled;
 			});
 		}
 
@@ -177,7 +180,7 @@ namespace Neuralium.Core.Classes.General {
 			systemMode = 2;
 #endif
 
-				return Task.FromResult((object) new SystemInfoAPI() {Version = GlobalSettings.SoftwareVersion.ToString(), Mode = systemMode, ConsoleEnabled = this.consoleMessagesEnabled});
+				return Task.FromResult((object) new SystemInfoAPI() {Version = GlobalSettings.SoftwareVersion.ToString(), Mode = systemMode, ConsoleEnabled = this.ConsoleMessagesEnabled});
 			} catch(Exception ex) {
 				Log.Error(ex, "Failed to Query system version");
 
@@ -269,183 +272,162 @@ namespace Neuralium.Core.Classes.General {
 
 			(Task<Task> task, CorrelationContext correlationContext) result;
 			var extraParameters = parameters?.ToArray() ?? new object[0];
-			
-			if(!correlationContext.HasValue) {
-				// this is an instant call
-				if(BlockchainSystemEventTypes.Instance.IsValueBaseset(eventType)) {
-					if(eventType == BlockchainSystemEventTypes.Instance.WalletSyncStarted) {
-						// alert the client of the event
-						return this.HubContext?.Clients?.All?.WalletSyncStarted(chainType.Value, (long) extraParameters[0], (long) extraParameters[1], (decimal) extraParameters[2]);
 
-					} else if(eventType == BlockchainSystemEventTypes.Instance.WalletSyncEnded) {
 
-						// alert the client of the event
-						return this.HubContext?.Clients?.All?.WalletSyncEnded(chainType.Value, (long) extraParameters[0], (long) extraParameters[1], (decimal) extraParameters[2]);
+			// this is an instant call
+			if(BlockchainSystemEventTypes.Instance.IsValueBaseset(eventType)) {
+				if(eventType == BlockchainSystemEventTypes.Instance.WalletSyncStarted) {
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.WalletSyncStarted(chainType.Value, (long) extraParameters[0], (long) extraParameters[1], (decimal) extraParameters[2]);
 
-					} else if(eventType == BlockchainSystemEventTypes.Instance.WalletSyncUpdate) {
+				} else if(eventType == BlockchainSystemEventTypes.Instance.WalletSyncEnded) {
 
-						// alert the client of the event
-						return this.HubContext?.Clients?.All?.WalletSyncUpdate(chainType.Value, (long) extraParameters[0], (long) extraParameters[1], (decimal) extraParameters[2], (string) extraParameters[3]);
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.WalletSyncEnded(chainType.Value, (long) extraParameters[0], (long) extraParameters[1], (decimal) extraParameters[2]);
 
-					} else if(eventType == BlockchainSystemEventTypes.Instance.BlockchainSyncStarted) {
+				} else if(eventType == BlockchainSystemEventTypes.Instance.WalletSyncUpdate) {
 
-						// alert the client of the event
-						return this.HubContext?.Clients?.All?.BlockchainSyncStarted(chainType.Value, (long) extraParameters[0], (long) extraParameters[1], (decimal) extraParameters[2]);
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.WalletSyncUpdate(chainType.Value, (long) extraParameters[0], (long) extraParameters[1], (decimal) extraParameters[2], (string) extraParameters[3]);
 
-					} else if(eventType == BlockchainSystemEventTypes.Instance.BlockchainSyncEnded) {
+				} else if(eventType == BlockchainSystemEventTypes.Instance.BlockchainSyncStarted) {
 
-						// alert the client of the event
-						return this.HubContext?.Clients?.All?.BlockchainSyncEnded(chainType.Value, (long) extraParameters[0], (long) extraParameters[1], (decimal) extraParameters[2]);
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.BlockchainSyncStarted(chainType.Value, (long) extraParameters[0], (long) extraParameters[1], (decimal) extraParameters[2]);
 
-					} else if(eventType == BlockchainSystemEventTypes.Instance.BlockchainSyncUpdate) {
+				} else if(eventType == BlockchainSystemEventTypes.Instance.BlockchainSyncEnded) {
 
-						// alert the client of the event
-						return this.HubContext?.Clients?.All?.BlockchainSyncUpdate(chainType.Value, (long) extraParameters[0], (long) extraParameters[1], (decimal) extraParameters[2], (string) extraParameters[3]);
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.BlockchainSyncEnded(chainType.Value, (long) extraParameters[0], (long) extraParameters[1], (decimal) extraParameters[2]);
 
-					} else if(eventType == BlockchainSystemEventTypes.Instance.BlockInserted) {
+				} else if(eventType == BlockchainSystemEventTypes.Instance.BlockchainSyncUpdate) {
 
-						// alert the client of the event
-						return this.HubContext?.Clients?.All?.BlockInserted(chainType.Value, (long) extraParameters[0], (DateTime) extraParameters[1], (string) extraParameters[2], (long) extraParameters[3], (int) extraParameters[4]);
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.BlockchainSyncUpdate(chainType.Value, (long) extraParameters[0], (long) extraParameters[1], (decimal) extraParameters[2], (string) extraParameters[3]);
 
-					} else if(eventType == BlockchainSystemEventTypes.Instance.DigestInserted) {
+				} else if(eventType == BlockchainSystemEventTypes.Instance.BlockInserted) {
 
-						// alert the client of the event
-						return this.HubContext?.Clients?.All?.DigestInserted(chainType.Value, (int) extraParameters[0], (DateTime) extraParameters[1], (string) extraParameters[2]);
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.BlockInserted(chainType.Value, (long) extraParameters[0], (DateTime) extraParameters[1], (string) extraParameters[2], (long) extraParameters[3], (int) extraParameters[4]);
 
-					} else if(eventType == BlockchainSystemEventTypes.Instance.Alert) {
+				} else if(eventType == BlockchainSystemEventTypes.Instance.BlockInterpreted) {
 
-						// alert the client of the event
-						return this.HubContext?.Clients?.All?.Alert((int) extraParameters[0]);
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.BlockInterpreted(chainType.Value, (long) extraParameters[0]);
 
-					} else if(eventType == BlockchainSystemEventTypes.Instance.ConnectableStatusChanged) {
+				} else if(eventType == BlockchainSystemEventTypes.Instance.DigestInserted) {
 
-						// alert the client of the event
-						return this.HubContext?.Clients?.All?.ConnectableStatusChanged((bool) extraParameters[0]);
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.DigestInserted(chainType.Value, (int) extraParameters[0], (DateTime) extraParameters[1], (string) extraParameters[2]);
 
-					} else if(eventType == BlockchainSystemEventTypes.Instance.TransactionReceived) {
+				} else if(eventType == BlockchainSystemEventTypes.Instance.Alert) {
 
-						// alert the client of the event
-						return this.HubContext?.Clients?.All?.TransactionReceived((string) extraParameters[0]);
-					}else if(eventType == BlockchainSystemEventTypes.Instance.MiningStarted) {
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.Alert((int) extraParameters[0]);
 
-						// alert the client of the event
-						return this.HubContext?.Clients?.All?.MiningStarted(chainType.Value);
-					}else if(eventType == BlockchainSystemEventTypes.Instance.MiningEnded) {
+				} else if(eventType == BlockchainSystemEventTypes.Instance.ConnectableStatusChanged) {
 
-						// alert the client of the event
-						return this.HubContext?.Clients?.All?.MiningEnded(chainType.Value);
-					}else if(eventType == BlockchainSystemEventTypes.Instance.MiningElected) {
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.ConnectableStatusChanged((bool) extraParameters[0]);
 
-						// alert the client of the event
-						return this.HubContext?.Clients?.All?.MiningElected(chainType.Value);
-					}else if(eventType == BlockchainSystemEventTypes.Instance.MiningPrimeElected) {
+				} else if(eventType == BlockchainSystemEventTypes.Instance.TransactionReceived) {
 
-						// alert the client of the event
-						return this.HubContext?.Clients?.All?.MiningPrimeElected(chainType.Value);
-					}else if(eventType == BlockchainSystemEventTypes.Instance.MiningStatusChanged) {
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.TransactionReceived((string) extraParameters[0]);
+				} else if(eventType == BlockchainSystemEventTypes.Instance.MiningStarted) {
 
-						// alert the client of the event
-						return this.HubContext?.Clients?.All?.MiningStatusChanged(chainType.Value, (bool) extraParameters[0]);
-					}else {
-						//TODO: what to do?
-						Log.Debug($"Event {eventType} was not handled");
-					}
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.MiningStarted(chainType.Value);
+				} else if(eventType == BlockchainSystemEventTypes.Instance.MiningEnded) {
 
-				} else if(BlockchainSystemEventTypes.Instance.IsValueChildset(eventType)) {
-					if(eventType == NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.NeuraliumMiningPrimeElected) {
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.MiningEnded(chainType.Value, (int) extraParameters[0]);
+				} else if(eventType == BlockchainSystemEventTypes.Instance.MiningElected) {
 
-						// alert the client of the event
-						return this.HubContext?.Clients?.All?.NeuraliumMiningPrimeElected(chainType.Value, (long) extraParameters[0], (decimal) extraParameters[1], (decimal) extraParameters[2], (string) extraParameters[3]);
-					} else if(eventType == NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.NeuraliumMiningBountyAllocated) {
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.MiningElected(chainType.Value, (long) extraParameters[0], (byte) extraParameters[1]);
+				} else if(eventType == BlockchainSystemEventTypes.Instance.MiningPrimeElected) {
 
-						// alert the client of the event
-						return this.HubContext?.Clients?.All?.NeuraliumMiningBountyAllocated(chainType.Value, (long) extraParameters[0], (decimal) extraParameters[1], (decimal) extraParameters[2], (string) extraParameters[3]);
-					}if(eventType == NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.AccountTotalUpdated) {
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.MiningPrimeElected(chainType.Value, (long) extraParameters[0], (byte) extraParameters[1]);
+				} else if(eventType == BlockchainSystemEventTypes.Instance.MiningPrimeElectedMissed) {
+
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.MiningPrimeElectedMissed(chainType.Value, (long) extraParameters[0], (long) extraParameters[1], (byte) extraParameters[2]);
+				} else if(eventType == BlockchainSystemEventTypes.Instance.MiningStatusChanged) {
+
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.MiningStatusChanged(chainType.Value, (bool) extraParameters[0]);
+				} else if(eventType == BlockchainSystemEventTypes.Instance.RequestWalletPassphrase) {
+
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.EnterWalletPassphrase(correlationContext?.CorrelationId??0, chainType.Value, (int) extraParameters[0], (int) extraParameters[1]);
 						
-						string accountId = this.GetParameterField<string>("AccountId", extraParameters[0]);
-						object total = this.GetParameterField<object>("Total", extraParameters[0]);
+				} else if(eventType == BlockchainSystemEventTypes.Instance.RequestKeyPassphrase) {
 
-						return this.HubContext?.Clients?.All?.AccountTotalUpdated(accountId, total);
+						// alert the client of the event
+						return this.HubContext?.Clients?.All?.EnterKeysPassphrase(correlationContext?.CorrelationId??0, chainType.Value, (int) extraParameters[0], (Guid) extraParameters[1], extraParameters[2].ToString(), (int) extraParameters[3]);
+					
+				}else if(eventType == BlockchainSystemEventTypes.Instance.RequestCopyWallet) {
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.RequestCopyWallet(correlationContext?.CorrelationId??0, chainType.Value);
+					
+				} else if(eventType == BlockchainSystemEventTypes.Instance.RequestCopyKeyFile) {
+						// alert the client of the event
+						return this.HubContext?.Clients?.All?.RequestCopyWalletKeyFile(correlationContext?.CorrelationId??0, chainType.Value, (int) extraParameters[0], (Guid) extraParameters[1], extraParameters[2].ToString(), (int) extraParameters[3]);
+					
+				} else if(eventType == BlockchainSystemEventTypes.Instance.AccountPublicationPOWNonceIteration) {
 
-					} 
-					else {
-						Log.Debug($"Event {eventType} was not handled");
-					}
+						// alert the client of the event
+						return this.HubContext?.Clients?.All?.AccountPublicationPOWNonceIteration(correlationContext?.CorrelationId??0, (int) extraParameters[0], (int) extraParameters[1]);
+					
+				} else if(eventType == BlockchainSystemEventTypes.Instance.AccountPublicationPOWNonceFound) {
+
+						// alert the client of the event
+						return this.HubContext?.Clients?.All?.AccountPublicationPOWNonceFound(correlationContext?.CorrelationId??0, (int) extraParameters[0], (int) extraParameters[1], (List<int>) extraParameters[2]);
+					
+				} else if(eventType == BlockchainSystemEventTypes.Instance.TransactionError) {
+
+						// alert the client of the event
+						return this.HubContext?.Clients?.All?.TransactionError(correlationContext?.CorrelationId??0, (string) extraParameters[0], (List<ushort>) extraParameters[1]);
+					
+				} else if(eventType == BlockchainSystemEventTypes.Instance.TransactionSent) {
+
+						// alert the client of the event
+						return this.HubContext?.Clients?.All?.TransactionSent(correlationContext?.CorrelationId??0, (string) extraParameters[0]);
+					
+				} else if(eventType == BlockchainSystemEventTypes.Instance.KeyGenerationStarted) {
+
+						// alert the client of the event
+						return this.HubContext?.Clients?.All?.KeyGenerationStarted(correlationContext?.CorrelationId??0, (string) extraParameters[0], (int) extraParameters[1], (int) extraParameters[2]);
+					
+				} else if(eventType == BlockchainSystemEventTypes.Instance.KeyGenerationEnded) {
+
+						// alert the client of the event
+						return this.HubContext?.Clients?.All?.KeyGenerationEnded(correlationContext?.CorrelationId??0, (string) extraParameters[0], (int) extraParameters[1], (int) extraParameters[2]);
+					
+				} else if(eventType == BlockchainSystemEventTypes.Instance.KeyGenerationPercentageUpdate) {
+						// alert the client of the event
+						return this.HubContext?.Clients?.All?.KeyGenerationPercentageUpdate(correlationContext?.CorrelationId??0, (string) extraParameters[0], (int) extraParameters[1]);
+
+					
+				} else if(eventType == BlockchainSystemEventTypes.Instance.AccountPublicationEnded) {
+
+						// alert the client of the event
+						//await this.HubContext?.Clients?.All?.AccountPublicationCompleted(sessionCorrelationId, (Guid)parameters[0], (bool)parameters[1], (long)parameters[2]);
+						return this.HubContext?.Clients?.All?.AccountPublicationEnded(correlationContext?.CorrelationId??0);
+					
+				} else if(eventType == BlockchainSystemEventTypes.Instance.RequireNodeUpdate) {
+
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.RequireNodeUpdate((ushort) extraParameters[0], (string) extraParameters[1]);
+					
 				}
+				else {
+					Log.Debug($"Event {eventType.Value} was not handled");
 
-			} else {
-				Func<CorrelationContext, LongRunningEvents, Task> action = null;
-				if(BlockchainSystemEventTypes.Instance.IsValueBaseset(eventType)) {
-					if(eventType == BlockchainSystemEventTypes.Instance.RequestWalletPassphrase) {
-						action = (sessionCorrelationContext, resetEvent) => {
-
-							// alert the client of the event
-							return this.HubContext?.Clients?.All?.EnterWalletPassphrase(sessionCorrelationContext.CorrelationId, chainType.Value, (int) extraParameters[0], (int) extraParameters[1]);
-						};
-					} else if(eventType == BlockchainSystemEventTypes.Instance.RequestKeyPassphrase) {
-						action = (sessionCorrelationContext, resetEvent) => {
-
-							// alert the client of the event
-							return this.HubContext?.Clients?.All?.EnterKeysPassphrase(sessionCorrelationContext.CorrelationId, chainType.Value, (int) extraParameters[0], (Guid) extraParameters[1], extraParameters[2].ToString(), (int) extraParameters[3]);
-						};
-					} else if(eventType == BlockchainSystemEventTypes.Instance.RequestCopyKeyFile) {
-						action = (sessionCorrelationContext, resetEvent) => {
-
-							// alert the client of the event
-							return this.HubContext?.Clients?.All?.CopyWalletKeyFile(sessionCorrelationContext.CorrelationId, chainType.Value, (int) extraParameters[0], (Guid) extraParameters[1], extraParameters[2].ToString(), (int) extraParameters[3]);
-						};
-					} else if(eventType == BlockchainSystemEventTypes.Instance.AccountPublicationPOWNonceIteration) {
-						action = (sessionCorrelationId, resetEvent) => {
-
-							// alert the client of the event
-							return this.HubContext?.Clients?.All?.AccountPublicationPOWNonceIteration(sessionCorrelationId.CorrelationId, (int) extraParameters[0], (int) extraParameters[1]);
-						};
-					} else if(eventType == BlockchainSystemEventTypes.Instance.AccountPublicationPOWNonceFound) {
-						action = (sessionCorrelationId, resetEvent) => {
-
-							// alert the client of the event
-							return this.HubContext?.Clients?.All?.AccountPublicationPOWNonceFound(sessionCorrelationId.CorrelationId, (int) extraParameters[0], (int) extraParameters[1], (List<int>) extraParameters[2]);
-						};
-					} else if(eventType == BlockchainSystemEventTypes.Instance.TransactionError) {
-						action = (sessionCorrelationId, resetEvent) => {
-
-							// alert the client of the event
-							return this.HubContext?.Clients?.All?.TransactionError(sessionCorrelationId.CorrelationId, (string) extraParameters[0], (List<ushort>) extraParameters[1]);
-						};
-					} else if(eventType == BlockchainSystemEventTypes.Instance.TransactionSent) {
-						action = (sessionCorrelationId, resetEvent) => {
-
-							// alert the client of the event
-							return this.HubContext?.Clients?.All?.TransactionSent(sessionCorrelationId.CorrelationId, (string) extraParameters[0]);
-						};
-					}  else if(eventType == BlockchainSystemEventTypes.Instance.KeyGenerationStarted) {
-						action = (sessionCorrelationId, resetEvent) => {
-
-							// alert the client of the event
-							return this.HubContext?.Clients?.All?.KeyGenerationStarted(sessionCorrelationId.CorrelationId, (string) extraParameters[0], (int) extraParameters[1], (int) extraParameters[2]);
-						};
-					} else if(eventType == BlockchainSystemEventTypes.Instance.KeyGenerationEnded) {
-						action = (sessionCorrelationId, resetEvent) => {
-
-							// alert the client of the event
-							return this.HubContext?.Clients?.All?.KeyGenerationEnded(sessionCorrelationId.CorrelationId, (string) extraParameters[0], (int) extraParameters[1], (int) extraParameters[2]);
-						};
-					} else if(eventType == BlockchainSystemEventTypes.Instance.KeyGenerationPercentageUpdate) {
-						action = (sessionCorrelationId, resetEvent) => {
-							// alert the client of the event
-							return this.HubContext?.Clients?.All?.KeyGenerationPercentageUpdate(sessionCorrelationId.CorrelationId, (string) extraParameters[0], (int) extraParameters[1]);
-
-						};
-					} else if(eventType == BlockchainSystemEventTypes.Instance.AccountPublicationEnded) {
-						action = (sessionCorrelationId, resetEvent) => {
-
-							// alert the client of the event
-							//await this.HubContext?.Clients?.All?.AccountPublicationCompleted(sessionCorrelationId, (Guid)parameters[0], (bool)parameters[1], (long)parameters[2]);
-							return this.HubContext?.Clients?.All?.AccountPublicationEnded(sessionCorrelationId.CorrelationId);
-						};
-					} else {
-
-						action = (sessionCorrelationId, resetEvent) => {
+					if(correlationContext.HasValue) {
+						//action = (sessionCorrelationId, resetEvent) => {
 
 							object parameter = null;
 
@@ -454,15 +436,34 @@ namespace Neuralium.Core.Classes.General {
 							}
 
 							// alert the client of the event
-							return this.HubContext?.Clients?.All?.LongRunningStatusUpdate(sessionCorrelationId.CorrelationId, eventType.Value, 1, parameter);
-						};
+							return this.HubContext?.Clients?.All?.LongRunningStatusUpdate(correlationContext?.CorrelationId??0, eventType.Value, 1, parameter);
+						//};
 					}
-				} else if(BlockchainSystemEventTypes.Instance.IsValueChildset(eventType)) {
-					if(false) {
-						
-					}
-					else {
-						action = (sessionCorrelationId, resetEvent) => {
+				}
+
+			} else if(BlockchainSystemEventTypes.Instance.IsValueChildset(eventType)) {
+				if(eventType == NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.NeuraliumMiningPrimeElected) {
+
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.NeuraliumMiningPrimeElected(chainType.Value, (long) extraParameters[0], (decimal) extraParameters[1], (decimal) extraParameters[2], (string) extraParameters[3], (byte) extraParameters[4]);
+				} else if(eventType == NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.NeuraliumMiningBountyAllocated) {
+
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.NeuraliumMiningBountyAllocated(chainType.Value, (long) extraParameters[0], (decimal) extraParameters[1], (decimal) extraParameters[2], (string) extraParameters[3]);
+				}
+
+				if(eventType == NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.AccountTotalUpdated) {
+
+					string accountId = this.GetParameterField<string>("AccountId", extraParameters[0]);
+					object total = this.GetParameterField<object>("Total", extraParameters[0]);
+
+					return this.HubContext?.Clients?.All?.AccountTotalUpdated(accountId, total);
+
+				} else {
+					Log.Debug($"Event {eventType.Value} was not handled");
+
+					if(correlationContext.HasValue) {
+					//	action = (sessionCorrelationId, resetEvent) => {
 
 							object parameter = null;
 
@@ -471,28 +472,31 @@ namespace Neuralium.Core.Classes.General {
 							}
 
 							// alert the client of the event
-							this.HubContext?.Clients?.All?.LongRunningStatusUpdate(sessionCorrelationId.CorrelationId, eventType.Value, 2, parameter);
+							this.HubContext?.Clients?.All?.LongRunningStatusUpdate(correlationContext?.CorrelationId??0, eventType.Value, 2, parameter);
 
 							return default;
-						};
+						//};
 					}
-				}
-
-				if(correlationContext.Value.IsNew) {
-					// if we had no previous correlation id, then its an uncorrelated event, so we give it one
-					result = this.CreateServerLongRunningEvent(action);
-
-					return result.task;
-				} else {
-					LongRunningEvents autoEvent = null;
-
-					lock(this.locker) {
-						autoEvent = this.longRunningEvents.ContainsKey(correlationContext.Value.CorrelationId) ? this.longRunningEvents[correlationContext.Value.CorrelationId] : null;
-					}
-
-					return action?.Invoke(correlationContext.Value, autoEvent);
 				}
 			}
+
+			// if(action != null) {
+			//
+			// 	if(!correlationContext.HasValue || correlationContext.Value.IsNew) {
+			// 		// if we had no previous correlation id, then its an uncorrelated event, so we give it one
+			// 		result = this.CreateServerLongRunningEvent(action);
+			//
+			// 		return result.task;
+			// 	} else {
+			// 		LongRunningEvents autoEvent = null;
+			//
+			// 		lock(this.locker) {
+			// 			autoEvent = this.longRunningEvents.ContainsKey(correlationContext.Value.CorrelationId) ? this.longRunningEvents[correlationContext.Value.CorrelationId] : null;
+			// 		}
+			//
+			// 		return action?.Invoke(correlationContext.Value, autoEvent);
+			// 	}
+			// }
 
 			return Task.FromResult(true);
 		}
@@ -510,7 +514,7 @@ namespace Neuralium.Core.Classes.General {
 		}
 
 		public void LogMessage(string message, DateTime timestamp, string level, object[] properties) {
-			if(this.consoleMessagesEnabled) {
+			if(this.ConsoleMessagesEnabled) {
 				this.HubContext?.Clients?.All?.Message(message, timestamp, level, properties);
 			}
 		}
@@ -904,6 +908,20 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
+		public async Task<List<object>> QueryMiningHistory(ushort chainType, int page, int pageSize, byte maxLevel) {
+			
+			try {
+				var result = await this.GetChainInterface(chainType).QueryMiningHistory(page, pageSize, maxLevel).awaitableTask;
+				
+				return result.Cast<object>().ToList();
+
+			} catch(Exception ex) {
+				Log.Error(ex, "Failed to query block mining history");
+
+				throw new HubException("Failed to query mining history");
+			}
+		}
+
 		public async Task<bool> CreateNextXmssKey(ushort chainType, Guid accountUuid, byte ordinal) {
 			try {
 				return await this.GetChainInterface(chainType).CreateNextXmssKey(accountUuid, ordinal).awaitableTask;
@@ -1001,19 +1019,6 @@ namespace Neuralium.Core.Classes.General {
 				Log.Error(ex, "Failed to neuralium transaction pool");
 
 				throw new HubException("Failed to query neuralium transaction pool");
-			}
-		}
-
-		public Task<List<object>> QueryMiningHistory(ushort chainType) {
-			try {
-				var results = this.GetChainInterface(chainType).QueryMiningHistory();
-
-				return Task.FromResult(results.Cast<object>().ToList());
-
-			} catch(Exception ex) {
-				Log.Error(ex, "Failed to query mining history");
-
-				throw new ApplicationException("Failed to query mining history");
 			}
 		}
 

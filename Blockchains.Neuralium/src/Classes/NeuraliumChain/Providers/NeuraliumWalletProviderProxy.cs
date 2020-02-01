@@ -33,24 +33,23 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		private INeuraliumWalletProvider WalletProvider => (INeuraliumWalletProvider) this.walletProvider;
 
 		public TotalAPI GetAccountBalance(bool includeReserved) {
-
-			return this.resourceAccessScheduler.ScheduleRead(this.walletProvider, prov => this.WalletProvider.GetAccountBalance(includeReserved)).result;
+			return this.ScheduleKeyedRead(prov => this.WalletProvider.GetAccountBalance(includeReserved));
 		}
 
 		public TotalAPI GetAccountBalance(Guid accountUuid, bool includeReserved) {
-			return this.resourceAccessScheduler.ScheduleRead(this.walletProvider, prov => this.WalletProvider.GetAccountBalance(accountUuid, includeReserved)).result;
+			return this.ScheduleKeyedRead(prov => this.WalletProvider.GetAccountBalance(accountUuid, includeReserved));
 		}
 
 		public TotalAPI GetAccountBalance(AccountId accountId, bool includeReserved) {
-			return this.resourceAccessScheduler.ScheduleRead(this.walletProvider, prov => this.WalletProvider.GetAccountBalance(accountId, includeReserved)).result;
+			return this.ScheduleKeyedRead(prov => this.WalletProvider.GetAccountBalance(accountId, includeReserved));
 		}
 
 		public TimelineHeader GetTimelineHeader(Guid accountUuid) {
-			return this.resourceAccessScheduler.ScheduleRead(this.walletProvider, prov => this.WalletProvider.GetTimelineHeader(accountUuid)).result;
+			return this.ScheduleKeyedRead(prov => this.WalletProvider.GetTimelineHeader(accountUuid));
 		}
 
 		public List<TimelineDay> GetTimelineSection(Guid accountUuid, DateTime firstday, int skip = 0, int take = 1) {
-			return this.resourceAccessScheduler.ScheduleRead(this.walletProvider, prov => this.WalletProvider.GetTimelineSection(accountUuid, firstday, skip, take)).result;
+			return this.ScheduleKeyedRead(prov => this.WalletProvider.GetTimelineSection(accountUuid, firstday, skip, take));
 		}
 
 		public void PerformWalletTransaction(Action transactionAction) {

@@ -205,12 +205,12 @@ namespace Neuralium.Core.Classes.Runtime {
 			
 			//TimeSpan elapsed = DateTime.UtcNow - ;
 
-			var limit = new DateTime(2019, 11, 17, 23, 0, 0, DateTimeKind.Utc);
+			var limit = new DateTime(2020, 1, 30, 23, 0, 0, DateTimeKind.Utc);
 			if(DateTime.UtcNow > limit) {
 			
 				Console.BackgroundColor = ConsoleColor.Black;
 				Console.ForegroundColor = ConsoleColor.Red;
-				Log.Fatal("This TESTNET release has expired! It can not be used anymore. Please download a more recent version from https://www.neuralium.com.");
+				Log.Fatal("This TESTNET release has expired! It can not be used anymore. Please download a more recent version from https://www.neuralium.com. [EXPIRED TESTNET].");
 
 				throw new TrialTimeoutException();
 			} else {
@@ -232,7 +232,7 @@ namespace Neuralium.Core.Classes.Runtime {
 			
 				Console.BackgroundColor = ConsoleColor.Black;
 				Console.ForegroundColor = ConsoleColor.Red;
-				Log.Fatal("This TESTNET release has expired! It can not be used anymore. Please download a more recent version from https://www.neuralium.com.");
+				Log.Fatal("This TESTNET release has expired! It can not be used anymore. Please download a more recent version from https://www.neuralium.com. [EXPIRED DEVNET].");
 			
 				throw new TrialTimeoutException();
 			} else {

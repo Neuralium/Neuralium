@@ -34,6 +34,7 @@ using Neuralia.Blockchains.Tools.Serialization;
 using Neuralium.Core.Classes.Configuration;
 using Neuralium.Core.Classes.Services;
 using System.Text.Json;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Tools;
 using Serilog;
 
 namespace Neuralium.Core.Classes.Runtime {
@@ -124,7 +125,13 @@ namespace Neuralium.Core.Classes.Runtime {
 
 				return;
 			}
-			
+
+			if(items[0] == "msg") {
+				this.neuraliumBlockChainInterface.CentralCoordinator.PostSystemEvent(SystemEventGenerator.MininPrimeElectedMissed(10, 12));
+
+				return;
+			}
+
 			if(items[0] == "ips") {
 				var conns = this.neuraliumBlockChainInterface.QueryIPsList();
 
@@ -244,11 +251,11 @@ namespace Neuralium.Core.Classes.Runtime {
 				}
 				//this.neuraliumBlockChainInterface.Test("");
 
-				var block = await this.neuraliumBlockChainInterface.QueryBlock(para).awaitableTask;
+				var block = await this.neuraliumBlockChainInterface.Test("").awaitableTask;
 				Log.Information(block);
 				
 				//var ff = this.test(gg.ConfirmedGeneralTransactions.Values.ToList()[5]);
-				// GzipCompression compressor = new GzipCompression();
+				// BrotliCompression compressor = new BrotliCompression();
 				//
 				// 	ArrayWrapper bytes = compressor.Decompress((ByteArray) );
 				// 	
@@ -370,7 +377,7 @@ namespace Neuralium.Core.Classes.Runtime {
 			if(items[0] == "historym") {
 				Console.WriteLine("showing mining history...");
 
-				var result = this.neuraliumBlockChainInterface.QueryMiningHistory();
+				var result = await this.neuraliumBlockChainInterface.QueryMiningHistory(0,10,1).awaitableTask;
 
 				foreach(MiningHistory entry in result) {
 					Log.Information($"Mining entry: {entry}");
@@ -421,7 +428,7 @@ namespace Neuralium.Core.Classes.Runtime {
 				Console.WriteLine("Connected to peers:");
 
 				foreach(PeerConnection node in this.networkingService.ConnectionStore.AllConnectionsList) {
-					Console.WriteLine($"Peer: {node.ScoppedAdjustedIp}:{node.NodeAddressInfoInfo.RealPort}");
+					Console.WriteLine($"Peer: {node.ScoppedAdjustedIp}:{node.NodeAddressInfo.RealPort}");
 				}
 
 				Console.WriteLine("=====================================================");

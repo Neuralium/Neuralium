@@ -2,6 +2,6 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal.Interfaces.Acco
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Interfaces.AccountSnapshots.Cards.Implementations {
 
-	public class NeuraliumAccountFeature : AccountFeature, INeuraliumAccountFeature {
+	public class NeuraliumAccountAttribute : AccountAttribute, INeuraliumAccountAttribute {
 	}
 }

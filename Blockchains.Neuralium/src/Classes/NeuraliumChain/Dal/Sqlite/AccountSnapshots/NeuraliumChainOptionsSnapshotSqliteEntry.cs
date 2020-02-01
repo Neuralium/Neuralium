@@ -11,5 +11,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Sqlite.AccountSnapsho
 	/// </summary>
 	public class NeuraliumChainOptionsSnapshotSqliteEntry : ChainOptionsSnapshotSqliteEntry, INeuraliumChainOptionsSnapshotSqliteEntry {
 		public decimal SAFUDailyRatio { get; set; }
+		public decimal MinimumSAFUQuantity { get; set; }
+		public int MaximumAmountDays { get; set; }
 	}
 }

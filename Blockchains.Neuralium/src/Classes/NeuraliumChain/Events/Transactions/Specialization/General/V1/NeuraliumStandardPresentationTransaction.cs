@@ -9,8 +9,8 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 
 	public class NeuraliumStandardPresentationTransaction : StandardPresentationTransaction, INeuraliumStandardPresentationTransaction {
 
-		protected override ITransactionAccountFeature CreateTransactionAccountFeature() {
-			return new NeuraliumTransactionAccountFeature();
+		protected override ITransactionAccountAttribute CreateTransactionAccountFeature() {
+			return new NeuraliumTransactionAccountAttribute();
 		}
 	}
 }

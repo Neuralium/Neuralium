@@ -38,11 +38,14 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions {
 
 		public readonly TransactionType NEURALIUM_SAFU_CONTRIBUTIONS;
 		public readonly TransactionType NEURALIUM_SAFU_TRANSFER;
+		public readonly TransactionType NEURALIUM_SAFU_UPDATE_RATIO;
 
 		public readonly TransactionType NEURALIUM_TRANSFER;
 		public readonly TransactionType NEURALIUM_UNFREEZE_SUSPICIOUSACCOUNTS;
 		public readonly TransactionType NEURALIUM_UNWIND_STOLEN_SUSPICIOUSACCOUNTS;
 
+		public readonly TransactionType NEURALIUM_THREE_WAY_GATED_TRANSFER_TRANSACTION;
+		
 		static NeuraliumTransactionTypes() {
 		}
 
@@ -57,6 +60,9 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions {
 
 			this.NEURALIUM_SAFU_CONTRIBUTIONS = this.CreateChildConstant();
 			this.NEURALIUM_SAFU_TRANSFER = this.CreateChildConstant();
+			this.NEURALIUM_SAFU_UPDATE_RATIO = this.CreateChildConstant();
+
+			this.NEURALIUM_THREE_WAY_GATED_TRANSFER_TRANSACTION = this.CreateChildConstant();
 
 			//this.PrintValues(";");
 

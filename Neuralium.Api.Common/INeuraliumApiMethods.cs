@@ -64,6 +64,7 @@ namespace Neuralium.Api.Common {
 		Task<bool> QueryBlockchainSynced(ushort chainType);
 		Task<bool> QueryWalletSynced(ushort chainType);
 		Task<object> QueryAccountTotalNeuraliums(Guid accountId);
+		Task<List<object>> QueryMiningHistory(ushort chainType, int page, int pageSize, byte maxLevel);
 
 		Task<bool> CreateNextXmssKey(ushort chainType, Guid accountUuid, byte ordinal);
 
@@ -79,8 +80,6 @@ namespace Neuralium.Api.Common {
 
 		Task<object> QueryElectionContext(ushort chainType, long blockId);
 		Task<List<object>> QueryNeuraliumTransactionPool();
-
-		Task<List<object>> QueryMiningHistory(ushort chainType);
 		
 		Task<bool> RestoreWalletBackup(string source, string dest);
 	}

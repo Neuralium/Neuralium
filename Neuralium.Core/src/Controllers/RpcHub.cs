@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.DataStructures.ExternalAPI;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.DataStructures.ExternalAPI.Wallet;
 using Neuralia.Blockchains.Core.Services;
 using Neuralium.Core.Classes.General;
@@ -237,6 +239,10 @@ namespace Neuralium.Core.Controllers {
 			return this.rpcProvider.PublishAccount(chainType, accountUuId);
 		}
 
+		public Task<List<object>> QueryMiningHistory(ushort chainType, int page, int pageSize, byte maxLevel) {
+			return this.rpcProvider.QueryMiningHistory(chainType, page, pageSize, maxLevel);
+		}
+		
 	#endregion
 
 	#region Neuralium chain queries
@@ -273,10 +279,6 @@ namespace Neuralium.Core.Controllers {
 
 		public Task<List<object>> QueryNeuraliumTransactionPool() {
 			return this.rpcProvider.QueryNeuraliumTransactionPool();
-		}
-
-		public Task<List<object>> QueryMiningHistory(ushort chainType) {
-			return this.rpcProvider.QueryMiningHistory(chainType);
 		}
 
 		public Task<bool> RestoreWalletBackup(string source, string dest) {

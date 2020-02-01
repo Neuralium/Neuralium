@@ -1,4 +1,8 @@
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Serialization.Blockchain.Utils;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Serialization;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Specialization.Moderator;
 using Neuralia.Blockchains.Core.Cryptography.Trees;
@@ -11,34 +15,39 @@ using Neuralia.Blockchains.Tools.Serialization;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.Moderator.V1.Security {
 
-	public interface INeuraliuUnfreezeClearedFundsTransaction : INeuraliumModerationTransaction {
+	public interface INeuraliumUnfreezeClearedFundsTransaction : INeuraliumModerationTransaction {
 		ushort FreezeId { get; set; }
 		Text Reason { get; set; }
-		List<NeuraliuUnfreezeClearedFundsTransaction.AccountUnfreeze> Accounts { get; }
+		List<NeuraliumUnfreezeClearedFundsTransaction.AccountUnfreeze> Accounts { get; }
 	}
 
-	public class NeuraliuUnfreezeClearedFundsTransaction : ModerationTransaction, INeuraliuUnfreezeClearedFundsTransaction {
+	public class NeuraliumUnfreezeClearedFundsTransaction : ModerationTransaction, INeuraliumUnfreezeClearedFundsTransaction {
 
 		public ushort FreezeId { get; set; }
 		public Text Reason { get; set; } = new Text();
 
 		public List<AccountUnfreeze> Accounts { get; } = new List<AccountUnfreeze>();
 
-		public override void Rehydrate(IDataRehydrator rehydrator) {
-			base.Rehydrate(rehydrator);
-			this.FreezeId = rehydrator.ReadUShort();
-			this.Reason.Rehydrate(rehydrator);
-			rehydrator.ReadRehydratableArray(this.Accounts);
+		protected override void RehydrateContents(ChannelsEntries<IDataRehydrator> dataChannels, ITransactionRehydrationFactory rehydrationFactory) {
+			base.RehydrateContents(dataChannels, rehydrationFactory);
+
+			this.FreezeId = dataChannels.ContentsData.ReadUShort();
+			this.Reason.Rehydrate(dataChannels.ContentsData);
+			dataChannels.ContentsData.ReadRehydratableArray(this.Accounts);
 		}
 
-		public override void Dehydrate(IDataDehydrator dehydrator) {
-			base.Dehydrate(dehydrator);
+		protected override void DehydrateContents(ChannelsEntries<IDataDehydrator> dataChannels) {
+			base.DehydrateContents(dataChannels);
 
-			dehydrator.Write(this.FreezeId);
-			this.Reason.Dehydrate(dehydrator);
-			dehydrator.Write(this.Accounts);
+			dataChannels.ContentsData.Write(this.FreezeId);
+			this.Reason.Dehydrate(dataChannels.ContentsData);
+			dataChannels.ContentsData.Write(this.Accounts);
 		}
 
+		protected override void Sanitize() {
+			base.Sanitize();
+		}
+		
 		public override HashNodeList GetStructuresArray() {
 			HashNodeList hasNodes = new HashNodeList();
 
@@ -59,6 +68,8 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 		protected override ComponentVersion<TransactionType> SetIdentity() {
 			return (NeuraliumTransactionTypes.Instance.NEURALIUM_UNFREEZE_SUSPICIOUSACCOUNTS, 1, 0);
 		}
+
+		public override ImmutableList<AccountId> TargetAccounts => this.Accounts.Select(e => e.AccountId).ToImmutableList();
 
 		public class AccountUnfreeze : ISerializableCombo {
 			public AccountId AccountId { get; set; } = new AccountId();
@@ -88,6 +99,8 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 				jsonDeserializer.SetProperty("AccountId", this.AccountId);
 				jsonDeserializer.SetProperty("Notes", this.Notes);
 			}
+			
+
 		}
 	}
 }

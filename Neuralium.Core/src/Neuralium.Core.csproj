@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch> 
+     <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch> 
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <NoWarn>NU1605</NoWarn>
     <OutputType>Library</OutputType>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -10,7 +10,6 @@
     <LangVersion>latest</LangVersion>
     <RootNamespace>Neuralium.Core</RootNamespace>
     <AssemblyName>Neuralium.Core</AssemblyName>
-    <Deterministic>false</Deterministic>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -32,26 +31,23 @@
     <PackageReference Include="Neuralia.Data.HashFunction.xxHash" Version="1.0.0" />
 
 
-    <PackageReference Include="Moq" Version="4.13.1" />
-    <PackageReference Include="morelinq" Version="3.2.0" />
+     <PackageReference Include="Moq" Version="4.13.1" />
+    <PackageReference Include="morelinq" Version="3.3.2" />
     <PackageReference Include="LiteDB" Version="4.1.4" />
-    <PackageReference Include="RestSharp" Version="106.6.10" />
+    <PackageReference Include="RestSharp" Version="106.10.1" />
     <PackageReference Include="RT.Comb" Version="2.3.0" />
     <PackageReference Include="Serilog.Enrichers.Thread" Version="3.1.0" />
-    <PackageReference Include="Serilog.Exceptions" Version="5.3.1" />
+    <PackageReference Include="Serilog.Exceptions" Version="5.4.0" />
     <PackageReference Include="Serilog.Extensions.Hosting" Version="3.0.0" />
     <PackageReference Include="Serilog.Settings.Configuration" Version="3.1.0" />
     <PackageReference Include="Serilog.Sinks.Async" Version="1.4.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="4.1.0" />
-    <PackageReference Include="System.IO.Abstractions" Version="7.0.7" />
+    <PackageReference Include="System.IO.Abstractions" Version="8.0.3" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Blockchains.Neuralium\src\Blockchains.Neuralium.csproj" />
     <ProjectReference Include="..\..\Neuralium.Api.Common\Neuralium.Api.Common.csproj" />
   </ItemGroup>
-  <PropertyGroup Condition="'$(SolutionDir)' == '' or&#xA;                     '$(SolutionDir)' == '*undefined*'">
-    <SolutionDir>..\..\</SolutionDir>
-  </PropertyGroup>
-  <Import Project="$(SolutionDir)CommonSettings.targets" />
+  <Import Project="$(MSBuildProjectDirectory)/../../CommonSettings.targets" />
 </Project>

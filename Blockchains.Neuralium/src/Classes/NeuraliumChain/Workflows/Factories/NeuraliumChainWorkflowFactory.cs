@@ -20,13 +20,13 @@ using Neuralia.Blockchains.Tools.Data;
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Factories {
 	public interface INeuraliumChainWorkflowFactory : IChainWorkflowFactory<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> {
 
-		IInsertDebugConfirmWorkflow CreateDebugConfirmChainWorkflow(TransactionId guid, SafeArrayHandle hash);
+		IInsertDebugConfirmWorkflow CreateDebugConfirmChainWorkflow(TransactionId guid, SafeArrayHandle hash, byte expiration = 0);
 
 		IInsertDebugMessageWorkflow CreateDebugMessageWorkflow();
 
-		ICreateNeuraliumTransferTransactionWorkflow CreateSendNeuraliumsWorkflow(Guid accountUuid, AccountId targetAccountId, Amount amount, Amount tip, string note, CorrelationContext correlationContext);
+		ICreateNeuraliumTransferTransactionWorkflow CreateSendNeuraliumsWorkflow(Guid accountUuid, AccountId targetAccountId, Amount amount, Amount tip, string note, CorrelationContext correlationContext, byte expiration = 0);
 #if TESTNET || DEVNET
-		ICreateNeuraliumRefillTransactionWorkflow CreateRefillNeuraliumsWorkflow(Guid accountUuid, CorrelationContext correlationContext);
+		ICreateNeuraliumRefillTransactionWorkflow CreateRefillNeuraliumsWorkflow(Guid accountUuid, CorrelationContext correlationContext, byte expiration = 0);
 #endif
 	}
 
@@ -34,27 +34,27 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Factories {
 		public NeuraliumChainWorkflowFactory(INeuraliumCentralCoordinator centralCoordinator) : base(centralCoordinator) {
 		}
 
-		public override ICreatePresentationTransactionWorkflow<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> CreatePresentationTransactionChainWorkflow(CorrelationContext correlationContext, Guid? accountUuId) {
-			return new NeuraliumCreatePresentationTransactionWorkflow(this.centralCoordinator, correlationContext, accountUuId);
+		public override ICreatePresentationTransactionWorkflow<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> CreatePresentationTransactionChainWorkflow(CorrelationContext correlationContext, Guid? accountUuId, byte expiration = 0) {
+			return new NeuraliumCreatePresentationTransactionWorkflow(this.centralCoordinator, expiration, correlationContext, accountUuId);
 		}
 
-		public override ICreateChangeKeyTransactionWorkflow<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> CreateChangeKeyTransactionWorkflow(byte changingKeyOrdinal, string note, CorrelationContext correlationContext) {
-			return new NeuraliumCreateChangeKeyTransactionWorkflow(this.centralCoordinator, note, changingKeyOrdinal, correlationContext);
+		public override ICreateChangeKeyTransactionWorkflow<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> CreateChangeKeyTransactionWorkflow(byte changingKeyOrdinal, string note, CorrelationContext correlationContext, byte expiration = 0) {
+			return new NeuraliumCreateChangeKeyTransactionWorkflow(this.centralCoordinator, expiration, note, changingKeyOrdinal, correlationContext);
 		}
 
-		public virtual IInsertDebugConfirmWorkflow CreateDebugConfirmChainWorkflow(TransactionId guid, SafeArrayHandle hash) {
+		public virtual IInsertDebugConfirmWorkflow CreateDebugConfirmChainWorkflow(TransactionId guid, SafeArrayHandle hash, byte expiration = 0) {
 			return new InsertDebugConfirmWorkflow(guid, hash, this.centralCoordinator);
 		}
 
-		public virtual ICreateNeuraliumTransferTransactionWorkflow CreateSendNeuraliumsWorkflow(Guid accountUuid, AccountId targetAccountId, Amount amount, Amount tip, string note, CorrelationContext correlationContext) {
-			return new CreateNeuraliumTransferTransactionWorkflow(accountUuid, targetAccountId, amount, tip, note, this.centralCoordinator, correlationContext);
+		public virtual ICreateNeuraliumTransferTransactionWorkflow CreateSendNeuraliumsWorkflow(Guid accountUuid, AccountId targetAccountId, Amount amount, Amount tip, string note, CorrelationContext correlationContext, byte expiration = 0) {
+			return new CreateNeuraliumTransferTransactionWorkflow(accountUuid, targetAccountId, amount, tip, expiration, note, this.centralCoordinator, correlationContext);
 		}
 
 		public IInsertDebugMessageWorkflow CreateDebugMessageWorkflow() {
 			return new InsertDebugMessageWorkflow(this.centralCoordinator);
 		}
 
-		public override ISendElectionsRegistrationMessageWorkflow<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> CreateSendElectionsCandidateRegistrationMessageWorkflow(AccountId candidateAccountId, ElectionsCandidateRegistrationInfo electionsCandidateRegistrationInfo, ChainConfigurations.RegistrationMethods registrationMethod, CorrelationContext correlationContext) {
+		public override ISendElectionsRegistrationMessageWorkflow<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> CreateSendElectionsCandidateRegistrationMessageWorkflow(AccountId candidateAccountId, ElectionsCandidateRegistrationInfo electionsCandidateRegistrationInfo, AppSettingsBase.ContactMethods registrationMethod, CorrelationContext correlationContext) {
 			return new NeuraliumSendElectionsRegistrationMessageWorkflow(candidateAccountId, electionsCandidateRegistrationInfo, registrationMethod, this.centralCoordinator, correlationContext);
 		}
 
@@ -63,8 +63,8 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Factories {
 		}
 
 #if TESTNET || DEVNET
-		public virtual ICreateNeuraliumRefillTransactionWorkflow CreateRefillNeuraliumsWorkflow(Guid accountUuid, CorrelationContext correlationContext) {
-			return new CreateNeuraliumRefillTransactionWorkflow(accountUuid, null, this.centralCoordinator, correlationContext);
+		public virtual ICreateNeuraliumRefillTransactionWorkflow CreateRefillNeuraliumsWorkflow(Guid accountUuid, CorrelationContext correlationContext, byte expiration = 0) {
+			return new CreateNeuraliumRefillTransactionWorkflow(accountUuid, expiration, null, this.centralCoordinator, correlationContext);
 		}
 #endif
 	}

@@ -17,7 +17,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.DataStructures.Timeline {
 
 			public string TransactionId { get; set; }
 			public string SenderAccountId { get; set; }
-			public string RecipientAccountId { get; set; }
+			public string RecipientAccountIds { get; set; }
 			public decimal Amount { get; set; }
 			public decimal Tips { get; set; }
 

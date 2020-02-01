@@ -3,10 +3,10 @@ using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Digests.Channels.Speci
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Digests.Channels.Specialization;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Digests.Channels.Specialization {
-	public interface INeuraliumStandardAccountSnapshotDigestChannel : IStandardAccountSnapshotDigestChannel, INeuraliumDigestChannel {
+	public interface INeuraliumStandardAccountSnapshotDigestChannel : IStandardAccountSnapshotDigestChannel<NeuraliumStandardAccountSnapshotDigestChannelCard>, INeuraliumDigestChannel {
 	}
 
-	public class NeuraliumStandardAccountSnapshotDigestChannel : StandardAccountSnapshotDigestChannel<INeuraliumStandardAccountSnapshotDigestChannelCard>, INeuraliumStandardAccountSnapshotDigestChannel {
+	public class NeuraliumStandardAccountSnapshotDigestChannel : StandardAccountSnapshotDigestChannel<NeuraliumStandardAccountSnapshotDigestChannelCard>, INeuraliumStandardAccountSnapshotDigestChannel {
 		[Flags]
 		public enum AccountSnapshotDigestChannelBands {
 			Wallets
@@ -15,7 +15,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Digests.Channels.S
 		public NeuraliumStandardAccountSnapshotDigestChannel(int groupSize, string folder) : base(groupSize, folder) {
 		}
 
-		protected override INeuraliumStandardAccountSnapshotDigestChannelCard CreateNewCardInstance() {
+		protected override NeuraliumStandardAccountSnapshotDigestChannelCard CreateNewCardInstance() {
 			return new NeuraliumStandardAccountSnapshotDigestChannelCard();
 		}
 	}

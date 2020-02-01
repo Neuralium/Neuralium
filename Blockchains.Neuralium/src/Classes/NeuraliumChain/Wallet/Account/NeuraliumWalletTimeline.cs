@@ -23,7 +23,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Wallet.Account {
 		DateTime Timestamp { get; set; }
 
 		AccountId SenderAccountId { get; set; }
-		AccountId RecipientAccountId { get; set; }
+		string RecipientAccountIds { get; set; }
 
 		decimal Amount { get; set; }
 		decimal Tips { get; set; }
@@ -57,7 +57,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Wallet.Account {
 		public string TransactionId { get; set; }
 		public DateTime Timestamp { get; set; }
 		public AccountId SenderAccountId { get; set; }
-		public AccountId RecipientAccountId { get; set; }
+		public string RecipientAccountIds { get; set; }
 
 		public decimal Amount { get; set; }
 		public decimal Tips { get; set; }

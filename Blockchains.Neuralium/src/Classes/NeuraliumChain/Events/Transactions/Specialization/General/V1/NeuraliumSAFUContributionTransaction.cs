@@ -1,6 +1,12 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
+using Blockchains.Neuralium.Classes.NeuraliumChain.Tools;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions;
 using Neuralia.Blockchains.Core.Cryptography.Trees;
+using Neuralia.Blockchains.Core.General.Types;
+using Neuralia.Blockchains.Core.General.Types.Dynamic;
 using Neuralia.Blockchains.Core.General.Types.Specialized;
 using Neuralia.Blockchains.Core.General.Versions;
 using Neuralia.Blockchains.Core.Serialization;
@@ -9,7 +15,7 @@ using Neuralia.Blockchains.Tools.Serialization;
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.General.V1 {
 
 	public interface INeuraliumSAFUContributionTransaction : INeuraliumTipingTransaction {
-		Amount Total { get; set; }
+		AdaptiveLong1_9 NumberDays { get; set; }
 		Amount DailyProtection { get; set; }
 		DateTime? Start { get; set; }
 		bool AcceptSAFUTermsOfService { get; set; }
@@ -18,7 +24,15 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 	public class NeuraliumSAFUContributionTransaction : NeuraliumTipingTransaction, INeuraliumSAFUContributionTransaction {
 
 		public bool AcceptSAFUTermsOfService { get; set; }
-		public Amount Total { get; set; } = new Amount();
+		
+		/// <summary>
+		/// the total amount of days
+		/// </summary>
+		public AdaptiveLong1_9 NumberDays { get; set; } = new AdaptiveLong1_9();
+		
+		/// <summary>
+		/// how many neuraliums are protected per day
+		/// </summary>
 		public Amount DailyProtection { get; set; } = new Amount();
 
 		public DateTime? Start { get; set; }
@@ -27,11 +41,17 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 			HashNodeList nodeList = base.GetStructuresArray();
 
 			nodeList.Add(this.AcceptSAFUTermsOfService);
-			nodeList.Add(this.Total);
+			nodeList.Add(this.NumberDays);
 			nodeList.Add(this.DailyProtection);
 			nodeList.Add(this.Start);
 
 			return nodeList;
+		}
+
+		protected override void Sanitize() {
+			base.Sanitize();
+			
+			this.DailyProtection = NeuraliumUtilities.CapAndRound(this.DailyProtection);
 		}
 
 		public override void JsonDehydrate(JsonDeserializer jsonDeserializer) {
@@ -39,7 +59,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 
 			//
 			jsonDeserializer.SetProperty("AcceptSAFUTermsOfService", this.AcceptSAFUTermsOfService);
-			jsonDeserializer.SetProperty("Total", this.Total.Value);
+			jsonDeserializer.SetProperty("NumberDays", this.NumberDays.Value);
 			jsonDeserializer.SetProperty("DailyProtection", this.DailyProtection.Value);
 			jsonDeserializer.SetProperty("Start", this.Start);
 		}
@@ -52,7 +72,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 			base.RehydrateHeader(rehydrator);
 
 			this.AcceptSAFUTermsOfService = rehydrator.ReadBool();
-			this.Total.Rehydrate(rehydrator);
+			this.NumberDays.Rehydrate(rehydrator);
 			this.DailyProtection.Rehydrate(rehydrator);
 			this.Start = rehydrator.ReadNullableDateTime();
 
@@ -62,10 +82,13 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 			base.DehydrateHeader(dehydrator);
 
 			dehydrator.Write(this.AcceptSAFUTermsOfService);
-			this.Total.Dehydrate(dehydrator);
+			this.NumberDays.Dehydrate(dehydrator);
 			this.DailyProtection.Dehydrate(dehydrator);
 			dehydrator.Write(this.Start);
 		}
+		
+		public override ImmutableList<AccountId> TargetAccounts => new [] {this.TransactionId.Account}.ToImmutableList();
+
 	}
 
 }

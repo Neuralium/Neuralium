@@ -24,12 +24,12 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain {
 
 		TaskResult<TotalAPI> QueryWalletTotal(Guid accountId);
 
-		TaskResult<bool> SendNeuraliums(AccountId targetAccountId, Amount amount, Amount tip, string note, CorrelationContext correlationContext);
+		TaskResult<bool> SendNeuraliums(AccountId targetAccountId, Amount amount, Amount tip, string note, CorrelationContext correlationContext, byte expiration = 0);
 
 		Task<TimelineHeader> QueryNeuraliumTimelineHeader(Guid accountUuid);
 		Task<List<TimelineDay>> QueryNeuraliumTimelineSection(Guid accountUuid, DateTime firstday, int skip, int take);
 #if TESTNET || DEVNET
-		TaskResult<bool> RefillNeuraliums(Guid accountUuid, CorrelationContext correlationContext);
+		TaskResult<bool> RefillNeuraliums(Guid accountUuid, CorrelationContext correlationContext, byte expiration = 0);
 #endif
 
 		TaskResult<List<object>> QueryNeuraliumTransactionPool();
@@ -104,14 +104,14 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain {
 			});
 		}
 
-		public TaskResult<bool> SendNeuraliums(AccountId targetAccountId, Amount amount, Amount tip, string note, CorrelationContext correlationContext) {
+		public TaskResult<bool> SendNeuraliums(AccountId targetAccountId, Amount amount, Amount tip, string note, CorrelationContext correlationContext, byte expiration = 0) {
 
 			Guid accountUuid = this.centralCoordinator.ChainComponentProvider.WalletProvider.GetActiveAccount().AccountUuid;
 
 			return this.RunTaskMethod(() => {
 
 				using(ManualResetEventSlim resetEvent = new ManualResetEventSlim(false)) {
-					ICreateNeuraliumTransferTransactionWorkflow workflow = this.NeuraliumChainFactoryProvider.WorkflowFactory.CreateSendNeuraliumsWorkflow(accountUuid, new AccountId(targetAccountId), amount, tip, note, correlationContext);
+					ICreateNeuraliumTransferTransactionWorkflow workflow = this.NeuraliumChainFactoryProvider.WorkflowFactory.CreateSendNeuraliumsWorkflow(accountUuid, new AccountId(targetAccountId), amount, tip, note, correlationContext, expiration);
 
 					workflow.Success += w => {
 						resetEvent.Set();
@@ -140,7 +140,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain {
 			return task;
 		}
 #if TESTNET || DEVNET
-		public TaskResult<bool> RefillNeuraliums(Guid accountUuid, CorrelationContext correlationContext) {
+		public TaskResult<bool> RefillNeuraliums(Guid accountUuid, CorrelationContext correlationContext, byte expiration = 0) {
 
 			if(accountUuid == Guid.Empty) {
 				accountUuid = this.centralCoordinator.ChainComponentProvider.WalletProvider.GetActiveAccount().AccountUuid;
@@ -149,7 +149,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain {
 			return this.RunTaskMethod(() => {
 
 				using(ManualResetEventSlim resetEvent = new ManualResetEventSlim(false)) {
-					ICreateNeuraliumRefillTransactionWorkflow workflow = this.NeuraliumChainFactoryProvider.WorkflowFactory.CreateRefillNeuraliumsWorkflow(accountUuid, correlationContext);
+					ICreateNeuraliumRefillTransactionWorkflow workflow = this.NeuraliumChainFactoryProvider.WorkflowFactory.CreateRefillNeuraliumsWorkflow(accountUuid, correlationContext, expiration);
 
 					workflow.Success += w => {
 						resetEvent.Set();
@@ -167,10 +167,8 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain {
 
 		public TaskResult<List<object>> QueryNeuraliumTransactionPool() {
 
-			return this.RunBlockchainTaskMethod((service, taskRoutingContext) => ((INeuraliumBlockchainManager) service).GetNeuraliumTransactionPool().Cast<object>().ToList(), (results, taskRoutingContext) => {
-				if(results.Error) {
-					//TODO: what to do here?
-				}
+			return this.RunTaskMethod(() => {
+				return this.centralCoordinator.ChainComponentProvider.BlockchainProvider.GetNeuraliumTransactionPool().Cast<object>().ToList();
 			});
 		}
 

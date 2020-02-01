@@ -19,9 +19,9 @@ using Neuralia.Blockchains.Core.Services;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 	public interface INeuraliumAssemblyProvider : IAssemblyProvider<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> {
-		ITransactionEnvelope GenerateNeuraliumTransferTransaction(Guid accountUuid, AccountId recipient, Amount amount, Amount tip, CorrelationContext correlationContext);
+		ITransactionEnvelope GenerateNeuraliumTransferTransaction(Guid accountUuid, AccountId recipient, Amount amount, Amount tip, CorrelationContext correlationContext, byte expiration = 0);
 
-		ITransactionEnvelope GenerateNeuraliumMultiTransferTransaction(Guid accountUuid, List<RecipientSet> recipients, Amount tip, CorrelationContext correlationContext);
+		ITransactionEnvelope GenerateNeuraliumMultiTransferTransaction(Guid accountUuid, List<RecipientSet> recipients, Amount tip, CorrelationContext correlationContext, byte expiration = 0);
 
 		ITransactionEnvelope GenerateRefillNeuraliumsTransaction(Guid accountUuid, CorrelationContext correlationContext);
 	}
@@ -55,11 +55,11 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			}
 		}
 
-		public virtual ITransactionEnvelope GenerateNeuraliumTransferTransaction(Guid accountUuid, AccountId recipient, Amount amount, Amount tip, CorrelationContext correlationContext) {
+		public virtual ITransactionEnvelope GenerateNeuraliumTransferTransaction(Guid accountUuid, AccountId recipient, Amount amount, Amount tip, CorrelationContext correlationContext, byte expiration = 0) {
 			try {
 				INeuraliumTransferTransaction transferTransaction = new NeuraliumTransferTransaction();
 
-				ITransactionEnvelope envelope = this.GenerateTransaction(transferTransaction, GlobalsService.TRANSACTION_KEY_NAME, EnvelopeSignatureTypes.Instance.Published, () => {
+				ITransactionEnvelope envelope = this.GenerateTransaction(transferTransaction, GlobalsService.TRANSACTION_KEY_NAME, EnvelopeSignatureTypes.Instance.Published, expiration, () => {
 
 					transferTransaction.Recipient = recipient;
 					transferTransaction.Amount = amount;
@@ -81,14 +81,13 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			}
 		}
 
-		public virtual ITransactionEnvelope GenerateNeuraliumMultiTransferTransaction(Guid accountUuid, List<RecipientSet> recipients, Amount tip, CorrelationContext correlationContext) {
+		public virtual ITransactionEnvelope GenerateNeuraliumMultiTransferTransaction(Guid accountUuid, List<RecipientSet> recipients, Amount tip, CorrelationContext correlationContext, byte expiration = 0) {
 			try {
 				INeuraliumMultiTransferTransaction multiTransferTransaction = new NeuraliumMultiTransferTransaction();
 
-				ITransactionEnvelope envelope = this.GenerateTransaction(multiTransferTransaction, GlobalsService.TRANSACTION_KEY_NAME, EnvelopeSignatureTypes.Instance.Published, () => {
+				ITransactionEnvelope envelope = this.GenerateTransaction(multiTransferTransaction, GlobalsService.TRANSACTION_KEY_NAME, EnvelopeSignatureTypes.Instance.Published, expiration, () => {
 
 					multiTransferTransaction.Recipients.AddRange(recipients);
-					multiTransferTransaction.Total = recipients.Sum(e => e.Amount);
 					multiTransferTransaction.Tip = tip;
 
 					// let's ensure we have the balance

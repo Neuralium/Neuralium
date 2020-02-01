@@ -12,7 +12,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Creation.Messag
 
 	public class NeuraliumSendElectionsRegistrationMessageWorkflow : SendElectionsRegistrationMessageWorkflow<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider, INeuraliumAssemblyProvider>, INeuraliumSendElectionsRegistrationMessageWorkflow {
 
-		public NeuraliumSendElectionsRegistrationMessageWorkflow(AccountId candidateAccountID, ElectionsCandidateRegistrationInfo electionsCandidateRegistrationInfo, ChainConfigurations.RegistrationMethods registrationMethod, INeuraliumCentralCoordinator centralCoordinator, CorrelationContext correlationContext) : base(candidateAccountID, electionsCandidateRegistrationInfo, registrationMethod, centralCoordinator, correlationContext) {
+		public NeuraliumSendElectionsRegistrationMessageWorkflow(AccountId candidateAccountID, ElectionsCandidateRegistrationInfo electionsCandidateRegistrationInfo, AppSettingsBase.ContactMethods registrationMethod, INeuraliumCentralCoordinator centralCoordinator, CorrelationContext correlationContext) : base(candidateAccountID, electionsCandidateRegistrationInfo, registrationMethod, centralCoordinator, correlationContext) {
 		}
 	}
 }

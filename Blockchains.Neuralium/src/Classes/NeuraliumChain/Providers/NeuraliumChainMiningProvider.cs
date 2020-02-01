@@ -13,6 +13,7 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Elections;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Specialization.Elections.Results.V1;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Providers;
+using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.General.Types;
 using Serilog;
 
@@ -56,10 +57,10 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			return new NeuraliumBlockElectionDistillate();
 		}
 
-		protected override void PreparePassiveElectionContext(long currentBlockId, AccountId miningAccountId, PassiveElectionContextDistillate intermediaryResultEntry, IIntermediaryElectionResults intermediaryElectionResult, IBlock currentBlock) {
-			base.PreparePassiveElectionContext(currentBlockId, miningAccountId, intermediaryResultEntry, intermediaryElectionResult, currentBlock);
+		protected override void PreparePassiveElectionContext(long currentBlockId, AccountId miningAccountId, PassiveElectionContextDistillate intermediaryResultEntry, IPassiveIntermediaryElectionResults passiveIntermediaryElectionResults, IBlock currentBlock) {
+			base.PreparePassiveElectionContext(currentBlockId, miningAccountId, intermediaryResultEntry, passiveIntermediaryElectionResults, currentBlock);
 
-			if(intermediaryElectionResult is INeuraliumIntermediaryElectionResults neuraliumSimpleIntermediaryElectionResults && intermediaryResultEntry is NeuraliumPassiveElectionContextDistillate neuraliumIntermediaryElectionContext) {
+			if(passiveIntermediaryElectionResults is INeuraliumIntermediaryElectionResults neuraliumSimpleIntermediaryElectionResults && intermediaryResultEntry is NeuraliumPassiveElectionContextDistillate neuraliumIntermediaryElectionContext) {
 
 			}
 		}
@@ -99,15 +100,17 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			return new NeuraliumMiningHistoryEntry();
 		}
 
-		protected override MiningHistoryEntry PrepareMiningHistoryEntry(BlockElectionDistillate blockElectionDistillate, FinalElectionResultDistillate finalElectionResultDistillate) {
-			MiningHistoryEntry entry = base.PrepareMiningHistoryEntry(blockElectionDistillate, finalElectionResultDistillate);
+		protected override void PrepareMiningHistoryEntry(MiningHistoryEntry entry, MiningHistoryEntry.MiningHistoryParameters parameters) {
+			base.PrepareMiningHistoryEntry(entry, parameters);
 
-			if(entry is NeuraliumMiningHistoryEntry neuraliumMiningHistoryEntry && finalElectionResultDistillate is NeuraliumFinalElectionResultDistillate neuraliumFinalElectionContext) {
-				neuraliumMiningHistoryEntry.BountyShare = neuraliumFinalElectionContext.BountyShare;
-				neuraliumMiningHistoryEntry.TransactionTips = neuraliumFinalElectionContext.TransactionTips;
+			if(entry.Message == BlockchainSystemEventTypes.Instance.MiningPrimeElected) {
+				entry.Message = NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.NeuraliumMiningPrimeElected;
+				
+				if(entry is NeuraliumMiningHistoryEntry neuraliumMiningHistoryEntry && parameters.finalElectionResultDistillate is NeuraliumFinalElectionResultDistillate neuraliumFinalElectionContext) {
+					neuraliumMiningHistoryEntry.BountyShare = neuraliumFinalElectionContext.BountyShare;
+					neuraliumMiningHistoryEntry.TransactionTips = neuraliumFinalElectionContext.TransactionTips;
+				}
 			}
-
-			return entry;
 		}
 	}
 

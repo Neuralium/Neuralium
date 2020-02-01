@@ -6,8 +6,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Sqlite.AccountSnapsho
 	public interface INeuraliumAccountSnapshotSqliteEntry : IAccountSnapshotSqliteEntry, INeuraliumAccountSnapshotEntry {
 	}
 
-	public interface INeuraliumAccountSnapshotSqliteEntry<ACCOUNT_FEATURE, ACCOUNT_FREEZE> : IAccountSnapshotSqliteEntry<ACCOUNT_FEATURE>, INeuraliumAccountSnapshotEntry<ACCOUNT_FEATURE, ACCOUNT_FREEZE>, INeuraliumAccountSnapshotSqliteEntry
-		where ACCOUNT_FEATURE : INeuraliumAccountFeatureSqliteEntry
-		where ACCOUNT_FREEZE : INeuraliumAccountFreezeSqlite {
+	public interface INeuraliumAccountSnapshotSqliteEntry<ACCOUNT_ATTRIBUTE> : IAccountSnapshotSqliteEntry<ACCOUNT_ATTRIBUTE>, INeuraliumAccountSnapshotEntry<ACCOUNT_ATTRIBUTE>, INeuraliumAccountSnapshotSqliteEntry
+		where ACCOUNT_ATTRIBUTE : INeuraliumAccountAttributeSqliteEntry {
 	}
 }

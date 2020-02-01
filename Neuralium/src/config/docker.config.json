@@ -1,0 +1,75 @@
+{
+    "AppSettings": {
+        "SystemFilesPath" : "/home",
+        "logLevel" : "3",
+        "EnableHubs" : false,
+        "nodes" : [
+      //     {"ip" : "127.0.0.1", "port" : 33889}
+          {"ip" : "172.23.0.99", "port" : 33888}
+        ],
+        "maxPeerCount" : 7,
+        "averagePeerCount" : 4,
+       
+        "NeuraliumChainConfiguration" : {
+            "LoadWalletOnStart" : true,
+            "CreateMissingWallet" : true,
+            "BlockSavingMode" : "DigestAndBlocks",
+            "DisableSync" : false,
+            "MinimumSyncPeerCount" : 1,
+            "SkipGenesisHashVerification" : true
+        },
+        "UndocumentedDebugConfigurations" : {
+            "DebugNetworkMode" : false,
+            "localhostOnly" : false
+        , "SkipHubCheck" : true
+        }
+    },
+    "Logging": {
+        "IncludeScopes": false,
+        "Debug": {
+            "LogLevel": {
+                "Default": "Trace",
+                "Microsoft": "Information"
+            }
+        },
+        "Console": {
+            "LogLevel": {
+                "Default": "Trace",
+                "Microsoft": "Information"
+            }
+        }
+    },
+    "Serilog": {
+        "Using":  ["Serilog.Sinks.Console", "Neuralium"],
+        "MinimumLevel":{
+            "Default": "Information",
+            "Override": {
+                "Microsoft": "Information",
+                "System": "Warning"
+            }
+        },
+        //https://github.com/serilog/serilog-sinks-console
+        "WriteTo": [
+            {
+                "Name": "RpcEventLogSink"
+            },
+            {
+            "Name": "Async",
+            "Args": {
+                "configure": [
+                    {
+                        "Name": "Console",
+                        "Args": {
+                            "theme": "Serilog.Sinks.SystemConsole.Themes.AnsiConsoleTheme::Code, Serilog.Sinks.Console",
+                            "outputTemplate": "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties}{NewLine}{Exception}"
+                        }
+                    }
+                ]
+            }
+        }],
+        "Enrich": ["FromLogContext", "WithThreadId" , "WithExceptionDetails"],
+        "Properties": {
+
+        }
+    }
+}

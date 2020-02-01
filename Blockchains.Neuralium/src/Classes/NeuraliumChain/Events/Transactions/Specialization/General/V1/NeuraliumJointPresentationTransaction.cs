@@ -7,8 +7,8 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 	}
 
 	public class NeuraliumJointPresentationTransaction : JointPresentationTransaction, INeuraliumJointPresentationTransaction {
-		protected override ITransactionAccountFeature CreateTransactionAccountFeature() {
-			return new NeuraliumTransactionAccountFeature();
+		protected override ITransactionAccountAttribute CreateTransactionAccountFeature() {
+			return new NeuraliumTransactionAccountAttribute();
 		}
 
 		protected override ITransactionJointAccountMember CreateTransactionJointAccountMember() {

@@ -5,21 +5,14 @@ using Neuralia.Blockchains.Core.General.Types.Specialized;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Interfaces.AccountSnapshots.Cards {
 
-	public interface INeuraliumAccountSnapshot : INeuraliumSnapshot, IAccountSnapshot, ITypedCollectionExposure<INeuraliumAccountFreeze> {
+	public interface INeuraliumAccountSnapshot : INeuraliumSnapshot, IAccountSnapshot {
 		/// <summary>
 		///     our account balance
 		/// </summary>
 		Amount Balance { get; set; }
 	}
 
-	public interface INeuraliumAccountSnapshot<ACCOUNT_FREEZE> : INeuraliumAccountSnapshot
-		where ACCOUNT_FREEZE : INeuraliumAccountFreeze {
-
-		List<ACCOUNT_FREEZE> AccountFreezes { get; }
-	}
-
-	public interface INeuraliumAccountSnapshot<ACCOUNT_FEATURE, ACCOUNT_FREEZE> : IAccountSnapshot<ACCOUNT_FEATURE>, INeuraliumAccountSnapshot<ACCOUNT_FREEZE>
-		where ACCOUNT_FEATURE : INeuraliumAccountFeature
-		where ACCOUNT_FREEZE : INeuraliumAccountFreeze {
+	public interface INeuraliumAccountSnapshot<ACCOUNT_ATTRIBUTE> : IAccountSnapshot<ACCOUNT_ATTRIBUTE>, INeuraliumAccountSnapshot
+		where ACCOUNT_ATTRIBUTE : INeuraliumAccountAttribute {
 	}
 }

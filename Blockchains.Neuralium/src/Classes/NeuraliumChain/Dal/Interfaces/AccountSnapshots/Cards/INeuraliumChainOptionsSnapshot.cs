@@ -3,5 +3,9 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal.Interfaces.Acco
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Interfaces.AccountSnapshots.Cards {
 	public interface INeuraliumChainOptionsSnapshot : INeuraliumSnapshot, IChainOptionsSnapshot {
 		decimal SAFUDailyRatio { get; set; }
+		
+		decimal MinimumSAFUQuantity { get; set; }
+		
+		int MaximumAmountDays { get; set; }
 	}
 }

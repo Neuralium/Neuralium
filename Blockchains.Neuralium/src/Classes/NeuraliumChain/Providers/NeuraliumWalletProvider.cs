@@ -30,6 +30,7 @@ using Neuralia.Blockchains.Core.General.Types;
 using Neuralia.Blockchains.Core.General.Versions;
 using Neuralia.Blockchains.Core.Services;
 using System.Text.Json;
+using Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInterpretation.V1;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 
@@ -76,7 +77,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 					neuraliumWalletTimeline.Amount = neuraliumSynthesizedElectionResult.ElectedGains[electedAccountId].bountyShare;
 					neuraliumWalletTimeline.Tips = neuraliumSynthesizedElectionResult.ElectedGains[electedAccountId].tips;
 
-					neuraliumWalletTimeline.RecipientAccountId = electedAccountId;
+					neuraliumWalletTimeline.RecipientAccountIds = electedAccountId.ToString();
 					neuraliumWalletTimeline.Direction = NeuraliumWalletTimeline.MoneratyTransactionTypes.Credit;
 					neuraliumWalletTimeline.CreditType = NeuraliumWalletTimeline.CreditTypes.Election;
 
@@ -115,16 +116,18 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			return historyEntry;
 		}
 
-		public override IWalletTransactionHistory InsertTransactionHistoryEntry(ITransaction transaction, AccountId targetAccountId, string note) {
+		public override List<IWalletTransactionHistory> InsertTransactionHistoryEntry(ITransaction transaction, string note) {
 			this.EnsureWalletIsLoaded();
-			IWalletTransactionHistory historyEntry = base.InsertTransactionHistoryEntry(transaction, targetAccountId, note);
+			List<IWalletTransactionHistory> historyEntries = base.InsertTransactionHistoryEntry(transaction, note);
 
-			if(historyEntry is INeuraliumWalletTransactionHistory neuraliumWalletTransactionHistory) {
+			foreach(var historyEntry in historyEntries) {
+				if(historyEntry is INeuraliumWalletTransactionHistory neuraliumWalletTransactionHistory) {
 
-				this.InsertNeuraliumTransactionTimelineEntry(transaction, targetAccountId, neuraliumWalletTransactionHistory);
+					this.InsertNeuraliumTransactionTimelineEntry(transaction, neuraliumWalletTransactionHistory);
+				}
 			}
 
-			return historyEntry;
+			return historyEntries;
 		}
 
 		public override List<WalletTransactionHistoryHeaderAPI> APIQueryWalletTransactionHistory(Guid accountUuid) {
@@ -198,8 +201,8 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			if(!this.WalletFileInfo.Accounts.ContainsKey(accountUuid)) {
 				return result;
 			}
-
-			IWalletAccountSnapshot accountBase = this.WalletFileInfo.Accounts[accountUuid].WalletSnapshotInfo.WalletAccountSnapshot;
+			var account = this.GetWalletAccount(accountUuid);
+			IWalletAccountSnapshot accountBase = this.GetStandardAccountSnapshot(account.GetAccountId());
 
 			if(accountBase is INeuraliumWalletAccountSnapshot walletAccountSnapshot) {
 				result.Total = walletAccountSnapshot.Balance;
@@ -214,11 +217,30 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 					result.ReservedDebit = results.debit + results.tip;
 					result.ReservedCredit = results.credit;
 				}
+
+				if(accountBase != null) {
+					foreach(var entry in accountBase.AppliedAttributesBase) {
+						result.Frozen += NeuraliumSnapshotUtilities.GetImpactAmount(entry);
+					}
+				}
 			}
 
 			return result;
 		}
 
+		public override Dictionary<AccountId, int> ClearTimedOutTransactions() {
+			Dictionary<AccountId, int> totals = base.ClearTimedOutTransactions();
+
+			foreach(var nonZero in totals.Where(e => e.Value != 0)) {
+				
+				// alert of the new total, since it changed
+				TotalAPI total = this.GetAccountBalance(nonZero.Key, true);
+				this.centralCoordinator.PostSystemEvent(NeuraliumSystemEventGenerator.NeuraliumAccountTotalUpdated(nonZero.Key.SequenceId, nonZero.Key.AccountType, total));
+			}
+
+			return totals;
+		}
+		
 		public override void InsertLocalTransactionCacheEntry(ITransactionEnvelope transactionEnvelope) {
 			base.InsertLocalTransactionCacheEntry(transactionEnvelope);
 
@@ -244,20 +266,22 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			this.centralCoordinator.PostSystemEvent(NeuraliumSystemEventGenerator.NeuraliumAccountTotalUpdated(transactionId.Account.SequenceId, transactionId.Account.AccountType, total));
 		}
 		
-		private void InsertNeuraliumTransactionTimelineEntry(ITransaction transaction, AccountId targetAccountId, INeuraliumWalletTransactionHistory neuraliumWalletTransactionHistory) {
+		private void InsertNeuraliumTransactionTimelineEntry(ITransaction transaction, INeuraliumWalletTransactionHistory neuraliumWalletTransactionHistory) {
 			if((neuraliumWalletTransactionHistory.Amount == 0) && (neuraliumWalletTransactionHistory.Tip == 0)) {
 				// this transaction is most probably not a token influencing transaction. let's ignore 0 values
 				return;
 			}
 
 			// this is an incomming transaction, now let's add a neuralium timeline entry
+			(IWalletAccount sendingAccount, var recipientAccounts) = this.GetImpactedLocalAccounts(transaction);
 
-			IWalletAccount account = this.WalletFileInfo.WalletBase.Accounts.Values.SingleOrDefault(a => a.GetAccountId() == targetAccountId);
-
+			IWalletAccount account = neuraliumWalletTransactionHistory.Local ? sendingAccount : recipientAccounts.Single(e => e.GetAccountId().ToString() == neuraliumWalletTransactionHistory.Recipient);
+				
 			if(account == null) {
 				throw new ApplicationException("Invalid account");
 			}
 
+			
 			if(this.WalletFileInfo.Accounts[account.AccountUuid] is INeuraliumAccountFileInfo neuraliumAccountFileInfo) {
 				NeuraliumWalletTimeline neuraliumWalletTimeline = new NeuraliumWalletTimeline();
 				INeuraliumWalletTimelineFileInfo neuraliumWalletTimelineFileInfo = neuraliumAccountFileInfo.WalletTimelineFileInfo;
@@ -267,11 +291,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 				neuraliumWalletTimeline.Tips = 0;
 
 				neuraliumWalletTimeline.TransactionId = transaction.TransactionId.ToString();
-
-				bool local = targetAccountId == transaction.TransactionId.Account;
-				neuraliumWalletTimeline.SenderAccountId = transaction.TransactionId.Account;
-				neuraliumWalletTimeline.RecipientAccountId = targetAccountId;
-
+				
 				decimal total = 0;
 				decimal? lastTotal = neuraliumWalletTimelineFileInfo.GetLastTotal();
 
@@ -279,11 +299,16 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 					total = lastTotal.Value;
 				} else {
 					// we dont have anything in the timeline, so lets take it from the wallet
-					total = this.GetAccountBalance(targetAccountId, false).Total;
+					total = this.GetAccountBalance(account.GetAccountId(), false).Total;
 				}
 
-				if(local) {
+				neuraliumWalletTimeline.SenderAccountId = transaction.TransactionId.Account;
+				neuraliumWalletTimeline.RecipientAccountIds = transaction.TargetAccountsSerialized;
+				
+				if(neuraliumWalletTransactionHistory.Local) {
 
+					
+					
 					// in most cases, transactions we make wil be debits
 					neuraliumWalletTimeline.Direction = NeuraliumWalletTimeline.MoneratyTransactionTypes.Debit;
 					neuraliumWalletTimeline.Total = total - neuraliumWalletTimeline.Amount;
@@ -301,6 +326,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 					neuraliumWalletTimeline.Confirmed = false;
 
 				} else {
+					
 					neuraliumWalletTimeline.Total = total + neuraliumWalletTimeline.Amount;
 
 					neuraliumWalletTimeline.Confirmed = true;
@@ -325,36 +351,33 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			}
 		}
 
-		protected override void FillWalletTransactionHistoryEntry(IWalletTransactionHistory walletAccountTransactionHistory, ITransaction transaction, AccountId targetAccountId, string note) {
+		protected override void FillWalletTransactionHistoryEntry(IWalletTransactionHistory walletAccountTransactionHistory, ITransaction transaction, bool local, string note) {
 			this.EnsureWalletIsLoaded();
-			base.FillWalletTransactionHistoryEntry(walletAccountTransactionHistory, transaction, targetAccountId, note);
+			base.FillWalletTransactionHistoryEntry(walletAccountTransactionHistory, transaction, local, note);
 
 			if(walletAccountTransactionHistory is INeuraliumWalletTransactionHistory neuraliumWalletTransactionHistory) {
-
-				bool ours = transaction.TransactionId.Account == targetAccountId;
 
 				//here we record the impact amount. + value increases our amount. - reduces
 				if(transaction is INeuraliumTransferTransaction neuraliumTransferTransaction) {
 
 					neuraliumWalletTransactionHistory.Amount = neuraliumTransferTransaction.Amount;
 					neuraliumWalletTransactionHistory.MoneratyTransactionType = NeuraliumWalletTransactionHistory.MoneratyTransactionTypes.Debit;
-					neuraliumWalletTransactionHistory.Recipient = neuraliumTransferTransaction.Recipient.ToString();
 				} else if(transaction is INeuraliumMultiTransferTransaction neuraliumMultiTransferTransaction) {
 
-					if(ours) {
+					if(walletAccountTransactionHistory.Local) {
 						neuraliumWalletTransactionHistory.Amount = neuraliumMultiTransferTransaction.Total;
 
 					} else {
-						neuraliumWalletTransactionHistory.Amount = neuraliumMultiTransferTransaction.Recipients.SingleOrDefault(r => r.Recipient == targetAccountId).Amount;
+						(IWalletAccount sendingAccount, var recipientAccounts) = this.GetImpactedLocalAccounts(transaction);
+						neuraliumWalletTransactionHistory.Amount = neuraliumMultiTransferTransaction.Recipients.SingleOrDefault(r => r.Recipient == recipientAccounts.Single().GetAccountId()).Amount;
 					}
 
 					neuraliumWalletTransactionHistory.MoneratyTransactionType = NeuraliumWalletTransactionHistory.MoneratyTransactionTypes.Debit;
 					neuraliumWalletTransactionHistory.Recipient = string.Join(",", neuraliumMultiTransferTransaction.Recipients.Select(a => a.Recipient).OrderBy(a => a.ToLongRepresentation()));
 				} else if(transaction is INeuraliumRefillNeuraliumsTransaction neuraliumsTransaction) {
-					if(ours) {
+					if(walletAccountTransactionHistory.Local) {
 						neuraliumWalletTransactionHistory.Amount = 1000;
 						neuraliumWalletTransactionHistory.MoneratyTransactionType = NeuraliumWalletTransactionHistory.MoneratyTransactionTypes.Credit;
-						neuraliumWalletTransactionHistory.Recipient = neuraliumsTransaction.TransactionId.Account.ToString();
 					}
 				}
 
@@ -468,7 +491,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 				var dayIds = results.Select(d => d.Id).ToList();
 
 				var dayEntries = neuraliumAccountFileInfo.WalletTimelineFileInfo.RunQuery<TimelineDay.TimelineEntry, NeuraliumWalletTimeline>(d => d.Where(e => dayIds.Contains(e.DayId)).Select(e => new TimelineDay.TimelineEntry {
-					Timestamp = TimeService.FormatDateTimeStandardUtc(e.Timestamp), SenderAccountId = e.SenderAccountId?.ToString() ?? "", RecipientAccountId = e.RecipientAccountId?.ToString() ?? "", Amount = e.Amount,
+					Timestamp = TimeService.FormatDateTimeStandardUtc(e.Timestamp), SenderAccountId = e.SenderAccountId?.ToString() ?? "", RecipientAccountIds = e.RecipientAccountIds, Amount = e.Amount,
 					Tips = e.Tips, Total = e.Total, Direction = (byte) e.Direction, CreditType = (byte) e.CreditType,
 					Confirmed = e.Confirmed, DayId = e.DayId, TransactionId = e.TransactionId ?? ""
 				}).OrderByDescending(e => e.Timestamp).ToList());
@@ -506,7 +529,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 						delegateAccountId = new AccountId(electionResult.DelegateAccountId);
 					}
 
-					neuraliumSynthesizedElectionResult.ElectedAccounts.Add(accountId, (accountId, delegateAccountId, (Enums.ElectedPeerShareTypes) electionResult.PeerType, electionResult.SelectedTransactions));
+					neuraliumSynthesizedElectionResult.ElectedAccounts.Add(accountId, (accountId, delegateAccountId, (Enums.MiningTiers) electionResult.ElectedTier, electionResult.SelectedTransactions));
 					neuraliumSynthesizedElectionResult.BlockId = synthesizedBlockApi.BlockId - electionResult.Offset;
 					neuraliumSynthesizedElectionResult.ElectedGains.Add(accountId, (electionResult.BountyShare, electionResult.Tips));
 

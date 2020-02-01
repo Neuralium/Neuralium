@@ -1,4 +1,5 @@
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.Tags;
+using Blockchains.Neuralium.Classes.NeuraliumChain.Tools;
 using Neuralia.Blockchains.Core.Cryptography.Trees;
 using Neuralia.Blockchains.Core.General;
 using Neuralia.Blockchains.Core.General.Types.Specialized;
@@ -6,7 +7,7 @@ using Neuralia.Blockchains.Core.Serialization;
 using Neuralia.Blockchains.Tools.Serialization;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.General.V1.Implementations {
-	public class NeuraliumTipingTransactionImplementation : ISerializableCombo, ITipTransaction {
+	public class NeuraliumTipingTransactionImplementation : ISerializableCombo, ITip {
 
 		public void Rehydrate(IDataRehydrator rehydrator) {
 
@@ -16,6 +17,10 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 		public void Dehydrate(IDataDehydrator dehydrator) {
 
 			this.Tip.Dehydrate(dehydrator);
+		}
+
+		public virtual void Sanitize() {
+			this.Tip = NeuraliumUtilities.CapAndRound(this.Tip);
 		}
 
 		public HashNodeList GetStructuresArray() {

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specialization.Elections.Contexts.TransactionTipsAllocationMethods;
+using MoreLinq;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Specialization.Elections.Results.V1;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Identifiers;
 using Neuralia.Blockchains.Core.General.Types;
@@ -16,7 +17,12 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Elections.TransactionTips
 
 		public override void AllocateTransactionTips(IFinalElectionResults result, Dictionary<AccountId, (SafeArrayHandle electionHash, List<TransactionId> transactionIds)> electionResults, Dictionary<TransactionId, Amount> transactionTips) {
 
-			var primeElectionResults = electionResults.Where(e => result.ElectedCandidates.ContainsKey(e.Key)).ToDictionary(e => e.Key, e => e.Value);
+			if(transactionTips.All(t => t.Value == 0M)) {
+				return;
+			}
+			
+			var allElectedCandidates = result.ElectedCandidates;
+			var primeElectionResults = electionResults.Where(e => allElectedCandidates.ContainsKey(e.Key)).ToDictionary();
 
 			// first we get the election hash into a number for the prime elected only
 			var preparedElectionResults = primeElectionResults.ToDictionary(t => t.Key, t => new BigInteger(t.Value.electionHash.ToExactByteArray()));
@@ -48,7 +54,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Elections.TransactionTips
 					if(selectedTransaction != null) {
 
 						// ok, its a selection, lets assign it to the elected
-						result.ElectedCandidates[currentId].Transactions.Add(selectedTransaction);
+						allElectedCandidates[currentId].Transactions.Add(selectedTransaction);
 
 						// lets remove this transaction from all the lists to clean our workspace and make sure its not assigned again, it now out of the circuit
 						foreach((TransactionId TransactionId, int index, AccountId AccountId) accountSets in groupedTransactions[selectedTransaction]) {

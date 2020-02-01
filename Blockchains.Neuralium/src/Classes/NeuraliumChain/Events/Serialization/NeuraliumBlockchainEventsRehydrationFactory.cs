@@ -6,6 +6,7 @@ using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Envelopes;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Messages.Specialization.General;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.General;
+using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.General.Gated;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.General.V1;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.Moderator.V1;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.Moderator.V1.SAFU;
@@ -21,11 +22,13 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Messages;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Messages.Serialization;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Messages.Specialization.General.Elections;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Serialization;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Serialization.Exceptions;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Contents;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Operations;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Serialization;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Specialization;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Specialization.Gated;
 using Neuralia.Blockchains.Core.General.Versions;
 using Neuralia.Blockchains.Tools.Serialization;
 
@@ -67,15 +70,15 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serialization {
 			}
 		}
 
-		public override IKeyedTransaction CreateKeyedTransaction(IDehydratedTransaction dehydratedTransaction) {
+		public override IMasterTransaction CreateMasterTransaction(IDehydratedTransaction dehydratedTransaction) {
 
 			ITransaction transaction = this.CreateTransaction(dehydratedTransaction);
 
-			if(transaction is IKeyedTransaction keyedTransaction) {
-				return keyedTransaction;
+			if(transaction is IMasterTransaction masterTransaction) {
+				return masterTransaction;
 			}
 
-			throw new ApplicationException("Created transaction is not keyed.");
+			throw new ApplicationException("Created transaction is not a master transaction.");
 		}
 
 		//		public override TransactionSerializationMap CreateTransactionDehydrationMap(byte type, byte version, ByteArray keyLengths) {
@@ -205,7 +208,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serialization {
 				}
 
 			} else {
-				throw new ApplicationException("Invalid block type");
+				throw new UnrecognizedBlockException(this.centralCoordinator.ChainId, this.centralCoordinator.ChainName);
 			}
 
 			return block;
@@ -224,40 +227,41 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serialization {
 
 		public override IBlockchainMessage CreateMessage(IDehydratedBlockchainMessage dehydratedMessage) {
 
-			IDataRehydrator bodyRehydrator = DataSerializationFactory.CreateRehydrator(dehydratedMessage.Contents);
+			using(IDataRehydrator bodyRehydrator = DataSerializationFactory.CreateRehydrator(dehydratedMessage.Contents)) {
 
-			//start by peeking and reading both the transactiontype and version
-			var version = bodyRehydrator.RehydrateRewind<ComponentVersion<BlockchainMessageType>>();
+				//start by peeking and reading both the transactiontype and version
+				var version = bodyRehydrator.RehydrateRewind<ComponentVersion<BlockchainMessageType>>();
 
-			bodyRehydrator.Rewind2Start();
+				bodyRehydrator.Rewind2Start();
 
-			if(version.Type == BlockchainMessageTypes.Instance.DEBUG) {
-				if(version == (1, 0)) {
-					return new NeuraliumDebugMessage();
+				if(version.Type == BlockchainMessageTypes.Instance.DEBUG) {
+					if(version == (1, 0)) {
+						return new NeuraliumDebugMessage();
+					}
+
+				} else if(version.Type == BlockchainMessageTypes.Instance.ELECTIONS_REGISTRATION) {
+					if(version == (1, 0)) {
+						return new NeuraliumElectionsRegistrationMessage();
+					}
+
+				} else if(version.Type == BlockchainMessageTypes.Instance.ACTIVE_ELECTION_CANDIDACY) {
+					if(version == (1, 0)) {
+						// a very rare case where it is not scopped for the chain
+						return new ActiveElectionCandidacyMessage();
+					}
+
+				} else if(version.Type == BlockchainMessageTypes.Instance.PASSIVE_ELECTION_CANDIDACY) {
+					if(version == (1, 0)) {
+						// a very rare case where it is not scopped for the chain
+						return new PassiveElectionCandidacyMessage();
+					}
+
+				} else {
+					throw new UnrecognizedMessageException(this.centralCoordinator.ChainId, this.centralCoordinator.ChainName);
 				}
 
-			} else if(version.Type == BlockchainMessageTypes.Instance.ELECTIONS_REGISTRATION) {
-				if(version == (1, 0)) {
-					return new NeuraliumElectionsRegistrationMessage();
-				}
-
-			} else if(version.Type == BlockchainMessageTypes.Instance.ACTIVE_ELECTION_CANDIDACY) {
-				if(version == (1, 0)) {
-					// a very rare case where it is not scopped for the chain
-					return new ActiveElectionCandidacyMessage();
-				}
-
-			} else if(version.Type == BlockchainMessageTypes.Instance.PASSIVE_ELECTION_CANDIDACY) {
-				if(version == (1, 0)) {
-					// a very rare case where it is not scopped for the chain
-					return new PassiveElectionCandidacyMessage();
-				}
-
-			} else {
-				throw new ApplicationException("Invalid blockchain message type");
+				return null;
 			}
-
-			return null;
 		}
 
 		public override IBlockchainDigest CreateDigest(IDataRehydrator rehydrator) {
@@ -272,7 +276,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serialization {
 				}
 
 			} else {
-				throw new ApplicationException("Invalid digest type");
+				throw new UnrecognizedDigestException(this.centralCoordinator.ChainId, this.centralCoordinator.ChainName);
 			}
 
 			return null;
@@ -328,7 +332,12 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serialization {
 						transaction = new NeuraliumChainAccreditationCertificateTransaction();
 					}
 
-				} else if(version.Type == TransactionTypes.Instance.DEBUG) {
+				} else if(version.Type == TransactionTypes.Instance.DEBUG_KEYED) {
+					if(version == (1, 0)) {
+						transaction = new NeuraliumDebugKeyedTransaction();
+					}
+
+				}else if(version.Type == TransactionTypes.Instance.DEBUG) {
 					if(version == (1, 0)) {
 						transaction = new NeuraliumDebugTransaction();
 					}
@@ -352,7 +361,11 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serialization {
 					if(version == (1, 0)) {
 						transaction = new NeuraliumAccountResetTransaction();
 					}
-
+				}
+				else if(version.Type == TransactionTypes.Instance.GATED_JUDGEMENT_TRANSACTION) {
+					if(version == (1, 0)) {
+						transaction = new NeuraliumGatedJudgementTransaction();
+					}
 				}
 
 				// neuralium only transactions
@@ -372,7 +385,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serialization {
 					}
 				} else if(version.Type == NeuraliumTransactionTypes.Instance.NEURALIUM_FREEZE_SUSPICIOUSACCOUNTS) {
 					if(version == (1, 0)) {
-						transaction = new NeuraliuFreezeSuspiciousFundsTransaction();
+						transaction = new NeuraliumFreezeSuspiciousFundsTransaction();
 					}
 				} else if(version.Type == NeuraliumTransactionTypes.Instance.NEURALIUM_UNWIND_STOLEN_SUSPICIOUSACCOUNTS) {
 					if(version == (1, 0)) {
@@ -380,15 +393,24 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serialization {
 					}
 				} else if(version.Type == NeuraliumTransactionTypes.Instance.NEURALIUM_UNFREEZE_SUSPICIOUSACCOUNTS) {
 					if(version == (1, 0)) {
-						transaction = new NeuraliuUnfreezeClearedFundsTransaction();
+						transaction = new NeuraliumUnfreezeClearedFundsTransaction();
 					}
 				} else if(version.Type == NeuraliumTransactionTypes.Instance.NEURALIUM_SAFU_TRANSFER) {
 					if(version == (1, 0)) {
 						transaction = new NeuraliumSAFUTransferTransaction();
 					}
+				}  else if(version.Type == NeuraliumTransactionTypes.Instance.NEURALIUM_SAFU_UPDATE_RATIO) {
+					if(version == (1, 0)) {
+						transaction = new NeuraliumDailySAFURatioTransaction();
+					}
 				} else if(version.Type == NeuraliumTransactionTypes.Instance.NEURALIUM_SAFU_CONTRIBUTIONS) {
 					if(version == (1, 0)) {
 						transaction = new NeuraliumSAFUContributionTransaction();
+					}
+				}
+				else if(version.Type == NeuraliumTransactionTypes.Instance.NEURALIUM_THREE_WAY_GATED_TRANSFER_TRANSACTION) {
+					if(version == (1, 0)) {
+						transaction = new NeuraliumThreeWayGatedTransferTransaction();
 					}
 				}
 #if TESTNET || DEVNET
@@ -400,7 +422,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serialization {
 #endif
 
 				else {
-					throw new ApplicationException("Invalid transaction type");
+					throw new UnrecognizedTransactionException(this.centralCoordinator.ChainId, this.centralCoordinator.ChainName);
 				}
 			}
 
@@ -414,16 +436,19 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serialization {
 				}
 			}
 
-			if(version == EnvelopeTypes.Instance.Block) {
+			else if(version == EnvelopeTypes.Instance.Block) {
 				if(version == (1, 0)) {
 					return new NeuraliumBlockEnvelope();
 				}
 			}
 
-			if(version == EnvelopeTypes.Instance.Transaction) {
+			else if(version == EnvelopeTypes.Instance.Transaction) {
 				if(version == (1, 0)) {
 					return new NeuraliumTransactionEnvelope();
 				}
+			}
+			else {
+				throw new UnrecognizedEnvelopeException(this.centralCoordinator.ChainId, this.centralCoordinator.ChainName);
 			}
 
 			return null;

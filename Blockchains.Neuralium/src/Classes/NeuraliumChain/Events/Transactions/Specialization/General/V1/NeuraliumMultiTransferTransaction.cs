@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.General.Structures;
+using Blockchains.Neuralium.Classes.NeuraliumChain.Tools;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Tags;
 using Neuralia.Blockchains.Common.Classes.Tools.Serialization;
@@ -14,14 +16,14 @@ using Neuralia.Blockchains.Tools.Serialization;
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.General.V1 {
 
 	public interface INeuraliumMultiTransferTransaction : INeuraliumTipingTransaction, IRateLimitedTransaction {
-		Amount Total { get; set; }
+		decimal Total { get; }
 
 		List<RecipientSet> Recipients { get; }
 	}
 
 	public class NeuraliumMultiTransferTransaction : NeuraliumTipingTransaction, INeuraliumMultiTransferTransaction {
 
-		public Amount Total { get; set; } = new Amount();
+		public decimal Total => this.Recipients.Sum(e => e.Amount.Value);
 
 		public List<RecipientSet> Recipients { get; } = new List<RecipientSet>();
 
@@ -38,6 +40,17 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 			}
 
 			return nodeList;
+		}
+
+		protected override void Sanitize() {
+			base.Sanitize();
+
+			var clone = this.Recipients.ToArray();
+			this.Recipients.Clear();
+			foreach(RecipientSet entry in clone) {
+
+				this.Recipients.Add(new RecipientSet(){ Recipient = entry.Recipient, Amount = NeuraliumUtilities.CapAndRound(entry.Amount)});
+			}
 		}
 
 		public override void JsonDehydrate(JsonDeserializer jsonDeserializer) {
@@ -61,17 +74,14 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 
 		protected override void RehydrateHeader(IDataRehydrator rehydrator) {
 			base.RehydrateHeader(rehydrator);
-
-			this.Total.Rehydrate(rehydrator);
-
+			
 			this.Recipients.Clear();
 
 			var parameters = new AccountIdGroupSerializer.AccountIdGroupSerializerRehydrateParameters<AccountId> {
 				RehydrateExtraData = (accountId, offset, index, dh) => {
 
-					RecipientSet entry = new RecipientSet();
-
-					entry.Recipient = accountId;
+					RecipientSet entry = new RecipientSet(accountId);
+					
 					entry.Amount.Rehydrate(rehydrator);
 
 					this.Recipients.Add(entry);
@@ -83,9 +93,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 
 		protected override void DehydrateHeader(IDataDehydrator dehydrator) {
 			base.DehydrateHeader(dehydrator);
-
-			this.Total.Dehydrate(dehydrator);
-
+			
 			var parameters = new AccountIdGroupSerializer.AccountIdGroupSerializerDehydrateParameters<RecipientSet, AccountId> {
 				DehydrateExtraData = (entry, AccountId, offset, index, dh) => {
 
@@ -95,5 +103,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Speci
 
 			AccountIdGroupSerializer.Dehydrate(this.Recipients.ToDictionary(e => e.Recipient, e => e), dehydrator, true, parameters);
 		}
+
+		public override ImmutableList<AccountId> TargetAccounts => this.Recipients.Select(r => r.Recipient).ToImmutableList();
 	}
 }
