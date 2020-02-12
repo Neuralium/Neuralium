@@ -30,19 +30,23 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 		public decimal? GetLastTotal() {
 			lock(this.locker) {
 				return this.RunDbOperation(litedbDal => {
-					
-					if(litedbDal.CollectionExists<NeuraliumWalletTimelineDay>() && litedbDal.Any<NeuraliumWalletTimelineDay>()) {
-						int maxId = litedbDal.All<NeuraliumWalletTimelineDay>().Max(dayEntry => dayEntry.Id);
+					return litedbDal.Open(db => {
+						if(litedbDal.CollectionExists<NeuraliumWalletTimelineDay>(db) && litedbDal.Any<NeuraliumWalletTimelineDay>(db)) {
+							int maxId = litedbDal.All<NeuraliumWalletTimelineDay>(db).Max(dayEntry => dayEntry.Id);
 
-						var timelineDay = litedbDal.GetOne<NeuraliumWalletTimelineDay>(k => k.Id == maxId);
+							var timelineDay = litedbDal.GetOne<NeuraliumWalletTimelineDay>(k => k.Id == maxId, db);
 
-						if(timelineDay != null) {
-							return timelineDay.Total;
+							if(timelineDay != null) {
+								return timelineDay.Total;
+							}
+
 						}
+						
+						return (decimal?)null;
+					});
+					
 
-					}
-
-					return (decimal?)null;
+					
 				});
 			}
 		}
@@ -51,41 +55,46 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 			lock(this.locker) {
 				this.RunDbOperation(litedbDal => {
 					
-					if(litedbDal.CollectionExists<NeuraliumWalletTimelineDay>() && (entry.Id != 0) && litedbDal.Exists<NeuraliumWalletTimeline>(k => k.Id == entry.Id || k.TransactionId == entry.TransactionId)) {
-						return;
-					}
-
-					DateTime day = entry.Timestamp.ToUniversalTime().Date;
-
-					NeuraliumWalletTimelineDay dayEntry = null;
-
-					// first, lets enter the day if required, otherwise update it
-					if(!litedbDal.CollectionExists<NeuraliumWalletTimelineDay>() || !litedbDal.Exists<NeuraliumWalletTimelineDay>(k => k.Timestamp == day)) {
-						dayEntry = new NeuraliumWalletTimelineDay();
-
-						int newId = 0;
-
-						if(litedbDal.CollectionExists<NeuraliumWalletTimelineDay>() && litedbDal.Any<NeuraliumWalletTimelineDay>()) {
-							newId = litedbDal.All<NeuraliumWalletTimelineDay>().Max(d => d.Id);
+					litedbDal.Open(db => {
+						if(litedbDal.CollectionExists<NeuraliumWalletTimelineDay>(db) && (entry.Id != 0) && litedbDal.Exists<NeuraliumWalletTimeline>(k => k.Id == entry.Id || k.TransactionId == entry.TransactionId, db)) {
+							return;
 						}
 
-						dayEntry.Id = newId + 1;
-						dayEntry.Timestamp = day;
+						DateTime day = entry.Timestamp.ToUniversalTime().Date;
+
+						NeuraliumWalletTimelineDay dayEntry = null;
+
+						// first, lets enter the day if required, otherwise update it
+						if(!litedbDal.CollectionExists<NeuraliumWalletTimelineDay>(db) || !litedbDal.Exists<NeuraliumWalletTimelineDay>(k => k.Timestamp == day, db)) {
+							dayEntry = new NeuraliumWalletTimelineDay();
+
+							int newId = 0;
+						
+							if(litedbDal.CollectionExists<NeuraliumWalletTimelineDay>(db) && litedbDal.Any<NeuraliumWalletTimelineDay>(db)) {
+								newId = litedbDal.All<NeuraliumWalletTimelineDay>(db).Max(d => d.Id);
+							}
+
+							dayEntry.Id = newId + 1;
+							dayEntry.Timestamp = day;
+							dayEntry.Total = entry.Total;
+
+							litedbDal.Insert(dayEntry, k => k.Id, db);
+						}
+
+						dayEntry = litedbDal.GetOne<NeuraliumWalletTimelineDay>(k => k.Timestamp == day, db);
+
+						// update to the latest total
 						dayEntry.Total = entry.Total;
 
-						litedbDal.Insert(dayEntry, k => k.Id);
-					}
+						litedbDal.Update(dayEntry, db);
 
-					dayEntry = litedbDal.GetOne<NeuraliumWalletTimelineDay>(k => k.Timestamp == day);
+						entry.DayId = dayEntry.Id;
 
-					// update to the latest total
-					dayEntry.Total = entry.Total;
-
-					litedbDal.Update(dayEntry);
-
-					entry.DayId = dayEntry.Id;
-
-					litedbDal.Insert(entry, k => k.Id);
+						litedbDal.Insert(entry, k => k.Id, db);
+						
+					});
+					
+					
 				});
 
 				this.Save();
@@ -148,11 +157,14 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 
 		public DateTime GetFirstDay() {
 			return this.RunQueryDbOperation(litedbDal => {
-				if(litedbDal.CollectionExists<NeuraliumWalletTimelineDay>()) {
-					return litedbDal.All<NeuraliumWalletTimelineDay>().Max(d => d.Timestamp);
-				}
 
-				return DateTime.MinValue;
+				return litedbDal.Open(db => {
+					if(litedbDal.CollectionExists<NeuraliumWalletTimelineDay>(db) && litedbDal.Any<NeuraliumWalletTimelineDay>(db)) {
+						return litedbDal.All<NeuraliumWalletTimelineDay>(db).Max(d => d.Timestamp);
+					}
+					return DateTime.MinValue;
+				});
+				
 			});
 		}
 

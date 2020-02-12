@@ -11,7 +11,7 @@ namespace Neuralium.Core.Classes.Configuration {
 		[Option('r', "runtime-mode", Default = "", Required = false, HelpText = "Are we running this in docker or not.")]
 		public string RuntimeMode { get; set; }
 
-		[Option('r', "cloud-mode", Default = "", Required = false, HelpText = "What cloud mode are we.")]
+		[Option('m', "cloud-mode", Default = "", Required = false, HelpText = "What cloud mode are we.")]
 		public string CloudMode { get; set; }
 
 		[Option("serialization-type", Default = "", Required = false, HelpText = "What type of serialization mode does this node take.")]

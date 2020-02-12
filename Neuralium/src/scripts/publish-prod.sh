@@ -8,17 +8,13 @@ RI=win-x64
 #RI=osx-x64
 
 #build first to clean resharper issue
-dotnet restore
 
-if dotnet build -c Release -r $RI --no-incremental ; then
-    if  dotnet publish -c Release  --self-contained -r $RI -o bin/publish ; then
-         echo "publish completed"
-    else
-        echo "build failed"
-    fi
+if  dotnet publish -c Release  --self-contained true /p:PublishTrimmed=true -r $RI -o bin/publish ; then
+     echo "publish completed"
 else
     echo "build failed"
 fi
+
 
 #    
 #if msbuild *.csproj -t:clean,build -restore -maxcpucount:3 -p:PublishWithAspNetCoreTargetManifest=false -p:RuntimeIdentifier=$RI -p:Configuration=Release -p:DebugSymbols=false -p:DebugType=None  ; then

@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,6 +29,8 @@ namespace Neuralium.Core.Classes.Runtime {
 
 		protected const string prefix = "NEURALIUM_";
 		protected const string appsettings = "config/config.json";
+		
+		protected const string docker_base_path = "/home/data/config.json";
 		protected const string docker_appsettings = "config/docker.config.json";
 		protected const string ConfigSectionName = "AppSettings";
 		
@@ -111,7 +114,14 @@ namespace Neuralium.Core.Classes.Runtime {
 			IConfigurationBuilder entry = configApp.SetBasePath(GetExecutingDirectoryName());
 
 			if(this.cmdOptions.RuntimeMode.ToUpper() == "DOCKER") {
-				entry = entry.AddJsonFile(docker_appsettings, false, false);
+				Console.WriteLine($"Docker mode.");
+				if(File.Exists(docker_base_path)) {
+					Console.WriteLine($"Loading config file {docker_base_path}");
+					entry = entry.AddJsonFile(docker_base_path, false, false);
+				} else {
+					Console.WriteLine($"Default docker config not found. Loading config file {docker_appsettings}");
+					entry = entry.AddJsonFile(docker_appsettings, false, false);
+				}
 			} else {
 				entry = entry.AddJsonFile(appsettings, false, false);
 			}

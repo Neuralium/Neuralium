@@ -322,7 +322,7 @@ namespace Neuralium.Core.Classes.Runtime {
 
 			try {
 				if(!File.Exists(testnetFlagFilePath)) {
-					var dehydrator = DataSerializationFactory.CreateDehydrator();
+					using var dehydrator = DataSerializationFactory.CreateDehydrator();
 					GlobalSettings.SoftwareVersion.Dehydrate(dehydrator);
 
 					var resultBytes = dehydrator.ToArray();

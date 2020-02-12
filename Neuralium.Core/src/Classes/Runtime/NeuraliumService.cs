@@ -205,7 +205,7 @@ namespace Neuralium.Core.Classes.Runtime {
 			
 			//TimeSpan elapsed = DateTime.UtcNow - ;
 
-			var limit = new DateTime(2020, 1, 30, 23, 0, 0, DateTimeKind.Utc);
+			var limit = new DateTime(2020, 2, 20, 23, 0, 0, DateTimeKind.Utc);
 			if(DateTime.UtcNow > limit) {
 			
 				Console.BackgroundColor = ConsoleColor.Black;

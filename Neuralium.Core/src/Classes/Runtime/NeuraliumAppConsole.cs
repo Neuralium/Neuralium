@@ -292,7 +292,7 @@ namespace Neuralium.Core.Classes.Runtime {
 				foreach(var trx in block.GetAllConfirmedTransactions()) {
 
 					IDehydratedTransaction dehydrated = trx.Value.Dehydrate(BlockChannelUtils.BlockChannelTypes.All);
-					IDataDehydrator dehydrator = DataSerializationFactory.CreateDehydrator();
+					using IDataDehydrator dehydrator = DataSerializationFactory.CreateDehydrator();
 					dehydrated.Dehydrate(dehydrator);
 					var ff = dehydrator.ToArray().ToExactByteArrayCopy();
 					veee.ConfirmedTransactions.Add(trx.Key.ToString(), ff);

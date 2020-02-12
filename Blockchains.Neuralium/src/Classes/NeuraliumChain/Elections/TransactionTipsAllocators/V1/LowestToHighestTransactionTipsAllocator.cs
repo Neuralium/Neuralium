@@ -16,10 +16,6 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Elections.TransactionTips
 		}
 
 		public override void AllocateTransactionTips(IFinalElectionResults result, Dictionary<AccountId, (SafeArrayHandle electionHash, List<TransactionId> transactionIds)> electionResults, Dictionary<TransactionId, Amount> transactionTips) {
-
-			if(transactionTips.All(t => t.Value == 0M)) {
-				return;
-			}
 			
 			var allElectedCandidates = result.ElectedCandidates;
 			var primeElectionResults = electionResults.Where(e => allElectedCandidates.ContainsKey(e.Key)).ToDictionary();

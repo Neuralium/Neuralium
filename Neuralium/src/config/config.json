@@ -4,8 +4,10 @@
     //  "SystemFilesPath" : "/home/jdb/demo/tests/super/files/peers/peer1",
     "logLevel": "3",
     "EnableHubs": true,
+    "HubContactMethod" : "Web",
+    
     "nodes": [
-  //  {"ip" : "127.0.0.1", "port" : 33889}
+    {"ip" : "127.0.0.1", "port" : 33889}
    //   {"ip" : "127.0.0.1", "port" : 33888}
      // {"ip": "34.66.138.235", "port": 33887}
 
@@ -13,12 +15,12 @@
     ],
     "RpcLoggingLevel" : "Verbose",
     "SocketType" : "Stream",
-    "HubsWebAddress" : "http://localhost:5000",
+  //  "HubsWebAddress" : "http://localhost:5000",
     "NeuraliumChainConfiguration": {
 
       //  "PassphraseCaptureMethod" : "Console",
-      "LoadWalletOnStart": false,
-      "CreateMissingWallet": false,
+      "LoadWalletOnStart": true,
+      "CreateMissingWallet": true,
       "BlockSavingMode": "DigestThenBlocks",
       "DisableSync": false,
       "MinimumSyncPeerCount": 1,
@@ -26,12 +28,13 @@
       "SkipGenesisHashVerification": true,
       "SkipDigestHashVerification" : true,
       "ElectionsRegistrationMethod": "Web",
-      "RegistrationMethod": "Web",
+      "RegistrationMethod": "Gossip",
       "EnableMiningStatusChecks" : true,
       "TrackedSnapshotAccountsList" : ["{SF}"],
       "AccountSnapshotTrackingMethod" : "List",
       "CompressWallet" : true,
       "EncryptWallet" : false,
+      "AllowGossipPresentations" : true,
 
      // "WebElectionsRegistrationUrl": "http://localhost:5000",
      //   "WebRegistrationUrl" : "http://localhost:5000",
@@ -53,14 +56,14 @@
     "IncludeScopes": false,
     "Debug": {
       "LogLevel": {
-        "Default": "Trace",
-        "Microsoft": "Information"
+        "Default": "Error",
+        "Microsoft": "Error"
       }
     },
     "Console": {
       "LogLevel": {
-        "Default": "Trace",
-        "Microsoft": "Information"
+        "Default": "Error",
+        "Microsoft": "Error"
       }
     }
   },
@@ -68,8 +71,8 @@
     "MinimumLevel":{
       "Default": "Verbose",
       "Override": {
-        "Microsoft": "Information",
-        "System": "Warning"
+        "Microsoft": "Error",
+        "System": "Error"
       }
     },
     //https://github.com/serilog/serilog-sinks-console
