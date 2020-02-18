@@ -210,56 +210,48 @@ namespace Neuralium.Core.Classes.Services {
 
 			builder.ConfigureServices(services => {
 				//webapi RPC:
-				if(appsettings.RpcMode.HasFlag(AppSettingsBase.RpcModes.Rest)) {
-					services.AddControllers();
 
-					//.AddApiExplorer()     // Optional (Microsoft.AspNetCore.Mvc.ApiExplorer)
-					//.AddAuthorization()   // Optional if no authentication
-					//.AddFormatterMappings()
+				services.AddControllers();
 
-					//.AddDataAnnotations() // Optional if no validation using attributes (Microsoft.AspNetCore.Mvc.DataAnnotations)
-					//.AddJsonFormatters();
+				//.AddApiExplorer()     // Optional (Microsoft.AspNetCore.Mvc.ApiExplorer)
+				//.AddAuthorization()   // Optional if no authentication
+				//.AddFormatterMappings()
 
-					//.AddCors()            // Optional (Microsoft.AspNetCore.Mvc.Cors)
-				}
+				//.AddDataAnnotations() // Optional if no validation using attributes (Microsoft.AspNetCore.Mvc.DataAnnotations)
+				//.AddJsonFormatters();
 
-				if(appsettings.RpcMode.HasFlag(AppSettingsBase.RpcModes.Signal)) {
-					services.AddSignalR(hubOptions => {
-						//hubOptions.SupportedProtocols.Clear();
+				//.AddCors()            // Optional (Microsoft.AspNetCore.Mvc.Cors)
+				
+
+				services.AddSignalR(hubOptions => {
+					//hubOptions.SupportedProtocols.Clear();
 #if TESTNET || DEVNET
-						hubOptions.EnableDetailedErrors = true;
+					hubOptions.EnableDetailedErrors = true;
 #endif
-						hubOptions.ClientTimeoutInterval = TimeSpan.FromMinutes(1);
-						hubOptions.KeepAliveInterval = TimeSpan.FromSeconds(30);
+					hubOptions.ClientTimeoutInterval = TimeSpan.FromMinutes(1);
+					hubOptions.KeepAliveInterval = TimeSpan.FromSeconds(30);
 
-					}).AddJsonProtocol(options => {
-						options.PayloadSerializerOptions.WriteIndented = false;
-					});
-				}
+				}).AddJsonProtocol(options => {
+					options.PayloadSerializerOptions.WriteIndented = false;
+				});
+				
 			}).Configure(app => {
 				app.UseRouting();
 
 				app.UseEndpoints(endpoints => {
-					if(appsettings.RpcMode.HasFlag(AppSettingsBase.RpcModes.Signal)) {
-						endpoints.MapHub<RPC_HUB>("/signal", option => {
-							option.ApplicationMaxBufferSize = 0;
-							option.TransportMaxBufferSize = 0;
-							option.WebSockets.CloseTimeout = TimeSpan.FromDays(7);
-							option.Transports = HttpTransportType.WebSockets;
-						});
-					}
+					
+					endpoints.MapHub<RPC_HUB>("/signal", option => {
+						option.ApplicationMaxBufferSize = 0;
+						option.TransportMaxBufferSize = 0;
+						option.WebSockets.CloseTimeout = TimeSpan.FromDays(7);
+						option.Transports = HttpTransportType.WebSockets;
+					});
 
-					if(appsettings.RpcMode.HasFlag(AppSettingsBase.RpcModes.Rest)) {
-						endpoints.MapControllers();
-					}
+					endpoints.MapControllers();
 				});
 
 				if(appsettings.RpcTransport == AppSettingsBase.RpcTransports.Secured) {
 					app.UseHttpsRedirection();
-				}
-
-				if(appsettings.RpcMode.HasFlag(AppSettingsBase.RpcModes.Rest)) {
-
 				}
 
 			}).ConfigureLogging((context, logging) => {

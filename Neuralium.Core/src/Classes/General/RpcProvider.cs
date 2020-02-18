@@ -708,6 +708,28 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
+		public async Task<string> QueryDefaultWalletAccountId(ushort chainType) {
+			try {
+				return await this.GetChainInterface(chainType).QueryDefaultWalletAccountId().awaitableTask;
+
+			} catch(Exception ex) {
+				Log.Error(ex, "Failed to query wallet default account id");
+
+				throw new HubException("Failed to query wallet default account id");
+			}
+		}
+		
+		public async Task<Guid> QueryDefaultWalletAccountUuid(ushort chainType) {
+			try {
+				return await this.GetChainInterface(chainType).QueryDefaultWalletAccountUuid().awaitableTask;
+
+			} catch(Exception ex) {
+				Log.Error(ex, "Failed to query wallet default account uuid");
+
+				throw new HubException("Failed to query wallet default account uuid");
+			}
+		}
+
 		public async Task<object> QueryWalletAccountDetails(ushort chainType, Guid accountUuid) {
 			try {
 				return await this.GetChainInterface(chainType).QueryWalletAccountDetails(accountUuid).awaitableTask;
@@ -774,8 +796,8 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
-		public async Task<int> PublishAccount(ushort chainType, Guid? accountUuId) {
-			return await this.CreateClientLongRunningEvent(async (correlationId, resetEvent) => await this.GetChainInterface(chainType).PresentAccountPublicly(correlationId, accountUuId).awaitableTask);
+		public async Task<int> PublishAccount(ushort chainType, Guid? accountUuid) {
+			return await this.CreateClientLongRunningEvent(async (correlationId, resetEvent) => await this.GetChainInterface(chainType).PresentAccountPublicly(correlationId, accountUuid).awaitableTask);
 		}
 
 		public Task StartMining(ushort chainType, string delegateAccountId) {
@@ -954,9 +976,9 @@ namespace Neuralium.Core.Classes.General {
 
 	#region neuralium chain queries
 
-		public async Task<object> QueryAccountTotalNeuraliums(Guid accountId) {
+		public async Task<object> QueryAccountTotalNeuraliums(Guid accountUuid) {
 			try {
-				return await this.GetNeuraliumChainInterface().QueryWalletTotal(accountId).awaitableTask;
+				return await this.GetNeuraliumChainInterface().QueryWalletTotal(accountUuid).awaitableTask;
 			} catch(Exception ex) {
 				Log.Error(ex, "Failed to Query wallet total");
 

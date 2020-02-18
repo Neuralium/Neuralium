@@ -1,12 +1,13 @@
 ﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Neuralium.Core.Controllers {
-	[Route("rest/[controller]")]
 
-	//[ApiController]
-	public class RpcController {
+	[Route("rpc")]
+	[ApiController]
+	public class RpcController : Controller {
 
 		public RpcController(IHubContext<RpcHub<IRpcClient>> hubContext) {
 
@@ -14,15 +15,11 @@ namespace Neuralium.Core.Controllers {
 
 		// GET api/values
 		[HttpGet]
-		public IEnumerable<string> Get() {
-			return new[] {"value1", "value2"};
-		}
+		public Task<IActionResult> Get() {
 
-		[HttpGet("stop")]
-		public IActionResult Stop() {
-			//new ObjectResult(item);
-			//projects.Router.stop = true;
-			return new OkResult();
+			string result = $"Neuralium node is online and RPC interfaces are available.";
+			
+			return Task.FromResult((IActionResult)this.Ok(result));
 		}
 	}
 }

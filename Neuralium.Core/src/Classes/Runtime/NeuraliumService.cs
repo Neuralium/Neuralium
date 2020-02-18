@@ -38,7 +38,7 @@ namespace Neuralium.Core.Classes.Runtime {
 				Console.ForegroundColor = ConsoleColor.Red;
 				Console.WriteLine("Currently in TESTNET mode");
 				Console.ResetColor();
-
+				
 				this.CheckTestnetDelay();
 
 				TimeSpan waitTime = TimeSpan.FromHours(1);

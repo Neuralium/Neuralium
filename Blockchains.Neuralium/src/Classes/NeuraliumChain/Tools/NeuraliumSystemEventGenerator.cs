@@ -1,4 +1,5 @@
 using Blockchains.Neuralium.Classes.NeuraliumChain.DataStructures;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Providers;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Tools;
 using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.General.Types;
@@ -19,7 +20,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Tools {
 			NeuraliumSystemEventGenerator generator = new NeuraliumSystemEventGenerator();
 
 			generator.EventType = NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.NeuraliumMiningPrimeElected;
-			generator.Parameters = new object[] {blockId, bounty, TransactionTip,  delegateAccountId?.ToString()};
+			generator.Parameters = new object[] {blockId, bounty, TransactionTip,  delegateAccountId?.ToString(), (byte)ChainMiningProvider.MiningEventLevel.Level1};
 
 			return generator;
 		}

@@ -22,7 +22,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain {
 
 		void SubmitDebugMessage(Action<(TransactionId, SafeArrayHandle)> callback);
 
-		TaskResult<TotalAPI> QueryWalletTotal(Guid accountId);
+		TaskResult<TotalAPI> QueryWalletTotal(Guid accountUuid);
 
 		TaskResult<bool> SendNeuraliums(AccountId targetAccountId, Amount amount, Amount tip, string note, CorrelationContext correlationContext, byte expiration = 0);
 
@@ -92,15 +92,15 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain {
 
 	#region API methods
 
-		public TaskResult<TotalAPI> QueryWalletTotal(Guid accountId) {
+		public TaskResult<TotalAPI> QueryWalletTotal(Guid accountUuid) {
 
 			return this.RunTaskMethod(() => {
 
-				if(accountId == Guid.Empty) {
-					accountId = this.centralCoordinator.ChainComponentProvider.WalletProvider.GetActiveAccount().AccountUuid;
+				if(accountUuid == Guid.Empty) {
+					accountUuid = this.centralCoordinator.ChainComponentProvider.WalletProvider.GetActiveAccount().AccountUuid;
 				}
 
-				return this.centralCoordinator.ChainComponentProvider.WalletProvider.GetAccountBalance(accountId, true);
+				return this.centralCoordinator.ChainComponentProvider.WalletProvider.GetAccountBalance(accountUuid, true);
 			});
 		}
 

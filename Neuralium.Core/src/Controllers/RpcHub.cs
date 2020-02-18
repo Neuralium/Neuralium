@@ -227,6 +227,14 @@ namespace Neuralium.Core.Controllers {
 			return this.rpcProvider.QueryWalletAccounts(chainType);
 		}
 
+		public Task<string> QueryDefaultWalletAccountId(ushort chainType) {
+			return this.rpcProvider.QueryDefaultWalletAccountId(chainType);
+		}
+
+		public Task<Guid> QueryDefaultWalletAccountUuid(ushort chainType) {
+			return this.rpcProvider.QueryDefaultWalletAccountUuid(chainType);
+		}
+
 		public Task<object> QueryWalletAccountDetails(ushort chainType, Guid accountUuid) {
 			return this.rpcProvider.QueryWalletAccountDetails(chainType, accountUuid);
 		}
@@ -235,8 +243,8 @@ namespace Neuralium.Core.Controllers {
 			return this.rpcProvider.QueryWalletAccountPresentationTransactionId(chainType, accountUuid);
 		}
 
-		public Task<int> PublishAccount(ushort chainType, Guid? accountUuId) {
-			return this.rpcProvider.PublishAccount(chainType, accountUuId);
+		public Task<int> PublishAccount(ushort chainType, Guid? accountUuid) {
+			return this.rpcProvider.PublishAccount(chainType, accountUuid);
 		}
 
 		public Task<List<object>> QueryMiningHistory(ushort chainType, int page, int pageSize, byte maxLevel) {
@@ -285,8 +293,8 @@ namespace Neuralium.Core.Controllers {
 			return this.rpcProvider.RestoreWalletBackup(source, dest);
 		}
 
-		public Task<object> QueryAccountTotalNeuraliums(Guid accountId) {
-			return this.rpcProvider.QueryAccountTotalNeuraliums(accountId);
+		public Task<object> QueryAccountTotalNeuraliums(Guid accountUuid) {
+			return this.rpcProvider.QueryAccountTotalNeuraliums(accountUuid);
 		}
 
 	#endregion

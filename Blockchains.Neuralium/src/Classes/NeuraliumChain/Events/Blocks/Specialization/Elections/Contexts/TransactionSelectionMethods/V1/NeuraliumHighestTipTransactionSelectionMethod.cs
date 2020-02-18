@@ -9,6 +9,7 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Speci
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Specialization.Elections.Contexts.TransactionSelectionMethods;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Identifiers;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Providers;
+using Neuralia.Blockchains.Common.Classes.Configuration;
 using Neuralia.Blockchains.Common.Classes.Services;
 using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.Configuration;
@@ -25,7 +26,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specializat
 
 		private readonly ITransactionTipsAllocationMethod transactionSelectionMethod;
 
-		public NeuraliumHighestTipTransactionSelectionMethod(long blockId, ITransactionTipsAllocationMethod transactionSelectionMethod, IChainStateProvider chainStateProvider, INeuraliumWalletProviderProxy walletProvider, IElectionContext electionContext, HighestTipTransactionSelectionStrategySettings highestTipTransactionSelectionStrategySettings, IBlockchainTimeService timeService, Enums.ChainSharingTypes blockSavingModes) : base(blockId, chainStateProvider, walletProvider,  electionContext, blockSavingModes) {
+		public NeuraliumHighestTipTransactionSelectionMethod(long blockId, BlockChainConfigurations configuration, ITransactionTipsAllocationMethod transactionSelectionMethod, IChainStateProvider chainStateProvider, INeuraliumWalletProviderProxy walletProvider, IElectionContext electionContext, HighestTipTransactionSelectionStrategySettings highestTipTransactionSelectionStrategySettings, IBlockchainTimeService timeService) : base(blockId, configuration, chainStateProvider, walletProvider,  electionContext) {
 			this.transactionSelectionMethod = transactionSelectionMethod;
 			this.highestTipTransactionSelectionStrategySettings = highestTipTransactionSelectionStrategySettings;
 			this.timeService = timeService;
