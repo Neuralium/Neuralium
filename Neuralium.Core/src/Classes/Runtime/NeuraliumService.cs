@@ -29,7 +29,7 @@ namespace Neuralium.Core.Classes.Runtime {
 			this.options = options;
 		}
 
-		public Task StartAsync(CancellationToken cancellationNeuralium) {
+		public async Task StartAsync(CancellationToken cancellationNeuralium) {
 
 			try {
 #if TESTNET
@@ -45,7 +45,13 @@ namespace Neuralium.Core.Classes.Runtime {
 
 				this.pollingTimer = new Timer(state => {
 
-					this.CheckTestnetDelay();
+					try{
+						this.CheckTestnetDelay();
+					}
+					catch(Exception ex){
+						//TODO: do something?
+						Log.Error(ex, "Timer exception");
+					}
 
 				}, this, waitTime, waitTime);
 
@@ -62,7 +68,13 @@ namespace Neuralium.Core.Classes.Runtime {
 
 			this.pollingTimer = new Timer(state => {
 
+try{
 				this.CheckDevnetDelay();
+}
+				catch(Exception ex){
+					//TODO: do something?
+Log.Error(ex, "Timer exception");
+				}
 
 			}, this, waitTime, waitTime);
 
@@ -82,26 +94,27 @@ namespace Neuralium.Core.Classes.Runtime {
 
 					Log.Information("Hit any key to exit....");
 
-					Task task = new TaskFactory().StartNew(() => {
+					Task task = Task.Run(() => {
 						Console.ReadKey();
-					});
+					}, cancellationNeuralium);
 
 					// auto shutdown after a few seconds.
+					// ReSharper disable once AsyncConverter.AsyncWait
 					task.Wait(1000 * 10);
 
 					this.applicationLifetime.StopApplication();
+
+					return Task.CompletedTask;
 				};
 
-				this.neuraliumApp.Start();
+				await this.neuraliumApp.Start().ConfigureAwait(false);
 
-				return Task.CompletedTask;
 			} catch(Exception ex) {
 				
 				this.applicationLifetime.StopApplication();
 				
-				Log.Warning($"Applecation service failed to start.");
+				Log.Warning($"Application service failed to start.");
 
-				return Task.FromResult(false);
 			}
 		}
 
@@ -110,7 +123,7 @@ namespace Neuralium.Core.Classes.Runtime {
 			this.applicationLifetime.StopApplication();
 		}
 		
-		public Task StopAsync(CancellationToken cancellationNeuralium) {
+		public async Task StopAsync(CancellationToken cancellationNeuralium) {
 
 			Log.Information("Daemon shutdown in progress...");
 #if TESTNET || DEVNET
@@ -118,12 +131,10 @@ namespace Neuralium.Core.Classes.Runtime {
 			this.autoResetEvent.Set();
 #endif
 
-			this.neuraliumApp.Stop();
+			await this.neuraliumApp.Stop().ConfigureAwait(false);
 			this.neuraliumApp.WaitStop(TimeSpan.FromSeconds(30));
 
 			this.neuraliumApp.Dispose();
-
-			return Task.CompletedTask;
 		}
 
 		/// <summary>
@@ -205,7 +216,7 @@ namespace Neuralium.Core.Classes.Runtime {
 			
 			//TimeSpan elapsed = DateTime.UtcNow - ;
 
-			var limit = new DateTime(2020, 2, 20, 23, 0, 0, DateTimeKind.Utc);
+			var limit = new DateTime(2020, 4, 26, 23, 0, 0, DateTimeKind.Utc);
 			if(DateTime.UtcNow > limit) {
 			
 				Console.BackgroundColor = ConsoleColor.Black;

@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Providers;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.DataStructures.Validation;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Envelopes;
@@ -9,6 +10,7 @@ using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.General.Types;
 using Neuralia.Blockchains.Core.General.Types.Specialized;
 using Neuralia.Blockchains.Tools.Data;
+using Neuralia.Blockchains.Tools.Locking;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Creation.Transactions {
 	public interface ICreateNeuraliumTransferTransactionWorkflow : IGenerateNewTransactionWorkflow<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> {
@@ -39,18 +41,18 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Creation.Transa
 			return NeuraliumTransactionCreationUtils.ValidateTransaction(envelope.Contents.RehydratedTransaction);
 		}
 
-		protected override ITransactionEnvelope AssembleEvent() {
-			return this.centralCoordinator.ChainComponentProvider.AssemblyProvider.GenerateNeuraliumTransferTransaction(this.accountUuid, this.targetAccountId, this.amount, this.tip, this.correlationContext);
+		protected override Task<ITransactionEnvelope> AssembleEvent(LockContext lockContext) {
+			return this.centralCoordinator.ChainComponentProvider.AssemblyProvider.GenerateNeuraliumTransferTransaction(this.accountUuid, this.targetAccountId, this.amount, this.tip, this.correlationContext, lockContext);
 		}
 
-		protected override void PerformSanityChecks() {
-			base.PreTransaction();
+		protected override async Task PerformSanityChecks(LockContext lockContext) {
+			await base.PreTransaction(lockContext).ConfigureAwait(false);
 
 			if(this.targetAccountId == null) {
 				throw new EventGenerationException("A valid target account Id must be set.");
 			}
 
-			var accountId = this.centralCoordinator.ChainComponentProvider.WalletProvider.GetPublicAccountId(this.accountUuid);
+			var accountId = await centralCoordinator.ChainComponentProvider.WalletProvider.GetPublicAccountId(accountUuid, lockContext).ConfigureAwait(false);
 
 			if(this.targetAccountId == accountId) {
 				throw new EventGenerationException("We cannot send a transaction to the same account Id.");

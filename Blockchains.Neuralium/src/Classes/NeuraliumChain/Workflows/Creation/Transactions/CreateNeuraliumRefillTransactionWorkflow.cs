@@ -1,10 +1,12 @@
 using System;
+using System.Threading.Tasks;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Providers;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Envelopes;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Identifiers;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Workflows.Creation.Transactions;
 using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Tools.Data;
+using Neuralia.Blockchains.Tools.Locking;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Creation.Transactions {
 
@@ -22,8 +24,8 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Creation.Transa
 			this.accountUuid = accountUuid;
 		}
 
-		protected override ITransactionEnvelope AssembleEvent() {
-			return this.centralCoordinator.ChainComponentProvider.AssemblyProvider.GenerateRefillNeuraliumsTransaction(this.accountUuid, this.correlationContext);
+		protected override Task<ITransactionEnvelope> AssembleEvent(LockContext lockContext) {
+			return this.centralCoordinator.ChainComponentProvider.AssemblyProvider.GenerateRefillNeuraliumsTransaction(this.accountUuid, this.correlationContext, lockContext);
 		}
 	}
 #endif

@@ -34,7 +34,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 				frozen = features.Sum(GetImpactAmount);
 			}
 
-			return snapshot.Balance.Value - frozen;
+			return snapshot.Balance - frozen;
 		}
 
 		/// <summary>

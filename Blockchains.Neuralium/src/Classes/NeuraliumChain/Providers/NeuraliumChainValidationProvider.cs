@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Blockchains.Neuralium.Classes.NeuraliumChain.DataStructures.Validation;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.Tags;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Providers;
@@ -15,8 +16,8 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Managers {
 		public NeuraliumChainValidationProvider(INeuraliumCentralCoordinator centralCoordinator) : base(centralCoordinator) {
 		}
 
-		protected override ValidationResult PerformBasicTransactionValidation(ITransaction transaction, ITransactionEnvelope envelope, bool? accreditationCertificateValid) {
-			ValidationResult result = base.PerformBasicTransactionValidation(transaction, envelope, accreditationCertificateValid);
+		protected override async Task<ValidationResult> PerformBasicTransactionValidation(ITransaction transaction, ITransactionEnvelope envelope, bool? accreditationCertificateValid) {
+			ValidationResult result = await base.PerformBasicTransactionValidation(transaction, envelope, accreditationCertificateValid).ConfigureAwait(false);
 
 			bool validCertificate = accreditationCertificateValid.HasValue && accreditationCertificateValid.Value;
 

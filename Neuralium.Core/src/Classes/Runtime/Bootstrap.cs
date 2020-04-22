@@ -218,7 +218,7 @@ namespace Neuralium.Core.Classes.Runtime {
 
 			try {
 				Log.Information("Starting host");
-				await host.RunAsync();
+				await host.RunAsync().ConfigureAwait(false);
 
 			} catch(OperationCanceledException) {
 				// thats fine, lets just exit

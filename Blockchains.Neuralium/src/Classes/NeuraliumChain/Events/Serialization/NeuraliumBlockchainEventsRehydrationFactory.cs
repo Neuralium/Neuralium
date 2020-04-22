@@ -66,7 +66,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serialization {
 
 				rehydrator.Rewind2Start();
 
-				return this.CreateTransation(version);
+				return this.CreateTransaction(version);
 			}
 		}
 
@@ -282,7 +282,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serialization {
 			return null;
 		}
 
-		private ITransaction CreateTransation(ComponentVersion<TransactionType> version) {
+		private ITransaction CreateTransaction(ComponentVersion<TransactionType> version) {
 			ITransaction transaction = null;
 
 			if(transaction == null) {
@@ -319,7 +319,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serialization {
 
 				} else if(version.Type == TransactionTypes.Instance.SET_ACCOUNT_RECOVERY) {
 					if(version == (1, 0)) {
-						transaction = new NeuraliumSetAccountRecoveryTransaction();
+						//transaction = new NeuraliumSetAccountRecoveryTransaction();
 					}
 
 				} else if(version.Type == TransactionTypes.Instance.MODERATION_OPERATING_RULES) {
@@ -349,7 +349,12 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serialization {
 
 				} else if(version.Type == TransactionTypes.Instance.MODERATION_RECLAIM_ACCOUNTS) {
 					if(version == (1, 0)) {
-						transaction = new NeuraliumReclaimAccountsTransaction();
+						//transaction = new NeuraliumReclaimAccountsTransaction();
+					}
+
+				}else if(version.Type == TransactionTypes.Instance.MODERATION_ASSIGN_ACCOUNT_CORRELATIONS) {
+					if(version == (1, 0)) {
+						transaction = new NeuraliumAssignAccountCorrelationsTransaction();
 					}
 
 				} else if(version.Type == TransactionTypes.Instance.MODERATION_ACCOUNT_RESET_WARNING) {
@@ -421,11 +426,11 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serialization {
 				}
 #endif
 
-				else {
-					throw new UnrecognizedTransactionException(this.centralCoordinator.ChainId, this.centralCoordinator.ChainName);
-				}
 			}
 
+			if (transaction == null){
+				throw new UnrecognizedTransactionException(this.centralCoordinator.ChainId, this.centralCoordinator.ChainName);
+			}
 			return transaction;
 		}
 

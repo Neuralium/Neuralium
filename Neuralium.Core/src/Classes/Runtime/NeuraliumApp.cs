@@ -1,8 +1,9 @@
 using System;
 using System.IO;
-using System.IO.Abstractions;
+
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using Blockchains.Neuralium.Classes;
 using Blockchains.Neuralium.Classes.NeuraliumChain;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions;
@@ -23,11 +24,13 @@ using Neuralia.Blockchains.Core.Tools;
 using Neuralia.Blockchains.Core.Types;
 using Neuralia.Blockchains.Tools.Data;
 using Neuralia.Blockchains.Tools.Data.Arrays;
+using Neuralia.Blockchains.Tools.Locking;
 using Neuralia.Blockchains.Tools.Serialization;
 using Neuralia.Blockchains.Tools.Threading;
 using Neuralium.Core.Classes.Configuration;
 using Neuralium.Core.Classes.Services;
 using Serilog;
+using Zio.FileSystems;
 
 namespace Neuralium.Core.Classes.Runtime {
 
@@ -70,9 +73,9 @@ namespace Neuralium.Core.Classes.Runtime {
 			this.timeService = timeService;
 			this.rpcService = rpcService;
 
-			this.rpcService.ShutdownRequested += () => {
+			this.rpcService.ShutdownRequested += async () => {
 				try {
-					this.Shutdown();
+					await this.Shutdown().ConfigureAwait(false);
 
 					return true;
 				} catch(Exception ex) {
@@ -99,7 +102,7 @@ namespace Neuralium.Core.Classes.Runtime {
 			this.delayedTriggerComponent.TriggerAchived += this.InitLateComponents;
 		}
 
-		protected virtual void CreateChains() {
+		protected virtual async Task CreateChains(LockContext lockContext) {
 
 			if(this.appSettings.NeuraliumChainConfiguration.Enabled) {
 
@@ -115,7 +118,7 @@ namespace Neuralium.Core.Classes.Runtime {
 				// chainRuntimeConfiguration.ServiceExecutionTypes.Add(Enums.INTERPRETATION_SERVICE, Enums.ServiceExecutionTypes.Synchronous);
 
 				this.globalService.AddSupportedChain(NeuraliumBlockchainTypes.NeuraliumInstance.Neuralium, "Neuralium", true);
-				this.neuraliumBlockChainInterface = NeuraliumChainInstantiationFactory.Instance.CreateNewChain(this.serviceProvider, chainRuntimeConfiguration);
+				this.neuraliumBlockChainInterface = await NeuraliumChainInstantiationFactory.Instance.CreateNewChain(serviceProvider, lockContext, chainRuntimeConfiguration).ConfigureAwait(false);
 
 				this.delayedTriggerComponent.IncrementTotal();
 				this.neuraliumBlockChainInterface.BlockchainStarted += this.delayedTriggerComponent.IncrementInitedComponetsCount;
@@ -133,12 +136,12 @@ namespace Neuralium.Core.Classes.Runtime {
 
 		}
 
-		protected virtual void StartChains() {
+		protected virtual async Task StartChains(LockContext lockContext) {
 
 			if((this.neuraliumBlockChainInterface != null) && this.appSettings.NeuraliumChainConfiguration.Enabled) {
 				try {
 
-					this.neuraliumBlockChainInterface.StartChain();
+					await this.neuraliumBlockChainInterface.StartChain(lockContext).ConfigureAwait(false);
 					this.globalService.SupportedChains[NeuraliumBlockchainTypes.NeuraliumInstance.Neuralium].Started = true;
 				} catch(Exception ex) {
 					throw new ApplicationException("Failed to start neuralium chain", ex);
@@ -146,12 +149,12 @@ namespace Neuralium.Core.Classes.Runtime {
 			}
 		}
 
-		protected virtual void StopChains() {
+		protected virtual async Task StopChains(LockContext lockContext) {
 
 			if((this.neuraliumBlockChainInterface != null) && this.appSettings.NeuraliumChainConfiguration.Enabled) {
 				try {
 
-					this.neuraliumBlockChainInterface.StopChain();
+					await this.neuraliumBlockChainInterface.StopChain(lockContext).ConfigureAwait(false);
 					this.globalService.SupportedChains[NeuraliumBlockchainTypes.NeuraliumInstance.Neuralium].Started = false;
 				} catch(Exception ex) {
 					throw new ApplicationException("Failed to stop neuralium chain", ex);
@@ -203,7 +206,7 @@ namespace Neuralium.Core.Classes.Runtime {
 			return (other <= localVersion) && (other >= minimumAcceptable);
 		}
 
-		protected virtual void InitializeApp() {
+		protected virtual async Task InitializeApp(LockContext lockContext) {
 
 			try {
 
@@ -225,22 +228,22 @@ namespace Neuralium.Core.Classes.Runtime {
 				this.InitRpc();
 
 				if(this.appSettings.P2PEnabled) {
-					this.InitNetworking();
+					await this.InitNetworking().ConfigureAwait(false);
 				}
 				
 				this.RunPreLaunchCode();
 
-				this.CreateChains();
+				await CreateChains(lockContext).ConfigureAwait(false);
 
 				this.InitializeChains();
 
 				this.InitEnvironment();
 
-				this.StartChains();
+				await this.StartChains(lockContext).ConfigureAwait(false);
 
 				if(this.appSettings.P2PEnabled) {
 					this.delayedTriggerComponent.IncrementTotal();
-					this.StartNetworking(this.delayedTriggerComponent.IncrementInitedComponetsCount);
+					await this.StartNetworking(this.delayedTriggerComponent.IncrementInitedComponetsCount).ConfigureAwait(false);
 				}
 
 				this.delayedTriggerComponent.Start();
@@ -327,9 +330,9 @@ namespace Neuralium.Core.Classes.Runtime {
 
 					var resultBytes = dehydrator.ToArray();
 
-					FileExtensions.EnsureDirectoryStructure(GlobalsService.GetGeneralSystemFilesDirectoryPath(), new FileSystem());
+					FileExtensions.EnsureDirectoryStructure(GlobalsService.GetGeneralSystemFilesDirectoryPath());
 
-					FileExtensions.WriteAllBytes(testnetFlagFilePath, resultBytes, new FileSystem());
+					FileExtensions.WriteAllBytes(testnetFlagFilePath, resultBytes);
 					resultBytes.Return();
 				}
 			}catch {
@@ -346,20 +349,22 @@ namespace Neuralium.Core.Classes.Runtime {
 
 		protected void RunRpcCommand(Action action) {
 			if(this.appSettings.RpcMode != AppSettingsBase.RpcModes.None) {
-				action?.Invoke();
+				if(action != null) {
+					action();
+				}
 			}
 		}
 
-		protected override sealed void Initialize() {
+		protected override sealed async Task Initialize(LockContext lockContext) {
 
 			try {
-				base.Initialize();
+				await base.Initialize(lockContext).ConfigureAwait(false);
 
 				// set the important global settings
 				this.SetAppSettings();
 
 				// and now the actual app initialization
-				this.InitializeApp();
+				await this.InitializeApp(lockContext).ConfigureAwait(false);
 			} catch(Exception ex) {
 				Log.Error(ex, "Failed to initialize app.");
 
@@ -383,28 +388,30 @@ namespace Neuralium.Core.Classes.Runtime {
 			this.RunRpcCommand(() => this.rpcService.Start());
 		}
 
-		protected virtual void InitNetworking() {
-			this.networkingService.Initialize();
+		protected virtual Task InitNetworking() {
+			return this.networkingService.Initialize();
 		}
 
-		protected virtual void StartNetworking(Action startedCallback) {
+		protected virtual Task StartNetworking(Action startedCallback) {
 
 			this.networkingService.Started += startedCallback;
-			this.networkingService.Start();
+			return this.networkingService.Start();
 		}
 
-		protected override void ProcessLoop() {
-
+		protected override Task ProcessLoop(LockContext lockContext){
 			this.CheckShouldCancel();
-			
-			this.RunLoop();
+
+			return this.RunLoop();
 		}
 
-		protected virtual void RunLoop() {
+		protected virtual Task RunLoop() {
 
+			return Task.CompletedTask;
 		}
 
-		public virtual void Shutdown() {
+		public virtual async Task Shutdown() {
+
+			LockContext lockContext = null;
 			this.applicationLifetime.ApplicationStopping.Register(() => {
 
 				// alert everyone shutdown has completed
@@ -417,32 +424,33 @@ namespace Neuralium.Core.Classes.Runtime {
 				this.RunRpcCommand(() => this.rpcService.RpcProvider.ShutdownCompleted());
 			});
 
-			this.StopChains();
+			await this.StopChains(lockContext).ConfigureAwait(false);
 
 			this.applicationLifetime.StopApplication();
 		}
 
-		public override void Stop() {
-			base.Stop();
+		public override async Task Stop() {
+			await base.Stop().ConfigureAwait(false);
 			
-			this.Shutdown();
+			await this.Shutdown().ConfigureAwait(false);
 		}
 
-		protected override void DisposeAll() {
+		protected override async Task DisposeAllAsync() {
 
-			base.DisposeAll();
+			LockContext lockContext = null;
+			await base.DisposeAllAsync().ConfigureAwait(false);
 			try {
 
 				this.rpcService?.Stop();
 
 				try {
-					this.neuraliumBlockChainInterface?.StopChain();
+					this.neuraliumBlockChainInterface?.StopChain(lockContext);
 				} finally {
 					this.neuraliumBlockChainInterface = null;
 				}
 
 				try {
-					this.networkingService.Stop();
+					await this.networkingService.Stop().ConfigureAwait(false);
 					this.networkingService.Dispose();
 				} catch(Exception ex) {
 					Log.Verbose("error occured", ex);

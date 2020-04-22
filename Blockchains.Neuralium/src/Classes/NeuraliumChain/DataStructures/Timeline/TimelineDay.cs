@@ -23,6 +23,8 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.DataStructures.Timeline {
 
 			public decimal Total { get; set; }
 
+			public long? ElectedBlockId { get; set; }
+
 			public byte Direction { get; set; }
 			public byte CreditType { get; set; }
 			public bool Confirmed { get; set; }

@@ -41,10 +41,10 @@ namespace Neuralium.Core.Classes.Configuration {
 		[Option("config-section", Default = null, Required = false, HelpText = "Choose config section.")]
 		public string ConfigSection { get; set; }
 
-		[Option("skip-genesis-hash-verification", Default = false, Required = false, HelpText = "if set, the genesis hash verification will be skiped.")]
+		[Option("skip-genesis-hash-verification", Default = false, Required = false, HelpText = "if set, the genesis hash verification will be skipped.")]
 		public bool SkipGenesisHashVerification { get; set; }
 
-		[Option("skip-digest-hash-verification", Default = false, Required = false, HelpText = "if set, the digest hash verification will be skiped.")]
+		[Option("skip-digest-hash-verification", Default = false, Required = false, HelpText = "if set, the digest hash verification will be skipped.")]
 		public bool SkipDigestHashVerification { get; set; }
 
 		[Option('p', "port", Default = null, Required = false, HelpText = "Will skip the RPC server startup if set.")]

@@ -1,9 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Blockchains.Neuralium.Classes.NeuraliumChain.DataStructures;
 using Blockchains.Neuralium.Classes.NeuraliumChain.DataStructures.Timeline;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Identifiers;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Providers;
 using Neuralia.Blockchains.Core.General.Types;
+using Neuralia.Blockchains.Core.General.Types.Specialized;
+using Neuralia.Blockchains.Tools.Locking;
+using Nito.AsyncEx.Synchronous;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 
@@ -11,18 +16,13 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 	}
 
 	public interface INeuraliumReadonlyWalletProvider : IReadonlyWalletProvider {
-		TotalAPI GetAccountBalance(bool includeReserved);
-		TotalAPI GetAccountBalance(Guid accountUuid, bool includeReserved);
-		TotalAPI GetAccountBalance(AccountId accountId, bool includeReserved);
-
-		TimelineHeader GetTimelineHeader(Guid accountUuid);
-		List<TimelineDay> GetTimelineSection(Guid accountUuid, DateTime firstday, int skip = 0, int take = 1);
+		
 	}
 
 	public interface INeuraliumWalletProviderWrite : IWalletProviderWrite {
 	}
 
-	public interface INeuraliumWalletProviderProxy : IWalletProviderProxy, INeuraliumUtilityWalletProvider, INeuraliumReadonlyWalletProvider, INeuraliumWalletProviderWrite {
+	public interface INeuraliumWalletProviderProxy : IWalletProviderProxy, INeuraliumUtilityWalletProvider, INeuraliumReadonlyWalletProvider, INeuraliumWalletProviderWrite, INeuraliumWalletProvider {
 	}
 
 	public class NeuraliumWalletProviderProxy : WalletProviderProxy<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider>, INeuraliumWalletProviderProxy {
@@ -32,28 +32,36 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 
 		private INeuraliumWalletProvider WalletProvider => (INeuraliumWalletProvider) this.walletProvider;
 
-		public TotalAPI GetAccountBalance(bool includeReserved) {
-			return this.ScheduleKeyedRead(prov => this.WalletProvider.GetAccountBalance(includeReserved));
+		public Task<TotalAPI> GetAccountBalance(bool includeReserved, LockContext lockContext) {
+			return this.ScheduleKeyedRead((prov, lc) => ((INeuraliumWalletProvider)prov).GetAccountBalance(includeReserved, lc), lockContext);
 		}
 
-		public TotalAPI GetAccountBalance(Guid accountUuid, bool includeReserved) {
-			return this.ScheduleKeyedRead(prov => this.WalletProvider.GetAccountBalance(accountUuid, includeReserved));
+		public Task<TotalAPI> GetAccountBalance(Guid accountUuid, bool includeReserved, LockContext lockContext) {
+			return this.ScheduleKeyedRead((prov, lc) => ((INeuraliumWalletProvider)prov).GetAccountBalance(accountUuid, includeReserved, lc), lockContext);
 		}
 
-		public TotalAPI GetAccountBalance(AccountId accountId, bool includeReserved) {
-			return this.ScheduleKeyedRead(prov => this.WalletProvider.GetAccountBalance(accountId, includeReserved));
+		public Task<TotalAPI> GetAccountBalance(AccountId accountId, bool includeReserved, LockContext lockContext) {
+			return this.ScheduleKeyedRead((prov, lc) => ((INeuraliumWalletProvider)prov).GetAccountBalance(accountId, includeReserved, lc), lockContext);
 		}
 
-		public TimelineHeader GetTimelineHeader(Guid accountUuid) {
-			return this.ScheduleKeyedRead(prov => this.WalletProvider.GetTimelineHeader(accountUuid));
+		public Task<TimelineHeader> GetTimelineHeader(Guid accountUuid, LockContext lockContext) {
+			return this.ScheduleKeyedRead((prov, lc) => ((INeuraliumWalletProvider)prov).GetTimelineHeader(accountUuid, lc), lockContext);
 		}
 
-		public List<TimelineDay> GetTimelineSection(Guid accountUuid, DateTime firstday, int skip = 0, int take = 1) {
-			return this.ScheduleKeyedRead(prov => this.WalletProvider.GetTimelineSection(accountUuid, firstday, skip, take));
+		public Task<List<TimelineDay>> GetTimelineSection(Guid accountUuid, DateTime firstday, LockContext lockContext, int skip = 0, int take = 1) {
+			return this.ScheduleKeyedRead((prov, lc) => ((INeuraliumWalletProvider)prov).GetTimelineSection(accountUuid, firstday, lc, skip, take), lockContext);
 		}
 
-		public void PerformWalletTransaction(Action transactionAction) {
-			throw new NotImplementedException();
+		public Task ApplyUniversalBasicBounties(Guid accountUuid, Amount bounty, LockContext lockContext){
+			return this.ScheduleTransaction((t, ct, lc) => {
+				return ((INeuraliumWalletProvider) this.walletProvider).ApplyUniversalBasicBounties(accountUuid, bounty, lc);
+
+			}, lockContext, 20, (lc) => {
+				// load wallet & key
+				this.walletProvider.EnsureWalletIsLoaded();
+				
+				return Task.CompletedTask;
+			});
 		}
 	}
 }

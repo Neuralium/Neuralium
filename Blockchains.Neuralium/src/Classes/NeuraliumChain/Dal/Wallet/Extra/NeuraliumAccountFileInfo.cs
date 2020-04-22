@@ -1,5 +1,7 @@
+using System.Threading.Tasks;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal.Wallet.Extra;
 using Neuralia.Blockchains.Core.Cryptography.Passphrases;
+using Neuralia.Blockchains.Tools.Locking;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet.Extra {
 
@@ -14,34 +16,34 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet.Extra {
 
 		public INeuraliumWalletTimelineFileInfo WalletTimelineFileInfo { get; set; }
 
-		public override void Load() {
-			base.Load();
+		public override async Task Load(LockContext lockContext) {
+			await base.Load(lockContext).ConfigureAwait(false);
 
-			this.WalletTimelineFileInfo.Load();
+			await WalletTimelineFileInfo.Load(lockContext).ConfigureAwait(false);
 		}
 
-		public override void Save() {
-			base.Save();
+		public override async Task Save(LockContext lockContext) {
+			await base.Save(lockContext).ConfigureAwait(false);
 
-			this.WalletTimelineFileInfo.Save();
+			await this.WalletTimelineFileInfo.Save(lockContext).ConfigureAwait(false);
 		}
 
-		public override void ChangeEncryption() {
-			base.ChangeEncryption();
+		public override async Task ChangeEncryption(LockContext lockContext) {
+			await base.ChangeEncryption(lockContext).ConfigureAwait(false);
 
-			this.WalletTimelineFileInfo.ChangeEncryption();
+			await this.WalletTimelineFileInfo.ChangeEncryption(lockContext).ConfigureAwait(false);
 		}
 
-		public override void Reset() {
-			base.Reset();
+		public override async Task Reset(LockContext lockContext) {
+			await base.Reset(lockContext).ConfigureAwait(false);
 
-			this.WalletTimelineFileInfo.Reset();
+			await this.WalletTimelineFileInfo.Reset(lockContext).ConfigureAwait(false);
 		}
 
-		public override void ReloadFileBytes() {
-			base.ReloadFileBytes();
+		public override async Task ReloadFileBytes(LockContext lockContext) {
+			await base.ReloadFileBytes(lockContext).ConfigureAwait(false);
 
-			this.WalletTimelineFileInfo.ReloadFileBytes();
+			await this.WalletTimelineFileInfo.ReloadFileBytes(lockContext).ConfigureAwait(false);
 		}
 	}
 }

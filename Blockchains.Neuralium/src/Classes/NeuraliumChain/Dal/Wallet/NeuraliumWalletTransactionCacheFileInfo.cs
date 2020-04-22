@@ -1,11 +1,13 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Blockchains.Neuralium.Classes.Configuration;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Wallet.Account;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal.Wallet;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Wallet.Account;
 using Neuralia.Blockchains.Common.Classes.Tools;
 using Neuralia.Blockchains.Core.Cryptography.Passphrases;
+using Neuralia.Blockchains.Tools.Locking;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 
@@ -18,11 +20,11 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 		///     take the sum of all amounts dn tips currently locked in unconfirmed transactions in our cache
 		/// </summary>
 		/// <returns></returns>
-		public (decimal debit, decimal credit, decimal tip) GetTransactionAmounts() {
-			lock(this.locker) {
+		public async Task<(decimal debit, decimal credit, decimal tip)> GetTransactionAmounts(LockContext lockContext) {
+			using var handle = await this.locker.LockAsync(lockContext).ConfigureAwait(false);
 				bool collectionExists = false;
 
-				var debits = this.RunQueryDbOperation(litedbDal => {
+				var debits = await RunQueryDbOperation(async (litedbDal, lc) => {
 					collectionExists = litedbDal.CollectionExists<NeuraliumWalletTransactionCache>();
 
 					if(collectionExists) {
@@ -30,15 +32,15 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 					}
 
 					return default;
-				});
+				}, handle).ConfigureAwait(false);
 
-				var credits = this.RunQueryDbOperation(litedbDal => {
+				var credits = await RunQueryDbOperation(async (litedbDal, lc) => {
 					if(collectionExists) {
 						return litedbDal.Get<NeuraliumWalletTransactionCache, Tuple<decimal, decimal>>(t => t.MoneratyTransactionType == NeuraliumWalletTransactionCache.MoneratyTransactionTypes.Credit, t => new Tuple<decimal, decimal>(t.Amount, t.Tip));
 					}
 
 					return default;
-				});
+				}, handle).ConfigureAwait(false);
 
 				decimal debit = 0;
 				decimal credit = 0;
@@ -59,5 +61,4 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 				return (debit, credit, tip);
 			}
 		}
-	}
 }

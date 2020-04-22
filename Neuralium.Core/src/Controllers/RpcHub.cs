@@ -53,13 +53,13 @@ namespace Neuralium.Core.Controllers {
 		}
 
 		public override async Task OnConnectedAsync() {
-			await this.Groups.AddToGroupAsync(this.Context.ConnectionId, "SignalR Users");
-			await base.OnConnectedAsync();
+			await this.Groups.AddToGroupAsync(this.Context.ConnectionId, "SignalR Users").ConfigureAwait(false);
+			await base.OnConnectedAsync().ConfigureAwait(false);
 		}
 
 		public override async Task OnDisconnectedAsync(Exception exception) {
-			await this.Groups.RemoveFromGroupAsync(this.Context.ConnectionId, "SignalR Users");
-			await base.OnDisconnectedAsync(exception);
+			await this.Groups.RemoveFromGroupAsync(this.Context.ConnectionId, "SignalR Users").ConfigureAwait(false);
+			await base.OnDisconnectedAsync(exception).ConfigureAwait(false);
 		}
 
 	#region Global Queries
@@ -68,7 +68,7 @@ namespace Neuralium.Core.Controllers {
 			return this.rpcProvider.ToggleServerMessages(enable);
 		}
 
-		public Task EnterWalletPassphrase(int correlationId, ushort chainType, int keyCorrelationCode, string passphrase) {
+		public Task EnterWalletPassphrase(int correlationId, ushort chainType, int keyCorrelationCode, string passphrase, bool setKeysToo = false) {
 			return this.rpcProvider.EnterWalletPassphrase(correlationId, chainType, keyCorrelationCode, passphrase);
 		}
 
@@ -119,6 +119,11 @@ namespace Neuralium.Core.Controllers {
 
 		public Task<object> BackupWallet(ushort chainType) {
 			return this.rpcProvider.BackupWallet(chainType);
+		}
+
+		public Task<bool> RestoreWalletFromBackup(ushort chainType, string backupsPath, string passphrase, string salt, int iterations)
+		{
+			return this.rpcProvider.RestoreWalletFromBackup(chainType, backupsPath, passphrase, salt, iterations);
 		}
 
 		/// <summary>
@@ -182,6 +187,10 @@ namespace Neuralium.Core.Controllers {
 			return this.rpcProvider.QueryBlockHeight(chainType);
 		}
 
+		public Task<long> QueryLowestAccountBlockSyncHeight(ushort chainType) {
+			return this.rpcProvider.QueryLowestAccountBlockSyncHeight(chainType);
+		}
+
 		public Task<string> QueryBlock(ushort chainType, long blockId) {
 			return this.rpcProvider.QueryBlock(chainType, blockId);
 		}
@@ -206,7 +215,7 @@ namespace Neuralium.Core.Controllers {
 			return this.rpcProvider.CreateNewWallet(chainType, accountName, encryptWallet, encryptKey, encryptKeysIndividualy, passphrases, publishAccount);
 		}
 
-		public Task<bool> SetWalletPassphrase(int correlationId, string passphrase) {
+		public Task<bool> SetWalletPassphrase(int correlationId, string passphrase, bool setKeysToo) {
 			return this.rpcProvider.SetWalletPassphrase(correlationId, passphrase);
 		}
 
@@ -289,8 +298,8 @@ namespace Neuralium.Core.Controllers {
 			return this.rpcProvider.QueryNeuraliumTransactionPool();
 		}
 
-		public Task<bool> RestoreWalletBackup(string source, string dest) {
-			return this.rpcProvider.RestoreWalletBackup(source, dest);
+		public Task<bool> RestoreWalletNarballBackup(string source, string dest) {
+			return this.rpcProvider.RestoreWalletNarballBackup(source, dest);
 		}
 
 		public Task<object> QueryAccountTotalNeuraliums(Guid accountUuid) {

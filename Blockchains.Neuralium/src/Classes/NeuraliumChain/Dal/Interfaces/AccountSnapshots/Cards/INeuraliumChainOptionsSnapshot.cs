@@ -7,5 +7,9 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Interfaces.AccountSna
 		decimal MinimumSAFUQuantity { get; set; }
 		
 		int MaximumAmountDays { get; set; }
+		
+		decimal UBBAmount { get; set; }
+		
+		byte UBBBlockRate { get; set; }
 	}
 }

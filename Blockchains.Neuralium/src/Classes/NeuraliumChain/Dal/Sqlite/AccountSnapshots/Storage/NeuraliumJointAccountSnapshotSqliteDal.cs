@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Interfaces.AccountSnapshots.Storage;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Factories;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal.Sqlite.AccountSnapshots.Storage;
@@ -21,7 +22,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Sqlite.AccountSnapsho
 
 		}
 
-		public override void InsertNewAccount(AccountId accountId, List<(byte ordinal, SafeArrayHandle key, TransactionId declarationTransactionId)> keys, long inceptionBlockId, long? correlationId) {
+		public override Task InsertNewAccount(AccountId accountId, List<(byte ordinal, SafeArrayHandle key, TransactionId declarationTransactionId)> keys, long inceptionBlockId, bool correlated) {
 			throw new NotImplementedException();
 		}
 	}

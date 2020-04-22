@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading.Tasks;
 using Blockchains.Neuralium.Classes.NeuraliumChain.DataStructures;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Elections;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks;
@@ -85,15 +86,15 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			return new NeuraliumElectedCandidateResultDistillate();
 		}
 
-		protected override void ConfirmedPrimeElected(BlockElectionDistillate blockElectionDistillate, FinalElectionResultDistillate finalElectionResultDistillate) {
+		protected override async Task ConfirmedPrimeElected(BlockElectionDistillate blockElectionDistillate, FinalElectionResultDistillate finalElectionResultDistillate) {
 
-			base.ConfirmedPrimeElected(blockElectionDistillate, finalElectionResultDistillate);
+			await base.ConfirmedPrimeElected(blockElectionDistillate, finalElectionResultDistillate).ConfigureAwait(false);
 
 			NeuraliumBlockElectionDistillate neuraliumBlockElectionDistillate = (NeuraliumBlockElectionDistillate) blockElectionDistillate;
 
 			NeuraliumFinalElectionResultDistillate neuraliumFinalElectionContext = (NeuraliumFinalElectionResultDistillate) finalElectionResultDistillate;
 
-			this.centralCoordinator.PostSystemEvent(NeuraliumSystemEventGenerator.NeuraliumMiningPrimeElected(blockElectionDistillate.currentBlockId, neuraliumFinalElectionContext.BountyShare, neuraliumFinalElectionContext.TransactionTips, AccountId.FromString(neuraliumFinalElectionContext.DelegateAccountId)));
+			this.centralCoordinator.PostSystemEvent(NeuraliumSystemEventGenerator.NeuraliumMiningPrimeElected(blockElectionDistillate.electionBockId, neuraliumFinalElectionContext.BountyShare, neuraliumFinalElectionContext.TransactionTips, AccountId.FromString(neuraliumFinalElectionContext.DelegateAccountId)));
 		}
 
 		protected override MiningHistoryEntry CreateMiningHistoryEntry() {

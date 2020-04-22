@@ -6,6 +6,7 @@ namespace Blockchains.Neuralium.Classes {
 		public readonly BlockchainSystemEventType AccountTotalUpdated;
 		public readonly BlockchainSystemEventType NeuraliumMiningBountyAllocated;
 		public readonly BlockchainSystemEventType NeuraliumMiningPrimeElected;
+		public readonly BlockchainSystemEventType NeuraliumTimelineUpdated;
 
 		static NeuraliumBlockchainSystemEventTypes() {
 		}
@@ -14,6 +15,7 @@ namespace Blockchains.Neuralium.Classes {
 			this.AccountTotalUpdated = this.CreateChildConstant();
 			this.NeuraliumMiningBountyAllocated = this.CreateChildConstant();
 			this.NeuraliumMiningPrimeElected = this.CreateChildConstant();
+			this.NeuraliumTimelineUpdated = this.CreateChildConstant();
 
 			//for debugging
 			//this.PrintValues(",");

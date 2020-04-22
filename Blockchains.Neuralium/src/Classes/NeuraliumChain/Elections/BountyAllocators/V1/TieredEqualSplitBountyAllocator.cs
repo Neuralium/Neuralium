@@ -5,8 +5,10 @@ using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specialization.
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specialization.Elections.Contexts.V1;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specialization.Elections.Results.V1;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Tools;
+using Microsoft.EntityFrameworkCore.Internal;
 using MoreLinq;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Specialization.Elections.Results.V1;
+using Neuralia.Blockchains.Common.Classes.Tools;
 using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.General.Types;
 using Serilog;
@@ -33,48 +35,87 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Elections.BountyAllocator
 				return;
 			}
 
-			decimal firstTierEffectiveServiceFees = 0;
-			decimal secondTierEffectiveServiceFees = 0;
-			decimal thirdTierEffectiveServiceFees = 0;
-
+			var tierEffectiveServiceFees = MiningTierUtils.FillMiningTierSet(electionContext.MiningTiers, 0M);
+			
 			if(electionContext.MaintenanceServiceFeesEnabled) {
-				firstTierEffectiveServiceFees = electionContext.FirstTierBounty * electionContext.MaintenanceServiceFees.Percentage;
-				secondTierEffectiveServiceFees = electionContext.SecondTierBounty * electionContext.MaintenanceServiceFees.Percentage;
-				thirdTierEffectiveServiceFees = electionContext.ThirdTierBounty * electionContext.MaintenanceServiceFees.Percentage;
+
+				foreach(var tier in tierEffectiveServiceFees.ToArray()) {
+					if(electionContext.MiningTierBounties.ContainsKey(tier.Key)) {
+						tierEffectiveServiceFees[tier.Key] = electionContext.MiningTierBounties[tier.Key] * electionContext.MaintenanceServiceFees.Percentage;
+					}
+				}
 			}
 
-			decimal firstTierEffectiveBounty = electionContext.FirstTierBounty - firstTierEffectiveServiceFees;
-			decimal secondTierEffectiveBounty = electionContext.SecondTierBounty - secondTierEffectiveServiceFees;
-			decimal thirdTierEffectiveBounty = electionContext.ThirdTierBounty - thirdTierEffectiveServiceFees;
+			var tierEffectiveBounties = MiningTierUtils.FillMiningTierSet(electionContext.MiningTiers, 0M);
+			
+			foreach(var tier in tierEffectiveBounties.ToArray()) {
+				if(electionContext.MiningTierBounties.ContainsKey(tier.Key)) {
+					tierEffectiveBounties[tier.Key] = electionContext.MiningTierBounties[tier.Key];
+				}
+
+				if(tierEffectiveServiceFees.ContainsKey(tier.Key)) {
+					tierEffectiveBounties[tier.Key] -= tierEffectiveServiceFees[tier.Key];
+				}
+			}
 
 			// assign the fees to the special network service fees account, if any and ONLY if enabled of course.
 			result.InfrastructureServiceFees = 0;
 
-			decimal effectiveServiceFees = firstTierEffectiveServiceFees + secondTierEffectiveServiceFees + thirdTierEffectiveServiceFees;
+			decimal effectiveServiceFees = 0;
+
+			if(tierEffectiveServiceFees.Any()) {
+				effectiveServiceFees = tierEffectiveServiceFees.Values.Sum();
+			}
 
 			if(electionContext.MaintenanceServiceFeesEnabled && (effectiveServiceFees > 0)) {
 				result.InfrastructureServiceFees = NeuraliumUtilities.RoundNeuraliumsPrecision(effectiveServiceFees);
 			}
 
 			// create the tier buckets
-			var firstTierElected = result.FirstTierElectedCandidates;
-			var secondTierElected = result.SecondTierElectedCandidates;
-			var thirdTierElected = result.ThirdTierElectedCandidates;
+			
+			var tierElected = MiningTierUtils.FillMiningTierSet(electionContext.MiningTiers, (Dictionary<AccountId, IElectedResults>)null);
 
-			bool hasFirstTiers = firstTierElected.Any();
-			bool hasSecondTiers = secondTierElected.Any();
-			bool hasThirdTiers = thirdTierElected.Any();
-
-			if(!hasThirdTiers) {
-				// ok, we have no third tier miners. the bounty will splill equallyy amongst first and second tier miners
-				decimal dividedBounty = thirdTierEffectiveBounty / 2;
-				firstTierEffectiveBounty += dividedBounty;
-				secondTierEffectiveBounty += dividedBounty;
+			foreach(var tier in tierElected.Keys.ToArray()) {
+				tierElected[tier] = result.GetTierElectedCandidates(tier);
+			}
+			
+			
+			var tierHasElected = MiningTierUtils.FillMiningTierSet(electionContext.MiningTiers, false);
+			foreach(var tier in tierHasElected.Keys.ToArray()) {
+				if(tierElected.ContainsKey(tier)) {
+					tierHasElected[tier] = tierElected[tier].Any();
+				}
 			}
 
-			if(!hasSecondTiers) {
+			bool firstTierEnabled = MiningTierUtils.HasTier(electionContext.MiningTiers, Enums.MiningTiers.FirstTier);
+			bool secondTierEnabled = MiningTierUtils.HasTier(electionContext.MiningTiers, Enums.MiningTiers.SecondTier);
+			bool thirdTierEnabled = MiningTierUtils.HasTier(electionContext.MiningTiers, Enums.MiningTiers.ThirdTier);
+			
+			// the first 3 tiers have special spill over logics, so we apply them ehre
+			bool hasFirstTiers = firstTierEnabled && tierHasElected[Enums.MiningTiers.FirstTier];
+			bool hasSecondTiers = secondTierEnabled && tierHasElected[Enums.MiningTiers.SecondTier];
+			bool hasThirdTiers = thirdTierEnabled && tierHasElected[Enums.MiningTiers.ThirdTier];
+
+			if(thirdTierEnabled && !hasThirdTiers && (firstTierEnabled || secondTierEnabled)) {
+				// ok, we have no third tier miners. the bounty will spill over equally amongst first and second tier miners
+				decimal spilloverBounty = tierEffectiveBounties[Enums.MiningTiers.ThirdTier];
+
+				if(firstTierEnabled && secondTierEnabled) {
+					decimal dividedBounty = spilloverBounty / 2;
+					tierEffectiveBounties[Enums.MiningTiers.FirstTier] += dividedBounty;
+					tierEffectiveBounties[Enums.MiningTiers.SecondTier] += dividedBounty;
+				}
+				else if(secondTierEnabled) {
+					tierEffectiveBounties[Enums.MiningTiers.SecondTier] += spilloverBounty;
+				}
+				else if(firstTierEnabled) {
+					tierEffectiveBounties[Enums.MiningTiers.FirstTier] += spilloverBounty;
+				}
+			}
+
+			if(secondTierEnabled && !hasSecondTiers && firstTierEnabled) {
 				// ok, we have no second tier miners. the bounty will splill to the first tier miners
-				firstTierEffectiveBounty += secondTierEffectiveBounty;
+				tierEffectiveBounties[Enums.MiningTiers.FirstTier] += tierEffectiveBounties[Enums.MiningTiers.SecondTier];
 			}
 
 			// now allocate weaker peers with their lesser part of the bounty
@@ -122,9 +163,9 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Elections.BountyAllocator
 				}
 			}
 
-			AllocateEntireBounty(hasFirstTiers, MoreEnumerable.ToHashSet(firstTierElected.Keys), firstTierEffectiveBounty, result.FirstTierElectedCandidates);
-			AllocateEntireBounty(hasSecondTiers, MoreEnumerable.ToHashSet(secondTierElected.Keys), secondTierEffectiveBounty, result.SecondTierElectedCandidates);
-			AllocateEntireBounty(hasThirdTiers, MoreEnumerable.ToHashSet(thirdTierElected.Keys), thirdTierEffectiveBounty, result.ThirdTierElectedCandidates);
+			foreach(var tier in electionContext.MiningTiers) {
+				AllocateEntireBounty(tierHasElected[tier], MoreEnumerable.ToHashSet(tierElected[tier].Keys), tierEffectiveBounties[tier], tierElected[tier]);
+			}
 		}
 	}
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.General.Structures;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Providers;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.DataStructures.Validation;
@@ -9,6 +10,7 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Workflows.Creation.
 using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.General.Types.Specialized;
 using Neuralia.Blockchains.Tools.Data;
+using Neuralia.Blockchains.Tools.Locking;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Creation.Transactions {
 	public interface ICreateNeuraliumMultiTransferTransactionWorkflow : IGenerateNewTransactionWorkflow<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> {
@@ -40,8 +42,8 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Creation.Transa
 			return NeuraliumTransactionCreationUtils.ValidateTransaction(envelope.Contents.RehydratedTransaction);
 		}
 
-		protected override ITransactionEnvelope AssembleEvent() {
-			return this.centralCoordinator.ChainComponentProvider.AssemblyProvider.GenerateNeuraliumMultiTransferTransaction(this.accountUuid, this.recipients, this.tip, this.correlationContext);
+		protected override Task<ITransactionEnvelope> AssembleEvent(LockContext lockContext) {
+			return this.centralCoordinator.ChainComponentProvider.AssemblyProvider.GenerateNeuraliumMultiTransferTransaction(this.accountUuid, this.recipients, this.tip, this.correlationContext, lockContext);
 		}
 	}
 }

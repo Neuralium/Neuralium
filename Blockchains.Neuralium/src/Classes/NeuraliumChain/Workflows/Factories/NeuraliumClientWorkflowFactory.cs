@@ -1,10 +1,12 @@
-using System.IO.Abstractions;
+
 using Blockchains.Neuralium.Classes.NeuraliumChain.Providers;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Chain.ChainSync;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Chain.WalletSync;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Workflows.Chain.ChainSync;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Workflows.Chain.WalletSync;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Workflows.Factories;
+using Neuralia.Blockchains.Core.Tools;
+using Zio;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Factories {
 	public interface INeuraliumClientWorkflowFactory : IClientChainWorkflowFactory<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> {
@@ -14,7 +16,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Factories {
 		public NeuraliumClientWorkflowFactory(INeuraliumCentralCoordinator centralCoordinator) : base(centralCoordinator) {
 		}
 
-		public override IClientChainSyncWorkflow CreateChainSynchWorkflow(IFileSystem fileSystem) {
+		public override IClientChainSyncWorkflow CreateChainSynchWorkflow(FileSystemWrapper fileSystem) {
 			return new NeuraliumClientChainSyncWorkflow(this.centralCoordinator, fileSystem);
 		}
 
@@ -22,7 +24,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Factories {
 			return new NeuraliumSyncWalletWorkflow(this.centralCoordinator);
 		}
 
-		public NeuraliumClientChainSyncWorkflow CreateNeuraliumChainSynchWorkflow(IFileSystem fileSystem) {
+		public NeuraliumClientChainSyncWorkflow CreateNeuraliumChainSynchWorkflow(FileSystemWrapper fileSystem) {
 			return (NeuraliumClientChainSyncWorkflow) this.CreateChainSynchWorkflow(fileSystem);
 		}
 

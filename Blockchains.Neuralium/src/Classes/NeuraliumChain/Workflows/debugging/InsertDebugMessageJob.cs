@@ -1,6 +1,9 @@
+using System.Threading.Tasks;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Base;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Workflows.Bases;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Workflows.Chain.ChainSync.Messages.V1.Structures;
 using Neuralia.Blockchains.Core.Workflows.Tasks.Routing;
+using Neuralia.Blockchains.Tools.Locking;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.debugging {
 	public interface IInsertDebugMessageWorkflow : INeuraliumChainWorkflow {
@@ -12,7 +15,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.debugging {
 
 		}
 
-		protected override void PerformWork(IChainWorkflow workflow, TaskRoutingContext taskRoutingContext) {
+		protected override Task PerformWork(IChainWorkflow workflow, TaskRoutingContext taskRoutingContext, LockContext lockContext) {
 
 			// IMessageEnvelope messageEnvelope =  this.centralCoordinator.ChainComponentProvider.AssemblyProvider.GenerateDebugMessage();
 			//
@@ -56,6 +59,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.debugging {
 			// });
 			//
 			// this.DispatchTaskSync(validationTask);
+			return Task.CompletedTask;
 		}
 	}
 }

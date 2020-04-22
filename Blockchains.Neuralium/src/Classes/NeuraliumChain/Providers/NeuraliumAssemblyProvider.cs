@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Envelopes;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Messages.Specialization.General;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.General;
@@ -16,26 +17,28 @@ using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.General.Types;
 using Neuralia.Blockchains.Core.General.Types.Specialized;
 using Neuralia.Blockchains.Core.Services;
+using Neuralia.Blockchains.Tools.Locking;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 	public interface INeuraliumAssemblyProvider : IAssemblyProvider<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> {
-		ITransactionEnvelope GenerateNeuraliumTransferTransaction(Guid accountUuid, AccountId recipient, Amount amount, Amount tip, CorrelationContext correlationContext, byte expiration = 0);
+		Task<ITransactionEnvelope> GenerateNeuraliumTransferTransaction(Guid accountUuid, AccountId recipient, Amount amount, Amount tip, CorrelationContext correlationContext, LockContext lockContext, byte expiration = 0);
 
-		ITransactionEnvelope GenerateNeuraliumMultiTransferTransaction(Guid accountUuid, List<RecipientSet> recipients, Amount tip, CorrelationContext correlationContext, byte expiration = 0);
+		Task<ITransactionEnvelope> GenerateNeuraliumMultiTransferTransaction(Guid accountUuid, List<RecipientSet> recipients, Amount tip, CorrelationContext correlationContext, LockContext lockContext, byte expiration = 0);
 
-		ITransactionEnvelope GenerateRefillNeuraliumsTransaction(Guid accountUuid, CorrelationContext correlationContext);
+		
+		Task<ITransactionEnvelope> GenerateRefillNeuraliumsTransaction(Guid accountUuid, CorrelationContext correlationContext, LockContext lockContext);
 	}
 
 	public class NeuraliumAssemblyProvider : AssemblyProvider<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider>, INeuraliumAssemblyProvider {
 		public NeuraliumAssemblyProvider(INeuraliumCentralCoordinator centralCoordinator) : base(centralCoordinator) {
 		}
 
-		public override ITransactionEnvelope GenerateDebugTransaction() {
+		public override async Task<ITransactionEnvelope> GenerateDebugTransaction() {
 
 			try {
 				ITransaction transaction = this.CreateNewDebugTransaction();
 
-				ITransactionEnvelope envelope = this.GenerateTransaction(transaction, GlobalsService.TRANSACTION_KEY_NAME, null);
+				ITransactionEnvelope envelope = await this.GenerateTransaction(transaction, GlobalsService.TRANSACTION_KEY_NAME, null, null).ConfigureAwait(false);
 
 				return envelope;
 			} catch(Exception ex) {
@@ -43,11 +46,11 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			}
 		}
 
-		public override IMessageEnvelope GenerateDebugMessage() {
+		public override async Task<IMessageEnvelope> GenerateDebugMessage() {
 			try {
 				INeuraliumDebugMessage message = new NeuraliumDebugMessage();
 				message.Message = "allo :)";
-				IMessageEnvelope envelope = this.GenerateBlockchainMessage(message);
+				IMessageEnvelope envelope = await this.GenerateBlockchainMessage(message, null).ConfigureAwait(false);
 
 				return envelope;
 			} catch(Exception ex) {
@@ -55,25 +58,25 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			}
 		}
 
-		public virtual ITransactionEnvelope GenerateNeuraliumTransferTransaction(Guid accountUuid, AccountId recipient, Amount amount, Amount tip, CorrelationContext correlationContext, byte expiration = 0) {
+		public virtual async Task<ITransactionEnvelope> GenerateNeuraliumTransferTransaction(Guid accountUuid, AccountId recipient, Amount amount, Amount tip, CorrelationContext correlationContext, LockContext lockContext, byte expiration = 0) {
 			try {
 				INeuraliumTransferTransaction transferTransaction = new NeuraliumTransferTransaction();
 
-				ITransactionEnvelope envelope = this.GenerateTransaction(transferTransaction, GlobalsService.TRANSACTION_KEY_NAME, EnvelopeSignatureTypes.Instance.Published, expiration, () => {
+				ITransactionEnvelope envelope = await this.GenerateTransaction(transferTransaction, GlobalsService.TRANSACTION_KEY_NAME, EnvelopeSignatureTypes.Instance.Published, lockContext, expiration, async (lc) => {
 
 					transferTransaction.Recipient = recipient;
 					transferTransaction.Amount = amount;
 					transferTransaction.Tip = tip;
 
 					// let's ensure we have the balance
-					Amount balance = this.CentralCoordinator.ChainComponentProvider.WalletProvider.GetAccountBalance(accountUuid, false).Total;
+					Amount balance = (await CentralCoordinator.ChainComponentProvider.WalletProvider.GetAccountBalance(accountUuid, false, lc).ConfigureAwait(false)).Total;
 
 					// make sure that the amount spent and tip are less than what we have in total
 					if((balance - (amount + tip)) < 0) {
 						//TODO: what to do here?
 						throw new InvalidOperationException("We don't have enough to transfer"); 
 					}
-				});
+				}).ConfigureAwait(false);
 
 				return envelope;
 			} catch(Exception ex) {
@@ -81,17 +84,17 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			}
 		}
 
-		public virtual ITransactionEnvelope GenerateNeuraliumMultiTransferTransaction(Guid accountUuid, List<RecipientSet> recipients, Amount tip, CorrelationContext correlationContext, byte expiration = 0) {
+		public virtual async Task<ITransactionEnvelope> GenerateNeuraliumMultiTransferTransaction(Guid accountUuid, List<RecipientSet> recipients, Amount tip, CorrelationContext correlationContext, LockContext lockContext, byte expiration = 0) {
 			try {
 				INeuraliumMultiTransferTransaction multiTransferTransaction = new NeuraliumMultiTransferTransaction();
 
-				ITransactionEnvelope envelope = this.GenerateTransaction(multiTransferTransaction, GlobalsService.TRANSACTION_KEY_NAME, EnvelopeSignatureTypes.Instance.Published, expiration, () => {
+				ITransactionEnvelope envelope = await this.GenerateTransaction(multiTransferTransaction, GlobalsService.TRANSACTION_KEY_NAME, EnvelopeSignatureTypes.Instance.Published, lockContext, expiration, async (lc) => {
 
 					multiTransferTransaction.Recipients.AddRange(recipients);
 					multiTransferTransaction.Tip = tip;
 
 					// let's ensure we have the balance
-					Amount balance = this.CentralCoordinator.ChainComponentProvider.WalletProvider.GetAccountBalance(accountUuid, false).Total;
+					Amount balance = (await CentralCoordinator.ChainComponentProvider.WalletProvider.GetAccountBalance(accountUuid, false, lc).ConfigureAwait(false)).Total;
 
 					// make sure that the amount spent and tip are less than what we have in total
 
@@ -99,7 +102,8 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 						//TODO: what to do here?
 						throw new InvalidOperationException("We don't have enough to transfer");
 					}
-				});
+					
+				}).ConfigureAwait(false);
 
 				return envelope;
 			} catch(Exception ex) {
@@ -107,11 +111,11 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			}
 		}
 
-		public virtual ITransactionEnvelope GenerateRefillNeuraliumsTransaction(Guid accountUuid, CorrelationContext correlationContext) {
+		public virtual async Task<ITransactionEnvelope> GenerateRefillNeuraliumsTransaction(Guid accountUuid, CorrelationContext correlationContext, LockContext lockContext) {
 			try {
 				INeuraliumRefillNeuraliumsTransaction refillTransaction = new NeuraliumRefillNeuraliumsTransaction();
 
-				ITransactionEnvelope envelope = this.GenerateTransaction(refillTransaction, GlobalsService.TRANSACTION_KEY_NAME, EnvelopeSignatureTypes.Instance.Published);
+				ITransactionEnvelope envelope = await this.GenerateTransaction(refillTransaction, GlobalsService.TRANSACTION_KEY_NAME, EnvelopeSignatureTypes.Instance.Published, lockContext).ConfigureAwait(false);
 
 				return envelope;
 			} catch(Exception ex) {

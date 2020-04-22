@@ -16,3 +16,5 @@ if  dotnet publish -c Release --self-contained true /p:PublishTrimmed=true -r li
 else
     echo "build failed"
 fi
+
+#docker push neuralium/neuralium:arm-testnet-0.1.0

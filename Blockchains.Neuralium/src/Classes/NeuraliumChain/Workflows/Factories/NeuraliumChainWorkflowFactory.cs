@@ -54,8 +54,8 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Factories {
 			return new InsertDebugMessageWorkflow(this.centralCoordinator);
 		}
 
-		public override ISendElectionsRegistrationMessageWorkflow<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> CreateSendElectionsCandidateRegistrationMessageWorkflow(AccountId candidateAccountId, ElectionsCandidateRegistrationInfo electionsCandidateRegistrationInfo, AppSettingsBase.ContactMethods registrationMethod, CorrelationContext correlationContext) {
-			return new NeuraliumSendElectionsRegistrationMessageWorkflow(candidateAccountId, electionsCandidateRegistrationInfo, registrationMethod, this.centralCoordinator, correlationContext);
+		public override ISendElectionsRegistrationMessageWorkflow<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> CreateSendElectionsCandidateRegistrationMessageWorkflow(AccountId candidateAccountId, Enums.MiningTiers miningTier, ElectionsCandidateRegistrationInfo electionsCandidateRegistrationInfo, AppSettingsBase.ContactMethods registrationMethod, CorrelationContext correlationContext) {
+			return new NeuraliumSendElectionsRegistrationMessageWorkflow(candidateAccountId, miningTier, electionsCandidateRegistrationInfo, registrationMethod, this.centralCoordinator, correlationContext);
 		}
 
 		public override ILoadWalletWorkflow<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> CreateLoadWalletWorkflow(CorrelationContext correlationContext, string passphrase = null) {

@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Wallet.Account;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal.Wallet;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Identifiers;
@@ -8,15 +9,16 @@ using Neuralia.Blockchains.Common.Classes.Tools;
 using Neuralia.Blockchains.Core.Configuration;
 using Neuralia.Blockchains.Core.Cryptography.Passphrases;
 using Neuralia.Blockchains.Core.DataAccess.Dal;
+using Neuralia.Blockchains.Tools.Locking;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 	public interface INeuraliumWalletTimelineFileInfo : IWalletFileInfo {
-		void InsertTimelineEntry(NeuraliumWalletTimeline entry);
-		void ConfirmLocalTimelineEntry(TransactionId transactionId);
-		void RemoveLocalTimelineEntry(TransactionId transactionId);
-		int GetDaysCount();
-		DateTime GetFirstDay();
-		decimal? GetLastTotal();
+		Task InsertTimelineEntry(NeuraliumWalletTimeline entry, LockContext lockContext);
+		Task ConfirmLocalTimelineEntry(TransactionId transactionId, LockContext lockContext);
+		Task RemoveLocalTimelineEntry(TransactionId transactionId, LockContext lockContext);
+		Task<int> GetDaysCount(LockContext lockContext);
+		Task<DateTime> GetFirstDay(LockContext lockContext);
+		Task<decimal?> GetLastTotal(LockContext lockContext);
 	}
 
 	public class NeuraliumWalletTimelineFileInfo : WalletFileInfo, INeuraliumWalletTimelineFileInfo {
@@ -27,9 +29,9 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 			this.account = account;
 		}
 
-		public decimal? GetLastTotal() {
-			lock(this.locker) {
-				return this.RunDbOperation(litedbDal => {
+		public async Task<decimal?> GetLastTotal(LockContext lockContext) {
+			using(var handle = await this.locker.LockAsync(lockContext).ConfigureAwait(false)) {
+				return await RunDbOperation(async (litedbDal, lc) => {
 					return litedbDal.Open(db => {
 						if(litedbDal.CollectionExists<NeuraliumWalletTimelineDay>(db) && litedbDal.Any<NeuraliumWalletTimelineDay>(db)) {
 							int maxId = litedbDal.All<NeuraliumWalletTimelineDay>(db).Max(dayEntry => dayEntry.Id);
@@ -41,21 +43,19 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 							}
 
 						}
-						
-						return (decimal?)null;
-					});
-					
 
-					
-				});
+						return (decimal?) null;
+					});
+				}, handle).ConfigureAwait(false);
 			}
 		}
 		
-		public void InsertTimelineEntry(NeuraliumWalletTimeline entry) {
-			lock(this.locker) {
-				this.RunDbOperation(litedbDal => {
-					
+		public async Task InsertTimelineEntry(NeuraliumWalletTimeline entry, LockContext lockContext) {
+			using(var handle = await this.locker.LockAsync(lockContext).ConfigureAwait(false)) {
+				await RunDbOperation(async (litedbDal, lc) => {
+
 					litedbDal.Open(db => {
+
 						if(litedbDal.CollectionExists<NeuraliumWalletTimelineDay>(db) && (entry.Id != 0) && litedbDal.Exists<NeuraliumWalletTimeline>(k => k.Id == entry.Id || k.TransactionId == entry.TransactionId, db)) {
 							return;
 						}
@@ -69,14 +69,14 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 							dayEntry = new NeuraliumWalletTimelineDay();
 
 							int newId = 0;
-						
+
 							if(litedbDal.CollectionExists<NeuraliumWalletTimelineDay>(db) && litedbDal.Any<NeuraliumWalletTimelineDay>(db)) {
 								newId = litedbDal.All<NeuraliumWalletTimelineDay>(db).Max(d => d.Id);
 							}
 
-							dayEntry.Id = newId + 1;
+							dayEntry.Id        = newId + 1;
 							dayEntry.Timestamp = day;
-							dayEntry.Total = entry.Total;
+							dayEntry.Total     = entry.Total;
 
 							litedbDal.Insert(dayEntry, k => k.Id, db);
 						}
@@ -91,18 +91,18 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 						entry.DayId = dayEntry.Id;
 
 						litedbDal.Insert(entry, k => k.Id, db);
-						
-					});
-					
-					
-				});
 
-				this.Save();
+					});
+
+
+				}, handle).ConfigureAwait(false);
+
+				await Save(handle).ConfigureAwait(false);
 			}
 		}
 
-		public void ConfirmLocalTimelineEntry(TransactionId transactionId) {
-			this.RunDbOperation(litedbDal => {
+		public async Task ConfirmLocalTimelineEntry(TransactionId transactionId, LockContext lockContext) {
+			await RunDbOperation(async (litedbDal, lc) => {
 
 				if(litedbDal.CollectionExists<NeuraliumWalletTimeline>()) {
 					NeuraliumWalletTimeline entry = litedbDal.GetOne<NeuraliumWalletTimeline>(k => k.TransactionId == transactionId.ToString());
@@ -114,13 +114,13 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 						litedbDal.Update(entry);
 					}
 				}
-			});
+			}, lockContext).ConfigureAwait(false);
 
-			this.Save();
+			await Save(lockContext).ConfigureAwait(false);
 		}
 
-		public void RemoveLocalTimelineEntry(TransactionId transactionId) {
-			this.RunDbOperation(litedbDal => {
+		public async Task RemoveLocalTimelineEntry(TransactionId transactionId, LockContext lockContext) {
+			await RunDbOperation(async (litedbDal, lc) => {
 
 				int dayId = 0;
 
@@ -140,23 +140,23 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 						litedbDal.Remove<NeuraliumWalletTimelineDay>(k => k.Id == dayId);
 					}
 				}
-			});
+			}, lockContext).ConfigureAwait(false);
 
-			this.Save();
+			await Save(lockContext).ConfigureAwait(false);
 		}
 
-		public int GetDaysCount() {
-			return this.RunQueryDbOperation(litedbDal => {
+		public Task<int> GetDaysCount(LockContext lockContext) {
+			return this.RunQueryDbOperation(async (litedbDal, lc) => {
 				if(litedbDal.CollectionExists<NeuraliumWalletTimelineDay>()) {
 					return litedbDal.Count<NeuraliumWalletTimelineDay>();
 				}
 
 				return 0;
-			});
+			}, lockContext);
 		}
 
-		public DateTime GetFirstDay() {
-			return this.RunQueryDbOperation(litedbDal => {
+		public Task<DateTime> GetFirstDay(LockContext lockContext) {
+			return this.RunQueryDbOperation(async (litedbDal, lc) => {
 
 				return litedbDal.Open(db => {
 					if(litedbDal.CollectionExists<NeuraliumWalletTimelineDay>(db) && litedbDal.Any<NeuraliumWalletTimelineDay>(db)) {
@@ -165,20 +165,22 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 					return DateTime.MinValue;
 				});
 				
-			});
+			}, lockContext);
 		}
 
-		protected override void CreateDbFile(LiteDBDAL litedbDal) {
+		protected override Task CreateDbFile(LiteDBDAL litedbDal, LockContext lockContext) {
 			litedbDal.CreateDbFile<NeuraliumWalletTimeline, long>(i => i.Id);
 			litedbDal.CreateDbFile<NeuraliumWalletTimelineDay, int>(i => i.Id);
+
+			return Task.CompletedTask;
 		}
 
-		protected override void PrepareEncryptionInfo() {
-			this.CreateSecurityDetails();
+		protected override Task PrepareEncryptionInfo(LockContext lockContext) {
+			return this.CreateSecurityDetails(lockContext);
 		}
 
-		protected override void CreateSecurityDetails() {
-			lock(this.locker) {
+		protected override async Task CreateSecurityDetails(LockContext lockContext) {
+			using(var handle = await this.locker.LockAsync(lockContext).ConfigureAwait(false)) {
 				if(this.EncryptionInfo == null) {
 					this.EncryptionInfo = new EncryptionInfo();
 
@@ -187,15 +189,16 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 					if(this.EncryptionInfo.Encrypt) {
 
 						this.EncryptionInfo.EncryptionParameters = this.account.KeyLogFileEncryptionParameters;
-						this.EncryptionInfo.Secret = () => this.account.KeyLogFileSecret;
+						this.EncryptionInfo.Secret               = () => this.account.KeyLogFileSecret;
 					}
 				}
 			}
 		}
 
-		protected override void UpdateDbEntry() {
+		protected override Task UpdateDbEntry(LockContext lockContext) {
 			// do nothing, we dont udpate
 
+			return Task.CompletedTask;
 		}
 
 		//

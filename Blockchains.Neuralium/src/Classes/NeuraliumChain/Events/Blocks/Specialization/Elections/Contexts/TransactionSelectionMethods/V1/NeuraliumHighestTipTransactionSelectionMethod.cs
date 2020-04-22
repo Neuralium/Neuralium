@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Blockchains.Neuralium.Classes.Configuration.TransactionSelectionStrategies;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specialization.Elections.Contexts.TransactionTipsAllocationMethods;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Providers;
@@ -36,7 +37,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specializat
 			return (NeuraliumTransactionSelectionMethodTypes.Instance.HighestTips, 1, 0);
 		}
 
-		public override List<TransactionId> PerformTransactionSelection(IEventPoolProvider chainEventPoolProvider, List<TransactionId> existingTransactions) {
+		public override async Task<List<TransactionId>> PerformTransactionSelection(IEventPoolProvider chainEventPoolProvider, List<TransactionId> existingTransactions) {
 
 			var poolTransactions = ((INeuraliumChainPoolProviderGenerix) chainEventPoolProvider).GetTransactionIdsAndTip();
 

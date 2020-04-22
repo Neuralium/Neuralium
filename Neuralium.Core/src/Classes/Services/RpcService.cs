@@ -41,7 +41,7 @@ namespace Neuralium.Core.Classes.Services {
 
 		IRpcProvider RpcProvider { get; }
 
-		Func<bool> ShutdownRequested { get; set; }
+		Func<Task<bool>> ShutdownRequested { get; set; }
 
 		bool IsStarted { get; }
 		void Start();
@@ -74,7 +74,7 @@ namespace Neuralium.Core.Classes.Services {
 			this.appsettings = appsettings;
 		}
 
-		public Func<bool> ShutdownRequested { get; set; }
+		public Func<Task<bool>> ShutdownRequested { get; set; }
 		public bool IsStarted { get; private set; }
 
 		public IRpcProvider RpcProvider => this.rpcProvider;

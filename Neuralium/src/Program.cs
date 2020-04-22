@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using CommandLine;
 using Neuralium.Core.Classes.Configuration;
@@ -7,20 +6,20 @@ using Neuralium.Core.Classes.Runtime;
 
 namespace Neuralium {
 	internal class Program {
-		public static async Task<int> Main(string[] args) {
+		public static Task<int> Main(string[] args){
 			var result = Parser.Default.ParseArguments<NeuraliumOptions>(args);
 
-			return await result.MapResult(async options => await RunProgram(options), HandleParseError);
+			return result.MapResult(RunProgramAsync, HandleParseErrorAsync);
 		}
 
-		private static async Task<int> RunProgram(NeuraliumOptions cmdOptions) {
+		private static Task<int> RunProgramAsync(NeuraliumOptions cmdOptions) {
 			Bootstrap boostrapper = new Bootstrap();
 			boostrapper.SetCmdOptions(cmdOptions);
 
-			return await boostrapper.Run();
+			return boostrapper.Run();
 		}
 
-		private static Task<int> HandleParseError(IEnumerable<Error> errors) {
+		private static Task<int> HandleParseErrorAsync(IEnumerable<Error> errors) {
 
 			return Task.FromResult(-1);
 		}

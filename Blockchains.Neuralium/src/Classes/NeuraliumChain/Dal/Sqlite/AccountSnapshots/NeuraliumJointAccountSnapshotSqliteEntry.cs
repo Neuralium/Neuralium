@@ -17,6 +17,6 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Sqlite.AccountSnapsho
 	/// </summary>
 	public class NeuraliumJointAccountSnapshotSqliteEntry : JointAccountSnapshotSqliteEntry<NeuraliumJointAccountAttributeSqliteEntry, NeuraliumJointMemberAccountSqliteEntry>, INeuraliumJointAccountSnapshotSqliteEntry {
 
-		public Amount Balance { get; set; } = new Amount();
+		public decimal Balance { get; set; } = new Amount();
 	}
 }

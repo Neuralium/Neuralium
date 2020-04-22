@@ -1,5 +1,5 @@
 using System;
-using System.IO.Abstractions;
+
 using Blockchains.Neuralium.Classes.NeuraliumChain.Dal;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Interfaces.AccountSnapshots.Storage;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Interfaces.AccountSnapshots.Storage.Base;
@@ -17,6 +17,8 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Factories;
 using Neuralia.Blockchains.Common.Classes.Tools;
 using Neuralia.Blockchains.Core.Configuration;
 using Neuralia.Blockchains.Core.DataAccess;
+using Neuralia.Blockchains.Core.Tools;
+using Zio;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Factories {
 	public interface INeuraliumChainDalCreationFactory : IChainDalCreationFactory<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> {
@@ -55,7 +57,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Factories {
 		// here are replaceable injection functions
 		public virtual Func<string, BlockchainServiceSet, AppSettingsBase.SerializationTypes, INeuraliumChainStateDal> CreateChainStateDalFunc => (folderPath, serviceSet, serializationType) => new NeuraliumChainStateSqliteDal(folderPath, serviceSet, GlobalSettings.SoftwareVersion, this, serializationType);
 
-		public override Func<INeuraliumCentralCoordinator, string, IFileSystem, IWalletSerialisationFal> CreateWalletSerialisationFal => (centralCoordinator, chainWalletDirectoryPath, fileSystem) => new NeuraliumWalletSerialisationFal(centralCoordinator, chainWalletDirectoryPath, fileSystem);
+		public override Func<INeuraliumCentralCoordinator, string, FileSystemWrapper, IWalletSerialisationFal> CreateWalletSerialisationFal => (centralCoordinator, chainWalletDirectoryPath, fileSystem) => new NeuraliumWalletSerialisationFal(centralCoordinator, chainWalletDirectoryPath, fileSystem);
 
 		public override CHAIN_STATE_DAL CreateChainStateDal<CHAIN_STATE_DAL, CHAIN_STATE_SNAPSHOT>(string folderPath, BlockchainServiceSet serviceSet, AppSettingsBase.SerializationTypes serializationType) {
 			return (CHAIN_STATE_DAL) this.CreateChainStateDalFunc(folderPath, serviceSet, serializationType);
@@ -69,7 +71,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Factories {
 			return (CHAIN_STATE_DAL) this.CreateChainPoolDalFunc(folderPath, serviceSet, serializationType);
 		}
 
-		public override Func<ChainConfigurations, BlockChannelUtils.BlockChannelTypes, string, string, IBlockchainDigestChannelFactory, IFileSystem, IBlockchainEventSerializationFalReadonly> CreateSerializedArchiveFal => (configurations, activeChannels, blocksFolderPath, digestFolderPath, blockchainDigestChannelFactory, fileSystem) => new NeuraliumBlockchainEventSerializationFal(configurations, activeChannels, blocksFolderPath, digestFolderPath, blockchainDigestChannelFactory, fileSystem);
+		public override Func<ChainConfigurations, BlockChannelUtils.BlockChannelTypes, string, string, IBlockchainDigestChannelFactory, FileSystemWrapper, IBlockchainEventSerializationFalReadonly> CreateSerializedArchiveFal => (configurations, activeChannels, blocksFolderPath, digestFolderPath, blockchainDigestChannelFactory, fileSystem) => new NeuraliumBlockchainEventSerializationFal(configurations, activeChannels, blocksFolderPath, digestFolderPath, blockchainDigestChannelFactory, fileSystem);
 
 		public override CHAIN_POOL_CONTEXT CreateChainPoolContext<CHAIN_POOL_CONTEXT>(AppSettingsBase.SerializationTypes serializationType) {
 			return (CHAIN_POOL_CONTEXT) this.CreateChainPoolContextFunc(serializationType);

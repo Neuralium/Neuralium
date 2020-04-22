@@ -47,6 +47,9 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal {
 			destination.MinimumSAFUQuantity = source.MinimumSAFUQuantity;
 			destination.MaximumAmountDays = source.MaximumAmountDays;
 			
+			destination.UBBAmount = source.UBBAmount;
+			destination.UBBBlockRate = source.UBBBlockRate;
+			
 			base.Copy(source, destination);
 		}
 

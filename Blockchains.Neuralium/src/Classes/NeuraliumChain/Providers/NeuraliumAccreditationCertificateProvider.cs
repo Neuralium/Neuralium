@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Interfaces.AccountSnapshots;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Interfaces.AccountSnapshots.Storage;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Sqlite.AccountSnapshots;
@@ -29,7 +30,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 	}
 
 	public interface INeuraliumAccreditationCertificateProviderGenerix : IAccreditationCertificateProvider {
-		Dictionary<AccountId, (decimal delegateBountyShare, decimal InfrastructureServiceFees)> GetDelegateAllocationPercentages(ImmutableList<AccountId> validDelegates, Enums.CertificateApplicationTypes applicationType);
+		Task<Dictionary<AccountId, (decimal delegateBountyShare, decimal InfrastructureServiceFees)>> GetDelegateAllocationPercentages(ImmutableList<AccountId> validDelegates, Enums.CertificateApplicationTypes applicationType);
 
 	}
 
@@ -61,10 +62,10 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		/// </summary>
 		/// <param name="validDelegates"></param>
 		/// <returns></returns>
-		public Dictionary<AccountId, (decimal delegateBountyShare, decimal InfrastructureServiceFees)> GetDelegateAllocationPercentages(ImmutableList<AccountId> validDelegates, Enums.CertificateApplicationTypes applicationType) {
+		public async Task<Dictionary<AccountId, (decimal delegateBountyShare, decimal InfrastructureServiceFees)>> GetDelegateAllocationPercentages(ImmutableList<AccountId> validDelegates, Enums.CertificateApplicationTypes applicationType) {
 
 			//TODO: avoid requery with previous method call
-			var certificateSnapshots = this.SnapshotProvider.GetAccreditationCertificates(validDelegates, new[] {AccreditationCertificateTypes.Instance.DELEGATE, AccreditationCertificateTypes.Instance.SDK_PROVIDER}, applicationType);
+			var certificateSnapshots = await this.SnapshotProvider.GetAccreditationCertificates(validDelegates, new[] {AccreditationCertificateTypes.Instance.DELEGATE, AccreditationCertificateTypes.Instance.SDK_PROVIDER}, applicationType).ConfigureAwait(false);
 			var results = new Dictionary<AccountId, (decimal delegateBountyShare, decimal InfrastructureServiceFees)>();
 
 			foreach(AccountId account in validDelegates) {

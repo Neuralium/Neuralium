@@ -1,9 +1,11 @@
 using System;
+using System.Threading.Tasks;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Base;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Identifiers;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Workflows.Bases;
 using Neuralia.Blockchains.Core.Workflows.Tasks.Routing;
 using Neuralia.Blockchains.Tools.Data;
+using Neuralia.Blockchains.Tools.Locking;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.debugging {
 	public interface IInsertDebugConfirmWorkflow : INeuraliumChainWorkflow {
@@ -18,7 +20,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.debugging {
 			this.hash = hash;
 		}
 
-		protected override void PerformWork(IChainWorkflow workflow, TaskRoutingContext taskRoutingContext) {
+		protected override Task PerformWork(IChainWorkflow workflow, TaskRoutingContext taskRoutingContext, LockContext lockContext) {
 			throw new NotImplementedException();
 		}
 	}

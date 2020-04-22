@@ -1,5 +1,5 @@
 using System;
-using System.IO.Abstractions;
+using System.Threading.Tasks;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serialization;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Managers;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Providers;
@@ -11,6 +11,10 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Factories;
 using Neuralia.Blockchains.Common.Classes.Services;
 using Neuralia.Blockchains.Common.Classes.Tools;
 using Neuralia.Blockchains.Core.Services;
+using Neuralia.Blockchains.Core.Tools;
+using Neuralia.Blockchains.Tools.Locking;
+using Zio;
+using Zio.FileSystems;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Factories {
 	public interface INeuraliumChainInstantiationFactory : IChainInstantiationFactory {
@@ -24,10 +28,10 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Factories {
 
 		public TimeSpan? TaskCheckSpan { get; set; }
 
-		public override INeuraliumBlockChainInterface CreateNewChain(IServiceProvider serviceProvider, ChainRuntimeConfiguration chainRuntimeConfiguration = null, IFileSystem fileSystem = null) {
+		public override async Task<INeuraliumBlockChainInterface> CreateNewChain(IServiceProvider serviceProvider, LockContext lockContext, ChainRuntimeConfiguration chainRuntimeConfiguration = null, FileSystemWrapper fileSystem = null) {
 
 			chainRuntimeConfiguration ??= new ChainRuntimeConfiguration();
-			fileSystem ??= new FileSystem();
+			fileSystem ??= FileSystemWrapper.CreatePhysical();
 
 			DIService.Instance.AddServiceProvider(NeuraliumBlockchainTypes.NeuraliumInstance.Neuralium, serviceProvider);
 			BlockchainServiceSet serviceSet = new BlockchainServiceSet(NeuraliumBlockchainTypes.NeuraliumInstance.Neuralium);
@@ -36,12 +40,12 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Factories {
 
 			NeuraliumBlockChainInterface chainInterface = new NeuraliumBlockChainInterface(centralCoordinator, this.TaskCheckSpan);
 
-			centralCoordinator.InitializeContents(this.CreateChainComponents(centralCoordinator, chainInterface));
+			await centralCoordinator.InitializeContents(CreateChainComponents(centralCoordinator, chainInterface), lockContext).ConfigureAwait(false);
 
 			return chainInterface;
 		}
 
-		protected override INeuraliumCentralCoordinator CreateCentralCoordinator(BlockchainServiceSet serviceSet, ChainRuntimeConfiguration chainRuntimeConfiguration, IFileSystem fileSystem) {
+		protected override INeuraliumCentralCoordinator CreateCentralCoordinator(BlockchainServiceSet serviceSet, ChainRuntimeConfiguration chainRuntimeConfiguration, FileSystemWrapper fileSystem) {
 			return new NeuraliumCentralCoordinator(serviceSet, chainRuntimeConfiguration, fileSystem);
 		}
 

@@ -1,11 +1,13 @@
 using System;
 using System.IO;
-using System.IO.Abstractions;
+
 using Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Providers;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal.Wallet;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Wallet.Account;
 using Neuralia.Blockchains.Core.Cryptography.Passphrases;
+using Neuralia.Blockchains.Core.Tools;
+using Zio;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal {
 
@@ -17,7 +19,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal {
 
 		public const string NEURALIUM_WALLET_TIMELINE_FILE_NAME = "NeuraliumTimeline.neuralium";
 
-		public NeuraliumWalletSerialisationFal(INeuraliumCentralCoordinator centralCoordinator, string chainFilesDirectoryPath, IFileSystem fileSystem) : base(centralCoordinator, chainFilesDirectoryPath, fileSystem) {
+		public NeuraliumWalletSerialisationFal(INeuraliumCentralCoordinator centralCoordinator, string chainFilesDirectoryPath, FileSystemWrapper fileSystem) : base(centralCoordinator, chainFilesDirectoryPath, fileSystem) {
 		}
 
 		public override IWalletAccountSnapshotFileInfo CreateWalletSnapshotFileInfo(IWalletAccount account, WalletPassphraseDetails walletPassphraseDetails) {

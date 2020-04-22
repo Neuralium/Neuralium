@@ -33,5 +33,15 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Tools {
 
 			return generator;
 		}
+		
+		public static SystemEventGenerator NeuraliumNeuraliumTimelineUpdated() {
+			NeuraliumSystemEventGenerator generator = new NeuraliumSystemEventGenerator();
+
+			generator.EventType  = NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.NeuraliumTimelineUpdated;
+			generator.Parameters = new object[] {};
+
+			return generator;
+		}
+		
 	}
 }

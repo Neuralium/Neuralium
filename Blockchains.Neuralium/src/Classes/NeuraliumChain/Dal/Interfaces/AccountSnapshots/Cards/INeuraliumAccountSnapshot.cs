@@ -9,7 +9,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Interfaces.AccountSna
 		/// <summary>
 		///     our account balance
 		/// </summary>
-		Amount Balance { get; set; }
+		decimal Balance { get; set; }
 	}
 
 	public interface INeuraliumAccountSnapshot<ACCOUNT_ATTRIBUTE> : IAccountSnapshot<ACCOUNT_ATTRIBUTE>, INeuraliumAccountSnapshot

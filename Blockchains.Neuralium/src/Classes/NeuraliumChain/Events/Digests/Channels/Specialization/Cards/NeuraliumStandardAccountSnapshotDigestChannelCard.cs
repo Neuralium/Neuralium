@@ -18,22 +18,22 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Digests.Channels.S
 
 	public class NeuraliumStandardAccountSnapshotDigestChannelCard : StandardAccountSnapshotDigestChannelCard, INeuraliumStandardAccountSnapshotDigestChannelCard {
 		
-		public Amount Balance { get; set; } = new Amount();
+		public decimal Balance { get; set; } = new Amount();
 
 		public override void Rehydrate(IDataRehydrator rehydrator) {
 			base.Rehydrate(rehydrator);
 
-			this.Balance.Rehydrate(rehydrator);
-
-			
+			Amount amount = new Amount();
+			amount.Rehydrate(rehydrator); 
+			this.Balance = amount.Value;
 		}
 
 		public override void Dehydrate(IDataDehydrator dehydrator) {
 			base.Dehydrate(dehydrator);
 
-			this.Balance.Dehydrate(dehydrator);
-
-			
+			Amount amount = new Amount();
+			amount = this.Balance;
+			amount.Dehydrate(dehydrator);
 		}
 
 		protected override IAccountAttribute CreateAccountFeature() {

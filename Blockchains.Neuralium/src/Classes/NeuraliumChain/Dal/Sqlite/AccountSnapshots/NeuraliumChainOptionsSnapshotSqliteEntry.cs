@@ -13,5 +13,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Sqlite.AccountSnapsho
 		public decimal SAFUDailyRatio { get; set; }
 		public decimal MinimumSAFUQuantity { get; set; }
 		public int MaximumAmountDays { get; set; }
+		public decimal UBBAmount{ get; set; }
+		public byte UBBBlockRate{ get; set; }
 	}
 }

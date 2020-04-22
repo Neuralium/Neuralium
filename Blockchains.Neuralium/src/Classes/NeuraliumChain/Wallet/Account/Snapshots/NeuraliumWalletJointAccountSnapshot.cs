@@ -23,6 +23,6 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Wallet.Account.Snapshots 
 		public byte? FreezeDataVersion { get; set; }
 		public byte[] FreezeData { get; set; }
 
-		public Amount Balance { get; set; } = new Amount();
+		public decimal Balance { get; set; } = new Amount();
 	}
 }

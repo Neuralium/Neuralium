@@ -58,6 +58,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Wallet.Account {
 		public DateTime Timestamp { get; set; }
 		public AccountId SenderAccountId { get; set; }
 		public string RecipientAccountIds { get; set; }
+		public long? ElectedBlockId { get; set; }
 
 		public decimal Amount { get; set; }
 		public decimal Tips { get; set; }

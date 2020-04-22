@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Dal;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Interfaces.AccountSnapshots.Cards;
 using Blockchains.Neuralium.Classes.NeuraliumChain.DataStructures;
@@ -19,6 +20,7 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal.Interfaces.AccountSnapshots.Cards;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.DataStructures;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.DataStructures.Types;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Identifiers;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Specialization.Elections.Results.V1;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Identifiers;
@@ -31,12 +33,13 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Tools.AccountAttrib
 using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.General.Types;
 using Neuralia.Blockchains.Core.General.Types.Specialized;
+using Neuralia.Blockchains.Tools.Locking;
 using Neuralia.Blockchains.Tools.Serialization;
 using Serilog;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInterpretation.V1 {
 
-	public class NeuraliumTransactionInterpretationProcessor<ACCOUNT_SNAPSHOT, STANDARD_ACCOUNT_SNAPSHOT, STANDARD_ACCOUNT_ATTRIBUTE_SNAPSHOT, JOINT_ACCOUNT_SNAPSHOT, JOINT_ACCOUNT_ATTRIBUTE_SNAPSHOT, JOINT_ACCOUNT_MEMBERS_SNAPSHOT, STANDARD_ACCOUNT_KEY_SNAPSHOT, ACCREDITATION_CERTIFICATE_SNAPSHOT, ACCREDITATION_CERTIFICATE_ACCOUNT_SNAPSHOT, CHAIN_OPTIONS_SNAPSHOT> : TransactionInterpretationProcessor<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider, ACCOUNT_SNAPSHOT, STANDARD_ACCOUNT_SNAPSHOT, STANDARD_ACCOUNT_ATTRIBUTE_SNAPSHOT, JOINT_ACCOUNT_SNAPSHOT, JOINT_ACCOUNT_ATTRIBUTE_SNAPSHOT, JOINT_ACCOUNT_MEMBERS_SNAPSHOT, STANDARD_ACCOUNT_KEY_SNAPSHOT, ACCREDITATION_CERTIFICATE_SNAPSHOT, ACCREDITATION_CERTIFICATE_ACCOUNT_SNAPSHOT, CHAIN_OPTIONS_SNAPSHOT>
+	public class NeuraliumTransactionInterpretationProcessor<ACCOUNT_SNAPSHOT, STANDARD_ACCOUNT_SNAPSHOT, STANDARD_ACCOUNT_ATTRIBUTE_SNAPSHOT, JOINT_ACCOUNT_SNAPSHOT, JOINT_ACCOUNT_ATTRIBUTE_SNAPSHOT, JOINT_ACCOUNT_MEMBERS_SNAPSHOT, STANDARD_ACCOUNT_KEY_SNAPSHOT, ACCREDITATION_CERTIFICATE_SNAPSHOT, ACCREDITATION_CERTIFICATE_ACCOUNT_SNAPSHOT, CHAIN_OPTIONS_SNAPSHOT> : TransactionInterpretationProcessor<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider, ACCOUNT_SNAPSHOT, STANDARD_ACCOUNT_SNAPSHOT, STANDARD_ACCOUNT_ATTRIBUTE_SNAPSHOT, JOINT_ACCOUNT_SNAPSHOT, JOINT_ACCOUNT_ATTRIBUTE_SNAPSHOT, JOINT_ACCOUNT_MEMBERS_SNAPSHOT, STANDARD_ACCOUNT_KEY_SNAPSHOT, ACCREDITATION_CERTIFICATE_SNAPSHOT, ACCREDITATION_CERTIFICATE_ACCOUNT_SNAPSHOT, CHAIN_OPTIONS_SNAPSHOT>, INeuraliumTransactionInterpretationProcessor<ACCOUNT_SNAPSHOT, STANDARD_ACCOUNT_SNAPSHOT, STANDARD_ACCOUNT_ATTRIBUTE_SNAPSHOT, JOINT_ACCOUNT_MEMBERS_SNAPSHOT, JOINT_ACCOUNT_SNAPSHOT, JOINT_ACCOUNT_ATTRIBUTE_SNAPSHOT, STANDARD_ACCOUNT_KEY_SNAPSHOT, ACCREDITATION_CERTIFICATE_SNAPSHOT, ACCREDITATION_CERTIFICATE_ACCOUNT_SNAPSHOT, CHAIN_OPTIONS_SNAPSHOT>
 		where ACCOUNT_SNAPSHOT : INeuraliumAccountSnapshot
 		where STANDARD_ACCOUNT_SNAPSHOT : class, INeuraliumStandardAccountSnapshot<STANDARD_ACCOUNT_ATTRIBUTE_SNAPSHOT>, ACCOUNT_SNAPSHOT, new()
 		where STANDARD_ACCOUNT_ATTRIBUTE_SNAPSHOT : class, INeuraliumAccountAttribute, new()
@@ -46,7 +49,10 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 		where STANDARD_ACCOUNT_KEY_SNAPSHOT : class, INeuraliumStandardAccountKeysSnapshot, new()
 		where ACCREDITATION_CERTIFICATE_SNAPSHOT : class, INeuraliumAccreditationCertificateSnapshot<ACCREDITATION_CERTIFICATE_ACCOUNT_SNAPSHOT>, new()
 		where ACCREDITATION_CERTIFICATE_ACCOUNT_SNAPSHOT : class, INeuraliumAccreditationCertificateSnapshotAccount, new()
-		where CHAIN_OPTIONS_SNAPSHOT : class, INeuraliumChainOptionsSnapshot, new() {
+		where CHAIN_OPTIONS_SNAPSHOT : class, INeuraliumChainOptionsSnapshot, new(){
+
+		public event Func<Amount, Task> ApplyUniversalBasicBountiesCallback;
+		
 
 		public NeuraliumTransactionInterpretationProcessor(INeuraliumCentralCoordinator centralCoordinator) : this(centralCoordinator, TransactionImpactSet.OperationModes.Real) {
 
@@ -58,54 +64,58 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 
 		protected override CardsUtils CardsUtils => NeuraliumCardsUtils.Instance;
 
-		protected override void RegisterTransactionImpactSets() {
-			base.RegisterTransactionImpactSets();
+		protected INeuraliumAccountSnapshotsProvider NeuraliumAccountSnapshotsProvider => (INeuraliumAccountSnapshotsProvider)this.AccountSnapshotsProvider;
+		
+		protected override async Task RegisterTransactionImpactSets() {
+			await base.RegisterTransactionImpactSets().ConfigureAwait(false);
 
 			// this.RegisterTransactionImpactSetOverride(new SupersetTransactionImpactSet<INeuraliumStandardPresentationTransaction, IStandardPresentationTransaction>());
 			// this.RegisterTransactionImpactSetOverride(new SupersetTransactionImpactSet<INeuraliumJointPresentationTransaction, IJointPresentationTransaction>());
 
-			this.TransactionImpactSets.RegisterTransactionImpactSetOverride<INeuraliumChainAccreditationCertificateTransaction, IChainAccreditationCertificateTransaction>(interpretTransactionAccreditationCertificatesFunc: (t, parameters, parent) => {
+			this.TransactionImpactSets.RegisterTransactionImpactSetOverride<INeuraliumChainAccreditationCertificateTransaction, IChainAccreditationCertificateTransaction>(interpretTransactionAccreditationCertificatesFunc: async (t, parameters, parent, lockContext) => {
 
-				parent(t, parameters);
+				await parent(t, parameters, lockContext).ConfigureAwait(false);
 				
-				ACCREDITATION_CERTIFICATE_SNAPSHOT certificate = parameters.snapshotCache.GetAccreditationCertificateSnapshotModify((int) t.CertificateId.Value);
+				ACCREDITATION_CERTIFICATE_SNAPSHOT certificate = await parameters.snapshotCache.GetAccreditationCertificateSnapshotModify((int) t.CertificateId.Value, lockContext).ConfigureAwait(false);
 
 				certificate.ProviderBountyshare = t.ProviderBountyshare;
 				certificate.InfrastructureServiceFees = t.InfrastructureServiceFees;
 			});
 
-			this.TransactionImpactSets.RegisterTransactionImpactSetOverride<INeuraliumChainOperatingRulesTransaction, IChainOperatingRulesTransaction>(getImpactedSnapshotsFunc: (t, affectedSnapshots, parent) => {
+			this.TransactionImpactSets.RegisterTransactionImpactSetOverride<INeuraliumChainOperatingRulesTransaction, IChainOperatingRulesTransaction>(async (t, affectedSnapshots, parent, lockContext) => {
 
-				parent(t, affectedSnapshots);
+				await parent(t, affectedSnapshots, lockContext).ConfigureAwait(false);
 
-			}, interpretTransactionChainOptionsFunc: (t, parameters, parent) => {
+			}, interpretTransactionChainOptionsFunc: async (t, parameters, parent, lockContext) => {
 				
-				parent(t, parameters);
+				await parent(t, parameters, lockContext).ConfigureAwait(false);
 				
 				if(parameters.operationModes == TransactionImpactSet.OperationModes.Real) {
 					CHAIN_OPTIONS_SNAPSHOT options = null;
 
-					if(parameters.snapshotCache.CheckChainOptionsSnapshotExists(1)) {
-						options = parameters.snapshotCache.GetChainOptionsSnapshotModify(1);
+					if(await parameters.snapshotCache.CheckChainOptionsSnapshotExists(1, lockContext).ConfigureAwait(false)) {
+						options = await parameters.snapshotCache.GetChainOptionsSnapshotModify(1, lockContext).ConfigureAwait(false);
 					} else {
-						options = parameters.snapshotCache.CreateNewChainOptionsSnapshot(1);
+						options = await parameters.snapshotCache.CreateNewChainOptionsSnapshot(1, lockContext).ConfigureAwait(false);
 					}
 
 					options.SAFUDailyRatio = t.SAFUDailyRatio;
 					options.MinimumSAFUQuantity = t.MinimumSAFUQuantity;
 					options.MaximumAmountDays = (int) t.MaximumAmountDays.Value;
+					
+					options.UBBAmount = t.UBBAmount;
+					options.UBBBlockRate = t.UBBBlockRate;
 				}
-
 			});
 
-			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumDailySAFURatioTransaction>(getImpactedSnapshotsFunc: (t, affectedSnapshots) => {
+			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumDailySAFURatioTransaction>(async (t, affectedSnapshots,lockContext) => {
 
 				affectedSnapshots.chainOptions.Add(1);
 
-			}, interpretTransactionChainOptionsFunc: (t, parameters) => {
+			}, interpretTransactionChainOptionsFunc: async (t, parameters,lockContext) => {
 
 				if(parameters.operationModes == TransactionImpactSet.OperationModes.Real) {
-					CHAIN_OPTIONS_SNAPSHOT options = parameters.snapshotCache.GetChainOptionsSnapshotModify(1);
+					CHAIN_OPTIONS_SNAPSHOT options = await parameters.snapshotCache.GetChainOptionsSnapshotModify(1, lockContext).ConfigureAwait(false);
 
 					options.SAFUDailyRatio = t.SAFUDailyRatio;
 					options.MinimumSAFUQuantity = t.MinimumSAFUQuantity;
@@ -113,15 +123,15 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 				}
 			});
 
-			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumTransferTransaction>(getImpactedSnapshotsFunc: (t, affectedKeysSnapshots) => {
+			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumTransferTransaction>(async (t, affectedKeysSnapshots,lockContext) => {
 
 				affectedKeysSnapshots.AddAccountId(t.TransactionId.Account);
 				affectedKeysSnapshots.AddAccounts(t.TargetAccounts);
 
-			}, interpretTransactionAccountsFunc: (t, parameters) => {
+			}, async (t, parameters,lockContext) => {
 
-				INeuraliumAccountSnapshot senderAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.TransactionId.Account);
-				INeuraliumAccountSnapshot recipientAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.Recipient);
+				INeuraliumAccountSnapshot senderAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.TransactionId.Account, lockContext).ConfigureAwait(false);
+				INeuraliumAccountSnapshot recipientAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.Recipient, lockContext).ConfigureAwait(false);
 
 				if(senderAccount != null) {
 					senderAccount.Balance -= t.Amount + t.Tip;
@@ -133,14 +143,14 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 				}
 			});
 
-			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumMultiTransferTransaction>(getImpactedSnapshotsFunc: (t, affectedSnapshots) => {
+			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumMultiTransferTransaction>(async (t, affectedSnapshots,lockContext) => {
 
 				affectedSnapshots.AddAccountId(t.TransactionId.Account);
 				affectedSnapshots.AddAccounts(t.TargetAccounts);
 
-			}, interpretTransactionAccountsFunc: (t, parameters) => {
+			}, async (t, parameters,lockContext) => {
 
-				INeuraliumAccountSnapshot senderAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.TransactionId.Account);
+				INeuraliumAccountSnapshot senderAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.TransactionId.Account, lockContext).ConfigureAwait(false);
 
 				if(senderAccount != null) {
 					senderAccount.Balance -= t.Total + t.Tip;
@@ -148,7 +158,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 				}
 
 				foreach(RecipientSet recipientSet in t.Recipients) {
-					INeuraliumAccountSnapshot recipientAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(recipientSet.Recipient);
+					INeuraliumAccountSnapshot recipientAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(recipientSet.Recipient, lockContext).ConfigureAwait(false);
 
 					if(recipientAccount != null) {
 						recipientAccount.Balance += recipientSet.Amount;
@@ -156,25 +166,25 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 				}
 			});
 
-			this.TransactionImpactSets.RegisterTransactionImpactSet<IEmittingTransaction>(getImpactedSnapshotsFunc: (t, affectedKeysSnapshots) => {
+			this.TransactionImpactSets.RegisterTransactionImpactSet<IEmittingTransaction>(async (t, affectedKeysSnapshots,lockContext) => {
 
 				affectedKeysSnapshots.AddAccounts(t.TargetAccounts);
-			}, interpretTransactionAccountsFunc: (t, parameters) => {
+			}, async (t, parameters,lockContext) => {
 
-				INeuraliumAccountSnapshot recipientAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.Recipient);
+				INeuraliumAccountSnapshot recipientAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.Recipient, lockContext).ConfigureAwait(false);
 
 				if(recipientAccount != null) {
 					recipientAccount.Balance += t.Amount;
 				}
 			});
 
-			this.TransactionImpactSets.RegisterTransactionImpactSet<IMultiEmittingTransaction>(getImpactedSnapshotsFunc: (t, affectedKeysSnapshots) => {
+			this.TransactionImpactSets.RegisterTransactionImpactSet<IMultiEmittingTransaction>(async (t, affectedKeysSnapshots,lockContext) => {
 
 				affectedKeysSnapshots.AddAccounts(t.TargetAccounts);
-			}, interpretTransactionAccountsFunc: (t, parameters) => {
+			}, async (t, parameters,lockContext) => {
 
 				foreach(RecipientSet recipientSet in t.Recipients) {
-					INeuraliumAccountSnapshot recipientAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(recipientSet.Recipient);
+					INeuraliumAccountSnapshot recipientAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(recipientSet.Recipient, lockContext).ConfigureAwait(false);
 
 					if(recipientAccount != null) {
 						recipientAccount.Balance += recipientSet.Amount;
@@ -182,12 +192,12 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 				}
 			});
 
-			this.TransactionImpactSets.RegisterTransactionImpactSet<IDestroyNeuraliumsTransaction>(getImpactedSnapshotsFunc: (t, affectedKeysSnapshots) => {
+			this.TransactionImpactSets.RegisterTransactionImpactSet<IDestroyNeuraliumsTransaction>(async (t, affectedKeysSnapshots,lockContext) => {
 
 				affectedKeysSnapshots.AddAccountId(new AccountId(NeuraliumConstants.DEFAULT_MODERATOR_DESTRUCTION_ACCOUNT_ID, Enums.AccountTypes.Standard));
-			}, interpretTransactionAccountsFunc: (t, parameters) => {
+			}, async (t, parameters,lockContext) => {
 
-				INeuraliumAccountSnapshot deflationAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(new AccountId(NeuraliumConstants.DEFAULT_MODERATOR_DESTRUCTION_ACCOUNT_ID, Enums.AccountTypes.Standard));
+				INeuraliumAccountSnapshot deflationAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(new AccountId(NeuraliumConstants.DEFAULT_MODERATOR_DESTRUCTION_ACCOUNT_ID, Enums.AccountTypes.Standard), lockContext).ConfigureAwait(false);
 
 				if(deflationAccount != null) {
 					// lets eliminate it all, we are deflating the neuralium
@@ -195,32 +205,32 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 				}
 			});
 
-			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumSAFUContributionTransaction>(getImpactedSnapshotsFunc: (t, affectedSnapshots) => {
+			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumSAFUContributionTransaction>(async (t, affectedSnapshots,lockContext) => {
 
 				affectedSnapshots.AddAccounts(t.TargetAccounts);
 				affectedSnapshots.chainOptions.Add(1);
 
-			}, interpretTransactionAccountsFunc: (t, parameters) => {
+			}, async (t, parameters,lockContext) => {
 
 				if(t.AcceptSAFUTermsOfService == false) {
 					return;
 				}
 
 				// ensure the safu certificate is valid
-				var safuCertificate = this.AccreditationCertificateProvider.GetAccountAccreditationCertificateBase(NeuraliumConstants.SAFU_ACCREDITATION_CERTIFICATE_ID);
+				var safuCertificate = await this.AccreditationCertificateProvider.GetAccountAccreditationCertificateBase(NeuraliumConstants.SAFU_ACCREDITATION_CERTIFICATE_ID).ConfigureAwait(false);
 				
 				if(AccreditationCertificateUtils.IsValid(safuCertificate) == false) {
 					return;
 				}
 
-				INeuraliumAccountSnapshot senderAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.TransactionId.Account);
+				INeuraliumAccountSnapshot senderAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.TransactionId.Account, lockContext).ConfigureAwait(false);
 
 				if(senderAccount == null) {
 					return;
 				}
 
-				CHAIN_OPTIONS_SNAPSHOT chainOptionsSnapshot = parameters.snapshotCache.GetChainOptionsSnapshotReadonly(1);
-
+				var chainOptionsSnapshot = await this.LoadChainOptionsSnapshot(parameters.snapshotCache, lockContext).ConfigureAwait(false);
+				
 				decimal total = chainOptionsSnapshot.SAFUDailyRatio * t.DailyProtection * t.NumberDays;
 				senderAccount.Balance -= total + t.Tip;
 				senderAccount.Balance = Math.Max(senderAccount.Balance, 0);
@@ -260,18 +270,18 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 
 				senderAccount.AddCollectionEntry(feature);
 
-				INeuraliumAccountSnapshot safuAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(new AccountId(NeuraliumConstants.DEFAULT_NEURALIUM_SAFU_ACCOUNT_ID, Enums.AccountTypes.Standard));
+				INeuraliumAccountSnapshot safuAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(new AccountId(NeuraliumConstants.DEFAULT_NEURALIUM_SAFU_ACCOUNT_ID, Enums.AccountTypes.Standard), lockContext).ConfigureAwait(false);
 
 				if(safuAccount != null) {
 					safuAccount.Balance += total;
 				}
 			});
 
-			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumSAFUTransferTransaction>(getImpactedSnapshotsFunc: (t, affectedSnapshots) => {
+			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumSAFUTransferTransaction>(async (t, affectedSnapshots,lockContext) => {
 
 				affectedSnapshots.AddAccounts(t.TargetAccounts);
 
-			}, interpretTransactionAccountsFunc: (t, parameters) => {
+			}, async (t, parameters,lockContext) => {
 
 				AccountId safuAccountId = new AccountId(NeuraliumConstants.DEFAULT_NEURALIUM_SAFU_ACCOUNT_ID, Enums.AccountTypes.Standard);
 
@@ -282,7 +292,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 				decimal total = 0;
 
 				foreach(RecipientSet recipientSet in t.Recipients) {
-					INeuraliumAccountSnapshot recipientAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(recipientSet.Recipient);
+					INeuraliumAccountSnapshot recipientAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(recipientSet.Recipient, lockContext).ConfigureAwait(false);
 
 					if(recipientAccount != null) {
 						recipientAccount.Balance += recipientSet.Amount;
@@ -290,20 +300,20 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 					}
 				}
 
-				INeuraliumAccountSnapshot senderAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(safuAccountId);
+				INeuraliumAccountSnapshot senderAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(safuAccountId, lockContext).ConfigureAwait(false);
 				senderAccount.Balance -= total;
 				senderAccount.Balance = Math.Max(senderAccount.Balance, 0);
 			});
 
-			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumFreezeSuspiciousFundsTransaction>(getImpactedSnapshotsFunc: (t, affectedSnapshots) => {
+			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumFreezeSuspiciousFundsTransaction>(async (t, affectedSnapshots,lockContext) => {
 
 				affectedSnapshots.AddAccounts(t.TargetAccounts);
 
-			}, interpretTransactionAccountsFunc: (t, parameters) => {
+			}, async (t, parameters,lockContext) => {
 				var impacts = t.GetFlatImpactTree();
 
 				foreach((AccountId key, decimal value) in impacts.holders) {
-					INeuraliumAccountSnapshot recipientAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(key);
+					INeuraliumAccountSnapshot recipientAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(key, lockContext).ConfigureAwait(false);
 
 					if(recipientAccount != null) {
 						recipientAccount.CreateNewCollectionEntry(out IAccountAttribute freeze);
@@ -321,28 +331,28 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 				}
 			});
 
-			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumUnfreezeClearedFundsTransaction>(getImpactedSnapshotsFunc: (t, affectedSnapshots) => {
+			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumUnfreezeClearedFundsTransaction>(async (t, affectedSnapshots,lockContext) => {
 
 				affectedSnapshots.AddAccounts(t.TargetAccounts);
 
-			}, interpretTransactionAccountsFunc: (t, parameters) => {
+			}, async (t, parameters,lockContext) => {
 
 				foreach(NeuraliumUnfreezeClearedFundsTransaction.AccountUnfreeze recipientSet in t.Accounts) {
-					INeuraliumAccountSnapshot recipientAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(recipientSet.AccountId);
+					INeuraliumAccountSnapshot recipientAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(recipientSet.AccountId, lockContext).ConfigureAwait(false);
 
 					recipientAccount?.RemoveCollectionEntry(entry => entry.CorrelationId == t.FreezeId && entry.AttributeType == NeuraliumAccountAttributesTypes.Instance.FREEZE);
 				}
 			});
 
-			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumUnwindStolenFundsTreeTransaction>(getImpactedSnapshotsFunc: (t, affectedSnapshots) => {
+			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumUnwindStolenFundsTreeTransaction>(async (t, affectedSnapshots,lockContext) => {
 
 				affectedSnapshots.AddAccounts(t.TargetAccounts);
 
-			}, interpretTransactionAccountsFunc: (t, parameters) => {
+			}, async (t, parameters,lockContext) => {
 
 				// ok, lets unwind the ones that have funds they should not have
 				foreach(NeuraliumUnwindStolenFundsTreeTransaction.AccountUnwindImpact recipientSet in t.AccountUnwindImpacts) {
-					INeuraliumAccountSnapshot recipientAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(recipientSet.AccountId);
+					INeuraliumAccountSnapshot recipientAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(recipientSet.AccountId, lockContext).ConfigureAwait(false);
 
 					if(recipientAccount != null) {
 						recipientAccount.RemoveCollectionEntry(entry => entry.CorrelationId == t.FreezeId && entry.AttributeType == NeuraliumAccountAttributesTypes.Instance.FREEZE);
@@ -354,7 +364,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 
 				// ok, lets refund the ones that were wronged
 				foreach(NeuraliumUnwindStolenFundsTreeTransaction.AccountRestoreImpact recipientSet in t.AccountRestoreImpacts) {
-					INeuraliumAccountSnapshot recipientAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(recipientSet.AccountId);
+					INeuraliumAccountSnapshot recipientAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(recipientSet.AccountId, lockContext).ConfigureAwait(false);
 
 					if(recipientAccount != null) {
 						recipientAccount.RemoveCollectionEntry(entry => entry.CorrelationId == t.FreezeId && entry.AttributeType == NeuraliumAccountAttributesTypes.Instance.FREEZE);
@@ -364,13 +374,13 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 				}
 			});
 			
-			this.TransactionImpactSets.RegisterTransactionImpactSetOverride<INeuraliumThreeWayGatedTransferTransaction, IThreeWayGatedTransaction>(getImpactedSnapshotsFunc: (t, affectedSnapshots, parent) => {
+			this.TransactionImpactSets.RegisterTransactionImpactSetOverride<INeuraliumThreeWayGatedTransferTransaction, IThreeWayGatedTransaction>(async (t, affectedSnapshots, parent, lockContext) => {
 
-				parent(t, affectedSnapshots);
+				await parent(t, affectedSnapshots, lockContext).ConfigureAwait(false);
 
-			}, interpretTransactionAccountsFunc: (t, parameters, parent) => {
+			}, async (t, parameters, parent, lockContext) => {
 
-				parent(t, parameters);
+				await parent(t, parameters, lockContext).ConfigureAwait(false);
 				
 				DateTime transactionStart = this.TrxDt(t);
 				
@@ -378,7 +388,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 				DateTime expirationTime = transactionStart + TimeSpan.FromDays(t.Duration);
 
 				
-				INeuraliumAccountSnapshot senderAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.SenderAccountId);
+				INeuraliumAccountSnapshot senderAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.SenderAccountId, lockContext).ConfigureAwait(false);
 
 				if(senderAccount != null) {
 					senderAccount.Balance -= t.SenderVerifierBaseServiceFee + t.Tip;
@@ -401,7 +411,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 				}
 
 				// receiver
-				var receiverAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.ReceiverAccountId);
+				var receiverAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.ReceiverAccountId, lockContext).ConfigureAwait(false);
 
 				if(receiverAccount != null) {
 
@@ -424,7 +434,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 					receiverAccount.AddCollectionEntry(feature);
 				}
 				
-				var verifierAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.VerifierAccountId);
+				var verifierAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.VerifierAccountId, lockContext).ConfigureAwait(false);
 
 				if(verifierAccount != null) {
 					verifierAccount.Balance += (t.SenderVerifierBaseServiceFee + t.ReceiverVerifierBaseServiceFee );
@@ -447,14 +457,14 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 			});
 			
 
-			this.TransactionImpactSets.RegisterTransactionImpactSetOverride<INeuraliumGatedJudgementTransaction, IGatedJudgementTransaction>(getImpactedSnapshotsFunc: (t, affectedSnapshots,  parent) => {
+			this.TransactionImpactSets.RegisterTransactionImpactSetOverride<INeuraliumGatedJudgementTransaction, IGatedJudgementTransaction>(async (t, affectedSnapshots,  parent, lockContext) => {
 
-				parent(t, affectedSnapshots);
-			}, interpretTransactionAccountsFunc: (t, parameters, parent) => {
+				await parent(t, affectedSnapshots, lockContext).ConfigureAwait(false);
+			}, async (t, parameters, parent, lockContext) => {
 
-				parent(t, parameters);
+				await parent(t, parameters, lockContext).ConfigureAwait(false);
 				
-				INeuraliumAccountSnapshot senderAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.SenderAccountId);
+				INeuraliumAccountSnapshot senderAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.SenderAccountId, lockContext).ConfigureAwait(false);
 
 				DateTime transactionStart = this.TrxDt(t);
 				
@@ -479,7 +489,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 					}
 				}
 
-				INeuraliumAccountSnapshot receiverAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.ReceiverAccountId);
+				INeuraliumAccountSnapshot receiverAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.ReceiverAccountId, lockContext).ConfigureAwait(false);
 
 				if(receiverAccount != null) {
 					var freeze = receiverAccount.AppliedAttributesBase.SingleOrDefault(f => f.CorrelationId == t.CorrelationId && f.AttributeType == NeuraliumAccountAttributesTypes.Instance.THREE_WAY_GATED_TRANSFER);
@@ -503,7 +513,7 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 					}
 				}
 
-				INeuraliumAccountSnapshot verifierAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.VerifierAccountId);
+				INeuraliumAccountSnapshot verifierAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.VerifierAccountId, lockContext).ConfigureAwait(false);
 
 				if(verifierAccount != null) {
 					var freeze = verifierAccount.AppliedAttributesBase.SingleOrDefault(f => f.CorrelationId == t.CorrelationId && f.AttributeType == NeuraliumAccountAttributesTypes.Instance.THREE_WAY_GATED_TRANSFER);
@@ -526,12 +536,12 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 			});
 
 #if TESTNET || DEVNET
-			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumRefillNeuraliumsTransaction>(getImpactedSnapshotsFunc: (t, affectedKeysSnapshots) => {
+			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumRefillNeuraliumsTransaction>(async (t, affectedKeysSnapshots,lockContext) => {
 
 				affectedKeysSnapshots.AddAccountId(t.TransactionId.Account);
-			}, interpretTransactionAccountsFunc: (t, parameters) => {
+			}, async (t, parameters,lockContext) => {
 
-				INeuraliumAccountSnapshot senderAccount = parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.TransactionId.Account);
+				INeuraliumAccountSnapshot senderAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.TransactionId.Account, lockContext).ConfigureAwait(false);
 
 				if(senderAccount != null) {
 					senderAccount.Balance += 1000;
@@ -540,8 +550,17 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 #endif
 		}
 
-		public override void ApplyBlockElectionsInfluence(List<IFinalElectionResults> publicationResult, Dictionary<TransactionId, ITransaction> transactions) {
-			base.ApplyBlockElectionsInfluence(publicationResult, transactions);
+		public async Task<CHAIN_OPTIONS_SNAPSHOT> LoadChainOptionsSnapshot(ISnapshotCacheSet<ACCOUNT_SNAPSHOT, STANDARD_ACCOUNT_SNAPSHOT, STANDARD_ACCOUNT_ATTRIBUTE_SNAPSHOT, JOINT_ACCOUNT_SNAPSHOT, JOINT_ACCOUNT_ATTRIBUTE_SNAPSHOT, JOINT_ACCOUNT_MEMBERS_SNAPSHOT, STANDARD_ACCOUNT_KEY_SNAPSHOT, ACCREDITATION_CERTIFICATE_SNAPSHOT, ACCREDITATION_CERTIFICATE_ACCOUNT_SNAPSHOT, CHAIN_OPTIONS_SNAPSHOT> snapshotCache, LockContext lockContext) {
+			CHAIN_OPTIONS_SNAPSHOT chainOptionsSnapshot = await snapshotCache.GetChainOptionsSnapshotReadonly(1, lockContext).ConfigureAwait(false);
+
+			if(chainOptionsSnapshot == null) {
+				chainOptionsSnapshot = (await AccountSnapshotsProvider.LoadChainOptionsSnapshot().ConfigureAwait(false)) as CHAIN_OPTIONS_SNAPSHOT;
+			}
+
+			return chainOptionsSnapshot;
+		}
+		public override async Task ApplyBlockElectionsInfluence(List<IFinalElectionResults> publicationResult, Dictionary<TransactionId, ITransaction> transactions, LockContext lockContext) {
+			await base.ApplyBlockElectionsInfluence(publicationResult, transactions, lockContext).ConfigureAwait(false);
 
 			// now apply the network service fees if applicable
 
@@ -549,12 +568,12 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 
 			if(neuraliumElectionResult.Any(r => r.InfrastructureServiceFees?.Value != 0)) {
 
-				this.SetNetworkServiceFees(neuraliumElectionResult.Where(r => (r.InfrastructureServiceFees != null) && (r.InfrastructureServiceFees.Value != 0)).Select(r => r.InfrastructureServiceFees.Value).ToList());
+				await this.SetNetworkServiceFees(neuraliumElectionResult.Where(r => (r.InfrastructureServiceFees != null) && (r.InfrastructureServiceFees.Value != 0)).Select(r => r.InfrastructureServiceFees.Value).ToList(), lockContext).ConfigureAwait(false);
 			}
 		}
 
-		public override void ApplyBlockElectionsInfluence(List<SynthesizedBlock.SynthesizedElectionResult> finalElectionResults, Dictionary<TransactionId, ITransaction> transactions) {
-			base.ApplyBlockElectionsInfluence(finalElectionResults, transactions);
+		public override async Task ApplyBlockElectionsInfluence(List<SynthesizedBlock.SynthesizedElectionResult> finalElectionResults, Dictionary<TransactionId, ITransaction> transactions, LockContext lockContext) {
+			await base.ApplyBlockElectionsInfluence(finalElectionResults, transactions, lockContext).ConfigureAwait(false);
 
 			// now apply the network service fees if applicable
 
@@ -562,26 +581,26 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 
 			if(neuraliumElectionResult.Any(r => r.InfrastructureServiceFees != 0)) {
 
-				this.SetNetworkServiceFees(neuraliumElectionResult.Where(r => r.InfrastructureServiceFees != 0).Select(r => r.InfrastructureServiceFees).ToList());
+				await this.SetNetworkServiceFees(neuraliumElectionResult.Where(r => r.InfrastructureServiceFees != 0).Select(r => r.InfrastructureServiceFees).ToList(), lockContext).ConfigureAwait(false);
 			}
 		}
 
-		private void SetNetworkServiceFees(List<decimal> networkServiceFees) {
+		private async Task SetNetworkServiceFees(List<decimal> networkServiceFees, LockContext lockContext) {
 			AccountId networkServiceFeesAccount = new AccountId(NeuraliumConstants.DEFAULT_NETWORK_MAINTENANCE_SERVICE_FEES_ACCOUNT_ID, Enums.AccountTypes.Standard);
 
-			if(this.IsAnyAccountTracked(new[] {networkServiceFeesAccount}.ToList())) {
+			if(await this.IsAnyAccountTracked(new[] {networkServiceFeesAccount}.ToList()).ConfigureAwait(false)) {
 
 				SnapshotKeySet impactedSnapshotKeys = new SnapshotKeySet();
 
 				impactedSnapshotKeys.AddAccountId(networkServiceFeesAccount);
 
 				// now, we can query the snapshots we will need
-				this.snapshotCacheSet.EnsureSnapshots(impactedSnapshotKeys);
+				await this.snapshotCacheSet.EnsureSnapshots(impactedSnapshotKeys, lockContext).ConfigureAwait(false);
 
-				STANDARD_ACCOUNT_SNAPSHOT serviceFeesAccount = this.snapshotCacheSet.GetStandardAccountSnapshotModify(networkServiceFeesAccount);
+				STANDARD_ACCOUNT_SNAPSHOT serviceFeesAccount = await this.snapshotCacheSet.GetStandardAccountSnapshotModify(networkServiceFeesAccount, lockContext).ConfigureAwait(false);
 
 				if(serviceFeesAccount == null) {
-					serviceFeesAccount = this.snapshotCacheSet.CreateNewStandardAccountSnapshot(networkServiceFeesAccount, null);
+					serviceFeesAccount = await snapshotCacheSet.CreateNewStandardAccountSnapshot(networkServiceFeesAccount, null, lockContext).ConfigureAwait(false);
 				}
 
 				if(networkServiceFees.Any()) {
@@ -640,6 +659,22 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInt
 				snapshot.Balance += gain;
 
 				Log.Information($"We were elected in the block! We were allocated {electedEntry.bountyShare}N in bounty, {electedEntry.tips}N in tips for a total gain of {gain}N. Our new total is {snapshot.Balance}N");
+			}
+		}
+
+		public async Task ApplyUniversalBasicBounties(BlockId blockId){
+			var chainOptions = await this.AccountSnapshotsProvider.LoadChainOptionsSnapshot().ConfigureAwait(false);
+
+			if (chainOptions == null){
+				return;
+			}
+			var neuraliumChainOptions = (INeuraliumChainOptionsSnapshot)chainOptions;
+
+			if (neuraliumChainOptions.UBBAmount != 0 && neuraliumChainOptions.UBBBlockRate != 0 && blockId.Value % neuraliumChainOptions.UBBBlockRate == 0){
+
+				if (this.ApplyUniversalBasicBountiesCallback != null){
+					await this.ApplyUniversalBasicBountiesCallback(neuraliumChainOptions.UBBAmount).ConfigureAwait(false);
+				}
 			}
 		}
 	}

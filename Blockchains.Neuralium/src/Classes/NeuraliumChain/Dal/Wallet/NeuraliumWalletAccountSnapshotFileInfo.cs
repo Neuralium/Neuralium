@@ -6,7 +6,12 @@ using Neuralia.Blockchains.Common.Classes.Tools;
 using Neuralia.Blockchains.Core.Cryptography.Passphrases;
 
 namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
-	public class NeuraliumWalletAccountSnapshotFileInfo : WalletAccountSnapshotFileInfo<NeuraliumWalletStandardAccountSnapshot> {
+
+	public interface INeuraliumWalletAccountSnapshotFileInfo : IWalletAccountSnapshotFileInfo {
+
+	}
+
+	public class NeuraliumWalletAccountSnapshotFileInfo : WalletAccountSnapshotFileInfo<NeuraliumWalletStandardAccountSnapshot>, INeuraliumWalletAccountSnapshotFileInfo {
 
 		public NeuraliumWalletAccountSnapshotFileInfo(IWalletAccount account, string filename, NeuraliumBlockChainConfigurations chainConfiguration, BlockchainServiceSet serviceSet, IWalletSerialisationFal serialisationFal, WalletPassphraseDetails walletSecurityDetails) : base(account, filename, chainConfiguration, serviceSet, serialisationFal, walletSecurityDetails) {
 		}

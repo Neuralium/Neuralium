@@ -16,7 +16,6 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Sqlite.AccountSnapsho
 
 			modelBuilder.Entity<NeuraliumStandardAccountSnapshotSqliteEntry>(eb => {
 
-				eb.Property(b => b.Balance).HasConversion(v => v.Value, v => (Amount) v);
 				eb.Property(b => b.Balance).IsRequired(true);
 			});
 			

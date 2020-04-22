@@ -1,7 +1,9 @@
+using System.Collections.Generic;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specialization.Elections.Contexts.BountyAllocationMethods;
 using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specialization.Elections.Contexts.TransactionTipsAllocationMethods;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Serialization;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Specialization.Elections.Contexts.V1;
+using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.General.Types;
 using Neuralia.Blockchains.Core.General.Types.Specialized;
 using Neuralia.Blockchains.Core.Serialization;
@@ -18,21 +20,9 @@ namespace Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specializat
 			this.neuraliumElectionContextImplementation = new NeuraliumElectionContextImplementation();
 		}
 
-		public Amount FirstTierBounty {
-			get => this.neuraliumElectionContextImplementation.FirstTierBounty;
-			set => this.neuraliumElectionContextImplementation.FirstTierBounty = value;
-		}
-		
-		public Amount SecondTierBounty {
-			get => this.neuraliumElectionContextImplementation.SecondTierBounty;
-			set => this.neuraliumElectionContextImplementation.SecondTierBounty = value;
-		}
-		
-		public Amount ThirdTierBounty {
-			get => this.neuraliumElectionContextImplementation.ThirdTierBounty;
-			set => this.neuraliumElectionContextImplementation.ThirdTierBounty = value;
-		}
+		public Dictionary<Enums.MiningTiers, decimal> MiningTierBounties => this.neuraliumElectionContextImplementation.MiningTierBounties;
 
+		
 		public override void Rehydrate(IDataRehydrator rehydrator, IElectionContextRehydrationFactory electionContextRehydrationFactory) {
 			base.Rehydrate(rehydrator, electionContextRehydrationFactory);
 
