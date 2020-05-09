@@ -1,11 +1,8 @@
 using System;
 using System.IO;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Blockchains.Neuralium.Classes.Configuration;
-using Blockchains.Neuralium.Classes.NeuraliumChain.Dal;
-using Microsoft.AspNetCore.Mvc;
+using Neuralium.Blockchains.Neuralium.Classes.Configuration;
+using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Dal;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -14,14 +11,15 @@ using Microsoft.Extensions.Options;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal;
 using Neuralia.Blockchains.Common.Classes.Services;
 using Neuralia.Blockchains.Core.Configuration;
+using Neuralia.Blockchains.Core.Logging;
 using Neuralia.Blockchains.Core.Services;
 using Neuralium.Core.Classes.Configuration;
 using Neuralium.Core.Classes.General;
 using Neuralium.Core.Classes.Services;
 using Neuralium.Core.Controllers;
 using Neuralium.Core.Resources;
-
 using Serilog;
+using Serilog.Configuration;
 using Serilog.Enrichers;
 
 namespace Neuralium.Core.Classes.Runtime {
@@ -29,22 +27,17 @@ namespace Neuralium.Core.Classes.Runtime {
 
 		protected const string prefix = "NEURALIUM_";
 		protected const string appsettings = "config/config.json";
-		
+
 		protected const string docker_base_path = "/home/data/config.json";
 		protected const string docker_appsettings = "config/docker.config.json";
 		protected const string ConfigSectionName = "AppSettings";
-		
+
 		protected const string hostsettings = "hostsettings.json";
 		protected NeuraliumOptions cmdOptions;
 
 		protected string configSectionName = ConfigSectionName;
-		
+
 		public IServiceProvider ServiceProvider { get; private set; }
-
-		static Bootstrap() {
-
-
-		}
 
 		protected virtual void ConfigureServices(IServiceCollection services, IConfiguration configuration) {
 
@@ -78,10 +71,9 @@ namespace Neuralium.Core.Classes.Runtime {
 		}
 
 		protected virtual void ConfigureExtraServices(IServiceCollection services, IConfiguration configuration) {
-			
-			
-			
+
 #if DEBUG
+
 			//services.AddSingleton<INeuraliumApp, NeuraliumApp>();
 			services.AddSingleton<INeuraliumApp, NeuraliumAppConsole>();
 #else
@@ -113,8 +105,13 @@ namespace Neuralium.Core.Classes.Runtime {
 
 			IConfigurationBuilder entry = configApp.SetBasePath(GetExecutingDirectoryName());
 
-			if(this.cmdOptions.RuntimeMode.ToUpper() == "DOCKER") {
-				Console.WriteLine($"Docker mode.");
+			if(!string.IsNullOrWhiteSpace(this.cmdOptions?.ConfigFile)) {
+				Console.WriteLine($"Loading user provided config file {this.cmdOptions.ConfigFile}");
+				entry = entry.AddJsonFile(this.cmdOptions.ConfigFile, false, false);
+			}
+			else if(this.cmdOptions.RuntimeMode.ToUpper() == "DOCKER") {
+				Console.WriteLine("Docker mode.");
+
 				if(File.Exists(docker_base_path)) {
 					Console.WriteLine($"Loading config file {docker_base_path}");
 					entry = entry.AddJsonFile(docker_base_path, false, false);
@@ -142,18 +139,20 @@ namespace Neuralium.Core.Classes.Runtime {
 
 				this.BuildConfiguration(hostingContext, configApp);
 			}).ConfigureServices((hostContext, services) => {
-				
+
 				services.AddOptions<HostOptions>().Configure(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(10));
 
-				
 				if(!string.IsNullOrWhiteSpace(this.cmdOptions?.ConfigSection)) {
 					this.configSectionName = this.cmdOptions.ConfigSection;
 				}
 
-				Log.Verbose($"Loading config section {this.configSectionName}");
+
+
+				
+				NLog.Default.Verbose($"Loading config section {this.configSectionName}");
 
 				this.ConfigureAppSettings(this.configSectionName, services, hostContext.Configuration);
-				
+
 				this.ConfigureServices(services, hostContext.Configuration);
 
 				// allow children to add their own overridable services
@@ -168,35 +167,36 @@ namespace Neuralium.Core.Classes.Runtime {
 
 				logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
 				logging.AddConsole();
-				
 
 			}).UseSerilog((hostingContext, loggerConfiguration) => {
 				loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration);
 
 				if(!this.cmdOptions.NoRPC) {
 
-					var section = hostingContext.Configuration.GetSection(this.configSectionName);
+					IConfigurationSection section = hostingContext.Configuration.GetSection(this.configSectionName);
 
-					var appSettingsTemplate = new AppSettings();
+					AppSettings appSettingsTemplate = new AppSettings();
 					AppSettingsBase.RpcModes rpcMode = appSettingsTemplate.RpcMode;
 
 					string rpcModeName = nameof(appSettingsTemplate.RpcMode);
+
 					if(section.GetSection(rpcModeName).Exists()) {
 						rpcMode = section.GetValue<AppSettingsBase.RpcModes>(rpcModeName);
 					}
-					
+
 					if(rpcMode != AppSettingsBase.RpcModes.None) {
 						// now we configure the RPC logger
-						
-						var entry = loggerConfiguration.MinimumLevel;
-						
-						var loggingLevel = section.GetValue<AppSettingsBase.RpcLoggingLevels>(nameof(appSettingsTemplate.RpcLoggingLevel));
-						
-						if(loggingLevel == AppSettingsBase.RpcLoggingLevels.Verbose) {
-							loggerConfiguration = entry.Verbose();
-						} else {
-							loggerConfiguration = entry.Information();
-						}
+
+						//TODO: use a different logger for RPC than console
+						LoggerMinimumLevelConfiguration entry = loggerConfiguration.MinimumLevel;
+
+						AppSettingsBase.RpcLoggingLevels loggingLevel = section.GetValue<AppSettingsBase.RpcLoggingLevels>(nameof(appSettingsTemplate.RpcLoggingLevel));
+
+						// if(loggingLevel == AppSettingsBase.RpcLoggingLevels.Verbose) {
+						// 	loggerConfiguration = entry.Verbose();
+						// } else {
+						// 	loggerConfiguration = entry.Information();
+						// }
 
 						loggerConfiguration.Enrich.With(new ThreadIdEnricher()).WriteTo.RpcEventLogSink(this);
 					}
@@ -213,11 +213,11 @@ namespace Neuralium.Core.Classes.Runtime {
 
 			IHostBuilder hostBuilder = this.BuildHost().UseConsoleLifetime();
 
-			var host = hostBuilder.Build();
+			IHost host = hostBuilder.Build();
 			this.ServiceProvider = host.Services;
 
 			try {
-				Log.Information("Starting host");
+				NLog.Default.Information("Starting host");
 				await host.RunAsync().ConfigureAwait(false);
 
 			} catch(OperationCanceledException) {
@@ -227,7 +227,7 @@ namespace Neuralium.Core.Classes.Runtime {
 
 				// here we write it twice, just in case the log provider is not initialize here
 				Console.WriteLine(message + "-" + ex);
-				Log.Fatal(ex, message);
+				NLog.Default.Fatal(ex, message);
 
 				return 1;
 			} finally {

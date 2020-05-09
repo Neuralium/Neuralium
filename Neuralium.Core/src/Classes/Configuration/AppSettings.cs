@@ -1,4 +1,4 @@
-using Blockchains.Neuralium.Classes.Configuration;
+using Neuralium.Blockchains.Neuralium.Classes.Configuration;
 
 namespace Neuralium.Core.Classes.Configuration {
 

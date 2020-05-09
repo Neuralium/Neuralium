@@ -6,8 +6,8 @@ using Neuralium.Core.Classes.Runtime;
 
 namespace Neuralium {
 	internal class Program {
-		public static Task<int> Main(string[] args){
-			var result = Parser.Default.ParseArguments<NeuraliumOptions>(args);
+		public static Task<int> Main(string[] args) {
+			ParserResult<NeuraliumOptions> result = Parser.Default.ParseArguments<NeuraliumOptions>(args);
 
 			return result.MapResult(RunProgramAsync, HandleParseErrorAsync);
 		}

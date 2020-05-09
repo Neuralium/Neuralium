@@ -1,10 +1,10 @@
 using System;
 using System.IO;
-using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
-using Neuralia.Blockchains.Core.General;
+using Neuralia.Blockchains.Core.Configuration;
+using Neuralia.Blockchains.Core.Logging;
 using Neuralia.Blockchains.Tools;
 using Neuralium.Core.Classes.Configuration;
 using Neuralium.Core.Resources;
@@ -38,19 +38,18 @@ namespace Neuralium.Core.Classes.Runtime {
 				Console.ForegroundColor = ConsoleColor.Red;
 				Console.WriteLine("Currently in TESTNET mode");
 				Console.ResetColor();
-				
+
 				this.CheckTestnetDelay();
 
 				TimeSpan waitTime = TimeSpan.FromHours(1);
 
 				this.pollingTimer = new Timer(state => {
 
-					try{
+					try {
 						this.CheckTestnetDelay();
-					}
-					catch(Exception ex){
+					} catch(Exception ex) {
 						//TODO: do something?
-						Log.Error(ex, "Timer exception");
+						NLog.Default.Error(ex, "Timer exception");
 					}
 
 				}, this, waitTime, waitTime);
@@ -73,7 +72,7 @@ try{
 }
 				catch(Exception ex){
 					//TODO: do something?
-Log.Error(ex, "Timer exception");
+NLog.Default.Error(ex, "Timer exception");
 				}
 
 			}, this, waitTime, waitTime);
@@ -83,16 +82,17 @@ Log.Error(ex, "Timer exception");
 				// lets do the legal stuff. sucks but thats how it is now...
 				this.VerifySoftwareLicenseAgreement();
 
-				Log.Information("Daemon is starting....");
+				NLog.Default.Information("Daemon is starting....");
 
 				this.applicationLifetime.ApplicationStarted.Register(this.OnStarted);
 				this.applicationLifetime.ApplicationStopping.Register(this.OnStopping);
 				this.applicationLifetime.ApplicationStopped.Register(this.OnStopped);
 				AppDomain.CurrentDomain.ProcessExit += this.CurrentDomainOnProcessExit;
-				this.neuraliumApp.Error += (app, exception) => {
-					Log.Error(exception, "Failed to run neuralium app. exception occured");
 
-					Log.Information("Hit any key to exit....");
+				this.neuraliumApp.Error += (app, exception) => {
+					NLog.Default.Error(exception, "Failed to run neuralium app. exception occured");
+
+					NLog.Default.Information("Hit any key to exit....");
 
 					Task task = Task.Run(() => {
 						Console.ReadKey();
@@ -110,24 +110,27 @@ Log.Error(ex, "Timer exception");
 				await this.neuraliumApp.Start().ConfigureAwait(false);
 
 			} catch(Exception ex) {
-				
+
 				this.applicationLifetime.StopApplication();
-				
-				Log.Warning($"Application service failed to start.");
+
+				NLog.Default.Warning("Application service failed to start.");
 
 			}
 		}
 
 		private void CurrentDomainOnProcessExit(object sender, EventArgs e) {
-			Log.Information("Daemon shutdown requested...");
+			NLog.Default.Information("Daemon shutdown requested...");
 			this.applicationLifetime.StopApplication();
 		}
-		
+
 		public async Task StopAsync(CancellationToken cancellationNeuralium) {
 
-			Log.Information("Daemon shutdown in progress...");
+			NLog.Default.Information("Daemon shutdown in progress...");
 #if TESTNET || DEVNET
-			this.pollingTimer?.Dispose();
+			if(this.pollingTimer != null) {
+				await this.pollingTimer.DisposeAsync().ConfigureAwait(false);
+			}
+			
 			this.autoResetEvent.Set();
 #endif
 
@@ -143,7 +146,7 @@ Log.Error(ex, "Timer exception");
 		protected virtual void VerifySoftwareLicenseAgreement() {
 
 			// Display the TOS
-			Log.Information(NeuraliumAppTranslationsManager.Instance.TOSPresentation);
+			NLog.Default.Information(NeuraliumAppTranslationsManager.Instance.TOSPresentation);
 
 			// now we check if the license has been accepted
 			string slaFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ".neuralium-sla");
@@ -152,7 +155,7 @@ Log.Error(ex, "Timer exception");
 				try {
 					File.WriteAllText(slaFilePath, this.options.AcceptSoftwareLicenseAgreement);
 				} catch(Exception ex) {
-					Log.Error(ex, $"Failed to write software license agreement file to {slaFilePath}");
+					NLog.Default.Error(ex, $"Failed to write software license agreement file to {slaFilePath}");
 
 					// we can keep going, this is not critical
 				}
@@ -169,7 +172,7 @@ Log.Error(ex, "Timer exception");
 				}
 
 				if(!accepted) {
-					Log.Warning("Confirm your acceptance of the terms of the software license agreement. Type \"YES\" to accept.");
+					NLog.Default.Warning("Confirm your acceptance of the terms of the software license agreement. Type \"YES\" to accept.");
 
 					string value = Console.ReadLine();
 
@@ -180,55 +183,56 @@ Log.Error(ex, "Timer exception");
 				}
 
 				if(!accepted) {
-					Log.Fatal("The Software License Agreement has not been accepted. We can not continue.");
+					NLog.Default.Fatal("The Software License Agreement has not been accepted. We can not continue.");
 
 					throw new SLARejectedException();
 				}
 			}
 
-			Log.Information("The software license agreement has been accepted.");
+			NLog.Default.Information("The software license agreement has been accepted.");
 		}
 
 		protected virtual void OnStarted() {
-			Log.Information("Daemon is successfully started.");
+			NLog.Default.Information("Daemon is successfully started.");
 
 			// Post-startup code goes here
 		}
 
 		protected virtual void OnStopping() {
-			Log.Information("Daemon shutdown requested.");
+			NLog.Default.Information("Daemon shutdown requested.");
 		}
 
 		protected virtual void OnStopped() {
-			Log.Information("Daemon successfully stopped");
+			NLog.Default.Information("Daemon successfully stopped");
 		}
 #if TESTNET
 		private Timer pollingTimer;
 
 		private readonly ManualResetEventSlim autoResetEvent = new ManualResetEventSlim(false);
 		protected virtual void CheckTestnetDelay() {
-			
+
 			//TODO: this needs review
 			//TimeSpan allowDelay = TimeSpan.FromDays(5);
 			//DateTime fileBuildTime = AssemblyUtils.GetBuildTimestamp(typeof(NeuraliumService));
-			
-			//TimeSpan allowDelay =  - fileBuildTime;
-			
-			//TimeSpan elapsed = DateTime.UtcNow - ;
 
-			var limit = new DateTime(2020, 4, 26, 23, 0, 0, DateTimeKind.Utc);
-			if(DateTime.UtcNow > limit) {
-			
+			//TimeSpan allowDelay =  - fileBuildTime;
+
+			//TimeSpan elapsed = DateTimeEx.CurrentTime - ;
+
+			DateTime limit = new DateTime(2020, 5, 11, 23, 0, 0, DateTimeKind.Utc);
+
+			if(DateTimeEx.CurrentTime > limit) {
+
 				Console.BackgroundColor = ConsoleColor.Black;
 				Console.ForegroundColor = ConsoleColor.Red;
-				Log.Fatal("This TESTNET release has expired! It can not be used anymore. Please download a more recent version from https://www.neuralium.com. [EXPIRED TESTNET].");
+				NLog.Default.Fatal("This TESTNET release has expired! It can not be used anymore. Please download a more recent version from https://www.neuralium.com. [EXPIRED TESTNET].");
 
 				throw new TrialTimeoutException();
-			} else {
-				TimeSpan remaining = limit - DateTime.UtcNow;
-			
-				Log.Warning($"This TESTNET release is still valid for {remaining.Days} days and {remaining.Hours} hours.");
 			}
+
+			TimeSpan remaining = limit - DateTimeEx.CurrentTime;
+
+			NLog.Default.Warning($"This TESTNET release is still valid for {remaining.Days} days and {remaining.Hours} hours.");
 		}
 #elif DEVNET
 		private Timer pollingTimer;
@@ -236,20 +240,20 @@ Log.Error(ex, "Timer exception");
 		private readonly AutoResetEvent autoResetEvent = new AutoResetEvent(false);
 		protected virtual void CheckDevnetDelay() {
 			//TimeSpan allowDelay = TimeSpan.FromDays(5);
-			TimeSpan allowDelay = new DateTime(2019, 9, 4, 23, 0, 0, DateTimeKind.Utc) - DateTime.UtcNow;
+			TimeSpan allowDelay = new DateTime(2019, 9, 4, 23, 0, 0, DateTimeKind.Utc) - DateTimeEx.CurrentTime;
 
 			var limit = new DateTime(2019, 10, 14, 23, 0, 0, DateTimeKind.Utc);
-			if(DateTime.UtcNow > limit) {
+			if(DateTimeEx.CurrentTime > limit) {
 			
 				Console.BackgroundColor = ConsoleColor.Black;
 				Console.ForegroundColor = ConsoleColor.Red;
-				Log.Fatal("This TESTNET release has expired! It can not be used anymore. Please download a more recent version from https://www.neuralium.com. [EXPIRED DEVNET].");
+				NLog.Default.Fatal("This TESTNET release has expired! It can not be used anymore. Please download a more recent version from https://www.neuralium.com. [EXPIRED DEVNET].");
 			
 				throw new TrialTimeoutException();
 			} else {
-				TimeSpan remaining = limit - DateTime.UtcNow;
+				TimeSpan remaining = limit - DateTimeEx.CurrentTime;
 			
-				Log.Warning($"This TESTNET release is still valid for {remaining.Days} days and {remaining.Hours} hours.");
+				NLog.Default.Warning($"This TESTNET release is still valid for {remaining.Days} days and {remaining.Hours} hours.");
 			}
 		}
 #endif
@@ -269,15 +273,16 @@ Log.Error(ex, "Timer exception");
 
 				try {
 					try {
-					this.autoResetEvent?.Dispose();
+						this.autoResetEvent?.Dispose();
 					} catch(Exception ex) {
-						Log.Verbose("error occured", ex);
+						NLog.Default.Verbose("error occured", ex);
 					}
 
 				} catch(Exception ex) {
-					Log.Error(ex, "failed to dispose of Neuralium service");
-				} 
+					NLog.Default.Error(ex, "failed to dispose of Neuralium service");
+				}
 			}
+
 			this.IsDisposed = true;
 		}
 

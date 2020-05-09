@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 
@@ -17,9 +16,9 @@ namespace Neuralium.Core.Controllers {
 		[HttpGet]
 		public Task<IActionResult> Get() {
 
-			string result = $"Neuralium node is online and RPC interfaces are available.";
-			
-			return Task.FromResult((IActionResult)this.Ok(result));
+			string result = "Neuralium node is online and RPC interfaces are available.";
+
+			return Task.FromResult((IActionResult) this.Ok(result));
 		}
 	}
 }

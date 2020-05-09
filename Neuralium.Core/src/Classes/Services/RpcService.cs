@@ -5,12 +5,11 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using Blockchains.Neuralium.Classes;
-using Blockchains.Neuralium.Classes.NeuraliumChain;
+using Neuralium.Blockchains.Neuralium.Classes;
+using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Connections;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +20,7 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common;
 using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.Configuration;
 using Neuralia.Blockchains.Core.Cryptography.TLS;
+using Neuralia.Blockchains.Core.Logging;
 using Neuralia.Blockchains.Core.Services;
 using Neuralia.Blockchains.Tools;
 using Neuralium.Core.Classes.Configuration;
@@ -58,14 +58,16 @@ namespace Neuralium.Core.Classes.Services {
 	public class RpcService<RPC_HUB, RCP_CLIENT> : IRpcService<RPC_HUB, RCP_CLIENT>
 		where RPC_HUB : RpcHub<RCP_CLIENT>
 		where RCP_CLIENT : class, IRpcClient {
+		private readonly IOptions<AppSettings> appsettings;
 
 		private readonly Dictionary<BlockchainType, IBlockChainInterface> chains = new Dictionary<BlockchainType, IBlockChainInterface>();
 		protected readonly IRpcProvider<RPC_HUB, RCP_CLIENT> rpcProvider;
+
+		private CancellationTokenSource cancellationToken;
 		private Task rpcTask;
 
 		private IHost rpcWebHost;
 		private IServiceProvider serviceProvider;
-		private readonly IOptions<AppSettings> appsettings;
 
 		public RpcService(IRpcProvider rpcProvider, IServiceProvider serviceProvider, IOptions<AppSettings> appsettings) {
 			this.rpcProvider = (IRpcProvider<RPC_HUB, RCP_CLIENT>) rpcProvider;
@@ -80,8 +82,6 @@ namespace Neuralium.Core.Classes.Services {
 		public IRpcProvider RpcProvider => this.rpcProvider;
 
 		public IHubContext<RPC_HUB, RCP_CLIENT> hubContext { get; private set; }
-
-		private CancellationTokenSource cancellationToken;
 
 		public void Start() {
 			if(GlobalSettings.ApplicationSettings.RpcMode != AppSettingsBase.RpcModes.None) {
@@ -146,7 +146,7 @@ namespace Neuralium.Core.Classes.Services {
 			int serverport = config.GetValue<int?>("port") ?? GlobalSettings.ApplicationSettings.RpcPort;
 			string serverurls = config.GetValue<string>("server.urls") ?? $"http://*:{serverport}";
 
-			var configDictionary = new Dictionary<string, string> {{"server.urls", serverurls}, {"port", serverport.ToString()}};
+			Dictionary<string, string> configDictionary = new Dictionary<string, string> {{"server.urls", serverurls}, {"port", serverport.ToString()}};
 
 			return new ConfigurationBuilder().AddCommandLine(args).AddInMemoryCollection(configDictionary).Build();
 		}
@@ -157,7 +157,7 @@ namespace Neuralium.Core.Classes.Services {
 
 			IHostBuilder builder = Host.CreateDefaultBuilder(args).ConfigureWebHostDefaults(webBuilder => {
 				webBuilder.UseConfiguration(config).UseContentRoot(Directory.GetCurrentDirectory()).UseKestrel(options => {
-					
+
 					options.AddServerHeader = false;
 					IPAddress listenAddress = IPAddress.Loopback;
 
@@ -206,7 +206,7 @@ namespace Neuralium.Core.Classes.Services {
 		}
 
 		protected virtual void ConfigureWebHost(IWebHostBuilder builder) {
-			var appsettings = this.appsettings.Value;
+			AppSettings appsettings = this.appsettings.Value;
 
 			builder.ConfigureServices(services => {
 				//webapi RPC:
@@ -221,7 +221,6 @@ namespace Neuralium.Core.Classes.Services {
 				//.AddJsonFormatters();
 
 				//.AddCors()            // Optional (Microsoft.AspNetCore.Mvc.Cors)
-				
 
 				services.AddSignalR(hubOptions => {
 					//hubOptions.SupportedProtocols.Clear();
@@ -234,12 +233,12 @@ namespace Neuralium.Core.Classes.Services {
 				}).AddJsonProtocol(options => {
 					options.PayloadSerializerOptions.WriteIndented = false;
 				});
-				
+
 			}).Configure(app => {
 				app.UseRouting();
 
 				app.UseEndpoints(endpoints => {
-					
+
 					endpoints.MapHub<RPC_HUB>("/signal", option => {
 						option.ApplicationMaxBufferSize = 0;
 						option.TransportMaxBufferSize = 0;
@@ -268,9 +267,10 @@ namespace Neuralium.Core.Classes.Services {
 				try {
 					this.Stop();
 				} catch(Exception ex) {
-					Log.Error(ex, "Failed to stop");
+					NLog.Default.Error(ex, "Failed to stop");
 				}
 			}
+
 			this.IsDisposed = true;
 		}
 

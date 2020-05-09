@@ -2,30 +2,31 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Net.WebSockets;
+using System.Text.Json;
 using System.Threading;
-using Blockchains.Neuralium.Classes.NeuraliumChain.DataStructures;
-using Blockchains.Neuralium.Classes.NeuraliumChain.DataStructures.Timeline;
-using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specialization.Elections.Results.V1;
+using System.Threading.Tasks;
+using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.DataStructures;
+using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.DataStructures.Timeline;
+using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specialization.Elections.Results.V1;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using Microsoft.IO;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.DataStructures.ExternalAPI;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.DataStructures.ExternalAPI.Wallet;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Serialization.Blockchain.Utils;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Specialization.Elections.Results.V1;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Widgets;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Serialization;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Tools;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Wallet.Keys;
 using Neuralia.Blockchains.Common.Classes.Services;
 using Neuralia.Blockchains.Common.Classes.Tools;
+using Neuralia.Blockchains.Components.Transactions.Identifiers;
 using Neuralia.Blockchains.Core;
-using Neuralia.Blockchains.Core.Compression;
 using Neuralia.Blockchains.Core.General;
 using Neuralia.Blockchains.Core.General.Types;
+using Neuralia.Blockchains.Core.Logging;
 using Neuralia.Blockchains.Core.P2p.Connections;
 using Neuralia.Blockchains.Core.Services;
 using Neuralia.Blockchains.Tools.Data;
@@ -33,9 +34,6 @@ using Neuralia.Blockchains.Tools.Data.Arrays;
 using Neuralia.Blockchains.Tools.Serialization;
 using Neuralium.Core.Classes.Configuration;
 using Neuralium.Core.Classes.Services;
-using System.Text.Json;
-using System.Threading.Tasks;
-using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Tools;
 using Serilog;
 
 namespace Neuralium.Core.Classes.Runtime {
@@ -78,18 +76,18 @@ namespace Neuralium.Core.Classes.Runtime {
 			if(success) {
 				if(!string.IsNullOrWhiteSpace(line)) {
 					try {
-						var items = line.Split(" ", StringSplitOptions.RemoveEmptyEntries);
+						string[] items = line.Split(" ", StringSplitOptions.RemoveEmptyEntries);
 						this.ProcessKey(items);
 
 					} catch(Exception ex) {
-						Log.Error(ex, "capture error");
+						NLog.Default.Error(ex, "capture error");
 					} finally {
 						this.lineEntered = true;
 					}
 				}
 			}
 		}
-		
+
 		//DEBUG
 		protected virtual async void ProcessKey(string[] items) {
 
@@ -109,16 +107,14 @@ namespace Neuralium.Core.Classes.Runtime {
 			}
 #endif
 
-			
-
 			if(items[0] == "create") {
-				this.neuraliumBlockChainInterface.CreateNewWallet( new CorrelationContext(), "test",false, false, false, null, false);
+				this.neuraliumBlockChainInterface.CreateNewWallet(new CorrelationContext(), "test", false, false, false, null, false);
 
 				return;
 			}
-			
+
 			if(items[0] == "con") {
-				var conns = this.neuraliumBlockChainInterface.QueryPeersList();
+				ImmutableList<string> conns = this.neuraliumBlockChainInterface.QueryPeersList();
 
 				Console.WriteLine($"We have {conns.Count} connections");
 
@@ -136,13 +132,15 @@ namespace Neuralium.Core.Classes.Runtime {
 			}
 
 			if(items[0] == "ips") {
-				var conns = this.neuraliumBlockChainInterface.QueryIPsList();
+				ImmutableList<string> conns = this.neuraliumBlockChainInterface.QueryIPsList();
 
-				Console.WriteLine($"IPs in our IP pool");
-				foreach(var ip in conns) {
+				Console.WriteLine("IPs in our IP pool");
+
+				foreach(string ip in conns) {
 					Console.WriteLine($"{ip}");
 				}
-				Console.WriteLine($"-----------------------");
+
+				Console.WriteLine("-----------------------");
 
 				return;
 			}
@@ -162,21 +160,21 @@ namespace Neuralium.Core.Classes.Runtime {
 
 				return;
 			}
-			
+
 			if(items[0] == "bi") {
-				var status = await this.neuraliumBlockChainInterface.QueryBlockChainInfo().awaitableTask.ConfigureAwait(false);
+				BlockchainInfo status = await this.neuraliumBlockChainInterface.QueryBlockChainInfo().awaitableTask.ConfigureAwait(false);
 
 				Console.WriteLine($"Current download block height: {status.DownloadBlockId}");
 				Console.WriteLine($"Current disk block height: {status.DiskBlockId}");
 				Console.WriteLine($"Current interpreted block height: {status.BlockId}");
 				Console.WriteLine($"Public block height: {status.PublicBlockId}");
-				
+
 				return;
 			}
 
 			if(items[0] == "newwal") {
 
-				var passprhases = new Dictionary<int, string>();
+				Dictionary<int, string> passprhases = new Dictionary<int, string>();
 				passprhases.Add(0, "qwerty");
 				passprhases.Add(1, "qwerty1");
 				passprhases.Add(2, "qwerty2");
@@ -223,40 +221,45 @@ namespace Neuralium.Core.Classes.Runtime {
 			if(items[0] == "sign") {
 
 				AccountId ss = AccountId.FromString("{SJ}");
-				var l = ss.ToLongRepresentation();
+				long l = ss.ToLongRepresentation();
 				long password = 181818;
 				byte[] bytes = new byte[8];
 				TypeSerializer.Serialize(password, bytes.AsSpan());
-				string sdas = (ByteArray.Wrap(bytes)).ToBase64();
+				string sdas = ByteArray.Wrap(bytes).ToBase64();
 
-				var signature = await this.neuraliumBlockChainInterface.SignXmssMessage(Guid.Empty, ByteArray.WrapAndOwn(bytes)).awaitableTask.ConfigureAwait(false);
+				SafeArrayHandle signature = await this.neuraliumBlockChainInterface.SignXmssMessage(Guid.Empty, ByteArray.WrapAndOwn(bytes)).awaitableTask.ConfigureAwait(false);
 
 				Console.WriteLine(signature.Entry.ToBase64());
 
 				return;
 			}
-			
+
 			if(items[0] == "timeline") {
 				CorrelationContext cc = new CorrelationContext();
 				cc.InitializeNew();
 				TimelineHeader result = await this.neuraliumBlockChainInterface.QueryNeuraliumTimelineHeader(Guid.Empty).awaitableTask.ConfigureAwait(false);
 
-				var result2 = await this.neuraliumBlockChainInterface.QueryNeuraliumTimelineSection(Guid.Empty, DateTime.Parse(result.FirstDay), 0, 5).awaitableTask.ConfigureAwait(false);
+				List<TimelineDay> result2 = await this.neuraliumBlockChainInterface.QueryNeuraliumTimelineSection(Guid.Empty, DateTime.Parse(result.FirstDay), 0, 5).awaitableTask.ConfigureAwait(false);
 
 				return;
 			}
 
 			if(items[0] == "test") {
 				long para = 1;
-
-				if(items.Length == 2) {
-					para = long.Parse(items[1]);
-				}
-				//this.neuraliumBlockChainInterface.Test("");
-
-				var block = await this.neuraliumBlockChainInterface.Test("").awaitableTask.ConfigureAwait(false);
-				Log.Information(block);
 				
+				//this.neuraliumBlockChainInterface.Test("");
+				SynthesizedBlockAPI api = new NeuraliumSynthesizedBlockApi();
+
+				api.BlockId = 13;
+				api.AccountId = new AccountId("{SRB}").ToString();
+				api.RejectedTransactions.Add(new TransactionId("{SRB}:MGYNY").ToString(), 1001);
+
+				
+				string json = JsonSerializer.Serialize(api);
+
+				string block = await this.neuraliumBlockChainInterface.Test(json).awaitableTask.ConfigureAwait(false);
+				NLog.Default.Information(block);
+
 				//var ff = this.test(gg.ConfirmedGeneralTransactions.Values.ToList()[5]);
 				// BrotliCompression compressor = new BrotliCompression();
 				//
@@ -271,15 +274,15 @@ namespace Neuralium.Core.Classes.Runtime {
 				// }
 
 				//var datas = await this.neuraliumBlockChainInterface.QueryBlockBinaryTransactions(para).awaitableTask;
-				
-				Log.Information("test results: ");
+
+				NLog.Default.Information("test results: ");
 			}
 
 			if(items[0] == "query") {
 				string block = await this.neuraliumBlockChainInterface.QueryBlock(int.Parse(items[1])).awaitableTask.ConfigureAwait(false);
-				Log.Information(block);
+				NLog.Default.Information(block);
 
-				File.WriteAllText("/home/jdb/block2.json", block);
+				await File.WriteAllTextAsync("/home/jdb/block2.json", block).ConfigureAwait(false);
 			}
 
 			if(items[0] == "gen") {
@@ -292,12 +295,12 @@ namespace Neuralium.Core.Classes.Runtime {
 				AccountId accountId = new AccountId("{9}");
 				veee.AccountId = accountId.ToString();
 
-				foreach(var trx in block.GetAllConfirmedTransactions()) {
+				foreach(KeyValuePair<TransactionId, ITransaction> trx in block.GetAllConfirmedTransactions()) {
 
 					IDehydratedTransaction dehydrated = trx.Value.Dehydrate(BlockChannelUtils.BlockChannelTypes.All);
 					using IDataDehydrator dehydrator = DataSerializationFactory.CreateDehydrator();
 					dehydrated.Dehydrate(dehydrator);
-					var ff = dehydrator.ToArray().ToExactByteArrayCopy();
+					byte[] ff = dehydrator.ToArray().ToExactByteArrayCopy();
 					veee.ConfirmedTransactions.Add(trx.Key.ToString(), ff);
 				}
 
@@ -324,12 +327,11 @@ namespace Neuralium.Core.Classes.Runtime {
 					veee.FinalElectionResults.Add(res);
 				}
 
-				var settingseee = JsonUtils.CreatePrettySerializerSettings();
-
+				JsonSerializerOptions settingseee = JsonUtils.CreatePrettySerializerSettings();
 
 				string resulssst = JsonSerializer.Serialize(veee, settingseee);
 
-				File.WriteAllText("/home/jdb/genesis.json", resulssst);
+				await File.WriteAllTextAsync("/home/jdb/genesis.json", resulssst).ConfigureAwait(false);
 			}
 
 			if(items[0] == "total") {
@@ -360,8 +362,8 @@ namespace Neuralium.Core.Classes.Runtime {
 			if(items[0] == "loadkey") {
 				Console.WriteLine("loading key...");
 
-				Guid acc = await neuraliumBlockChainInterface.CentralCoordinator.ChainComponentProvider.WalletProvider.GetAccountUuid(null).ConfigureAwait(false);
-				IWalletKey key = await neuraliumBlockChainInterface.CentralCoordinator.ChainComponentProvider.WalletProvider.LoadKey(acc, GlobalsService.TRANSACTION_KEY_NAME, null).ConfigureAwait(false);
+				Guid acc = await this.neuraliumBlockChainInterface.CentralCoordinator.ChainComponentProvider.WalletProvider.GetAccountUuid(null).ConfigureAwait(false);
+				IWalletKey key = await this.neuraliumBlockChainInterface.CentralCoordinator.ChainComponentProvider.WalletProvider.LoadKey(acc, GlobalsService.TRANSACTION_KEY_NAME, null).ConfigureAwait(false);
 
 				Console.WriteLine("Key load done...");
 			}
@@ -380,20 +382,20 @@ namespace Neuralium.Core.Classes.Runtime {
 			if(items[0] == "historym") {
 				Console.WriteLine("showing mining history...");
 
-				var result = await this.neuraliumBlockChainInterface.QueryMiningHistory(0,10,1).awaitableTask.ConfigureAwait(false);
+				List<MiningHistory> result = await this.neuraliumBlockChainInterface.QueryMiningHistory(0, 10, 1).awaitableTask.ConfigureAwait(false);
 
 				foreach(MiningHistory entry in result) {
-					Log.Information($"Mining entry: {entry}");
+					NLog.Default.Information($"Mining entry: {entry}");
 				}
 			}
 
 			if(items[0] == "historyt") {
 				Console.WriteLine("showing transaction history...");
 
-				var results = await this.neuraliumBlockChainInterface.QueryWalletTransactionHistory(Guid.Empty).awaitableTask.ConfigureAwait(false);
+				List<WalletTransactionHistoryHeaderAPI> results = await this.neuraliumBlockChainInterface.QueryWalletTransactionHistory(Guid.Empty).awaitableTask.ConfigureAwait(false);
 
 				foreach(WalletTransactionHistoryHeaderAPI entry in results) {
-					Log.Information($"Transaction entry: {entry}");
+					NLog.Default.Information($"Transaction entry: {entry}");
 				}
 			}
 
@@ -458,7 +460,7 @@ namespace Neuralium.Core.Classes.Runtime {
 
 			if(items[0] == "c") {
 
-				var accounts = await this.neuraliumBlockChainInterface.QueryWalletAccounts().awaitableTask.ConfigureAwait(false);
+				List<WalletAccountAPI> accounts = await this.neuraliumBlockChainInterface.QueryWalletAccounts().awaitableTask.ConfigureAwait(false);
 
 				this.neuraliumBlockChainInterface.QueryWalletAccountPresentationTransactionId(accounts[0].AccountUuid);
 
@@ -500,7 +502,7 @@ namespace Neuralium.Core.Classes.Runtime {
 				//
 				//								this.networkingService.WorkflowCoordinator.AddWorkflow(hashshake);
 				//							} catch(Exception ex) {
-				//								Log.Error(ex, message: "failed to create handshake");
+				//								NLog.Default.Error(ex, message: "failed to create handshake");
 				//							}
 			}
 		}
@@ -521,7 +523,7 @@ namespace Neuralium.Core.Classes.Runtime {
 					inputThread.IsBackground = true;
 					inputThread.Start();
 				} catch(Exception ex) {
-					Log.Error(ex, "Failed to start console input reader.");
+					NLog.Default.Error(ex, "Failed to start console input reader.");
 				}
 			}
 
@@ -541,7 +543,7 @@ namespace Neuralium.Core.Classes.Runtime {
 						gotInput.Set();
 					}
 				} catch(Exception ex) {
-					Log.Error(ex, "Failed to read from console input reader.");
+					NLog.Default.Error(ex, "Failed to read from console input reader.");
 				}
 			}
 

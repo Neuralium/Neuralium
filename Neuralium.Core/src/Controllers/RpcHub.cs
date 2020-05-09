@@ -1,12 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
-using Neuralia.Blockchains.Common.Classes.Blockchains.Common.DataStructures.ExternalAPI;
-using Neuralia.Blockchains.Common.Classes.Blockchains.Common.DataStructures.ExternalAPI.Wallet;
 using Neuralia.Blockchains.Core.Services;
 using Neuralium.Core.Classes.General;
 
@@ -17,7 +14,6 @@ namespace Neuralium.Core.Controllers {
 
 	public interface IRpcServer : IRpcServerMethods {
 	}
-
 
 	[Route("/signal")]
 	public class RpcHub<RCP_CLIENT> : Hub<RCP_CLIENT>, IRpcServer
@@ -93,6 +89,10 @@ namespace Neuralium.Core.Controllers {
 			return this.rpcProvider.QuerySupportedChains();
 		}
 
+		public Task<byte> GetMiningRegistrationIpMode(ushort chainType) {
+			return this.rpcProvider.GetMiningRegistrationIpMode(chainType);
+		}
+
 		public Task<bool> CompleteLongRunningEvent(int correlationId, object data) {
 			return this.rpcProvider.CompleteLongRunningEvent(correlationId, data);
 		}
@@ -121,8 +121,7 @@ namespace Neuralium.Core.Controllers {
 			return this.rpcProvider.BackupWallet(chainType);
 		}
 
-		public Task<bool> RestoreWalletFromBackup(ushort chainType, string backupsPath, string passphrase, string salt, int iterations)
-		{
+		public Task<bool> RestoreWalletFromBackup(ushort chainType, string backupsPath, string passphrase, string salt, int iterations) {
 			return this.rpcProvider.RestoreWalletFromBackup(chainType, backupsPath, passphrase, salt, iterations);
 		}
 
@@ -140,6 +139,10 @@ namespace Neuralium.Core.Controllers {
 		/// <returns></returns>
 		public Task<string> Ping() {
 			return this.rpcProvider.Ping();
+		}
+
+		public Task<byte> GetPublicIPMode() {
+			return this.rpcProvider.GetPublicIPMode();
 		}
 
 		public Task<int> QueryTotalConnectedPeersCount() {
@@ -210,7 +213,7 @@ namespace Neuralium.Core.Controllers {
 		public Task<bool> SetActiveAccount(ushort chainType, Guid accountUuid) {
 			return this.rpcProvider.SetActiveAccount(chainType, accountUuid);
 		}
-		
+
 		public Task<int> CreateNewWallet(ushort chainType, string accountName, bool encryptWallet, bool encryptKey, bool encryptKeysIndividualy, ImmutableDictionary<string, string> passphrases, bool publishAccount) {
 			return this.rpcProvider.CreateNewWallet(chainType, accountName, encryptWallet, encryptKey, encryptKeysIndividualy, passphrases, publishAccount);
 		}
@@ -230,9 +233,9 @@ namespace Neuralium.Core.Controllers {
 		public Task<object> QueryWalletTransationHistoryDetails(ushort chainType, Guid accountUuid, string transactionId) {
 			return this.rpcProvider.QueryWalletTransationHistoryDetails(chainType, accountUuid, transactionId);
 		}
-		
+
 		public Task<List<object>> QueryWalletAccounts(ushort chainType) {
-			
+
 			return this.rpcProvider.QueryWalletAccounts(chainType);
 		}
 
@@ -259,7 +262,19 @@ namespace Neuralium.Core.Controllers {
 		public Task<List<object>> QueryMiningHistory(ushort chainType, int page, int pageSize, byte maxLevel) {
 			return this.rpcProvider.QueryMiningHistory(chainType, page, pageSize, maxLevel);
 		}
-		
+
+		public Task<object> QueryMiningStatistics(ushort chainType) {
+			return this.rpcProvider.QueryMiningStatistics(chainType);
+		}
+
+		public Task<bool> ClearCachedCredentials(ushort chainType) {
+			return this.rpcProvider.ClearCachedCredentials(chainType);
+		}
+
+		public Task<long> QueryCurrentDifficulty(ushort chainType) {
+			return this.rpcProvider.QueryCurrentDifficulty(chainType);
+		}
+
 	#endregion
 
 	#region Neuralium chain queries

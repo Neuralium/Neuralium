@@ -1,4 +1,4 @@
-using Blockchains.Neuralium.Resources;
+using Neuralium.Blockchains.Neuralium.Resources;
 using Neuralia.Blockchains.Common.Resources;
 using Neuralia.Blockchains.Core.Tools;
 

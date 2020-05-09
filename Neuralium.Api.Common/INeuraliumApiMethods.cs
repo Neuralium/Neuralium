@@ -16,6 +16,9 @@ namespace Neuralium.Api.Common {
 		Task<List<object>> QuerySupportedChains();
 		Task<string> Ping();
 
+		Task<byte> GetPublicIPMode();
+		Task<byte> GetMiningRegistrationIpMode(ushort chainType);
+
 		Task<bool> CompleteLongRunningEvent(int correlationId, object data);
 		Task<bool> RenewLongRunningEvent(int correlationId);
 
@@ -31,16 +34,15 @@ namespace Neuralium.Api.Common {
 		Task<bool> QueryMiningPortConnectable();
 		Task<object> QueryChainStatus(ushort chainType);
 		Task<object> QueryWalletInfo(ushort chainType);
-		
+
 		Task<object> QueryBlockChainInfo(ushort chainType);
-		
-		
+
 		Task<bool> IsWalletLoaded(ushort chainType);
 		Task<bool> WalletExists(ushort chainType);
 		Task<int> LoadWallet(ushort chainType, string passphrase = null);
 		Task<long> QueryBlockHeight(ushort chainType);
 		Task<long> QueryLowestAccountBlockSyncHeight(ushort chainType);
-		
+
 		Task<string> QueryBlock(ushort chainType, long blockId);
 		Task<byte[]> QueryCompressedBlock(ushort chainType, long blockId);
 		Task<List<object>> QueryBlockBinaryTransactions(ushort chainType, long blockId);
@@ -69,13 +71,17 @@ namespace Neuralium.Api.Common {
 		Task<bool> QueryWalletSynced(ushort chainType);
 		Task<object> QueryAccountTotalNeuraliums(Guid accountUuid);
 		Task<List<object>> QueryMiningHistory(ushort chainType, int page, int pageSize, byte maxLevel);
-
+		Task<object> QueryMiningStatistics(ushort chainType);
+		Task<bool> ClearCachedCredentials(ushort chainType);
+		
+		Task<long> QueryCurrentDifficulty(ushort chainType);
+		
 		Task<bool> CreateNextXmssKey(ushort chainType, Guid accountUuid, byte ordinal);
 
 		Task<int> SendNeuraliums(string targetAccountId, decimal amount, decimal fees, string note);
 		Task<object> QueryNeuraliumTimelineHeader(Guid accountUuid);
 		Task<List<object>> QueryNeuraliumTimelineSection(Guid accountUuid, DateTime firstday, int skip, int take);
-		
+
 		Task<byte[]> SignXmssMessage(ushort chainType, Guid accountUuid, byte[] message);
 
 #if TESTNET || DEVNET
@@ -84,7 +90,7 @@ namespace Neuralium.Api.Common {
 
 		Task<object> QueryElectionContext(ushort chainType, long blockId);
 		Task<List<object>> QueryNeuraliumTransactionPool();
-		
+
 		Task<bool> RestoreWalletNarballBackup(string source, string dest);
 	}
 }

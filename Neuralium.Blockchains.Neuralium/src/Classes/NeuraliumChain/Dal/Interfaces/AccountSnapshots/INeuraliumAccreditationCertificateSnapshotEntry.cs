@@ -1,0 +1,12 @@
+using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Interfaces.AccountSnapshots.Cards;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal.Interfaces.AccountSnapshots;
+
+namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Interfaces.AccountSnapshots {
+
+	public interface INeuraliumAccreditationCertificateSnapshotEntry : IAccreditationCertificateSnapshotEntry, INeuraliumAccreditationCertificateSnapshot {
+	}
+
+	public interface INeuraliumAccreditationCertificateSnapshotEntry<ACCREDITATION_CERTIFICATE_SNAPSHOT_ACCOUNT> : IAccreditationCertificateSnapshotEntry<ACCREDITATION_CERTIFICATE_SNAPSHOT_ACCOUNT>, INeuraliumAccreditationCertificateSnapshot<ACCREDITATION_CERTIFICATE_SNAPSHOT_ACCOUNT>, INeuraliumAccreditationCertificateSnapshotEntry
+		where ACCREDITATION_CERTIFICATE_SNAPSHOT_ACCOUNT : INeuraliumAccreditationCertificateSnapshotAccountEntry {
+	}
+}

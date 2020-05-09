@@ -1,14 +1,12 @@
 using System;
 using System.IO;
-
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Blockchains.Neuralium.Classes;
-using Blockchains.Neuralium.Classes.NeuraliumChain;
-using Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions;
-using Blockchains.Neuralium.Classes.NeuraliumChain.Factories;
-using Blockchains.Neuralium.Classes.NeuraliumChain.Tools;
+using Neuralium.Blockchains.Neuralium.Classes;
+using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain;
+using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions;
+using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Factories;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common;
@@ -18,6 +16,7 @@ using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.Configuration;
 using Neuralia.Blockchains.Core.Extensions;
 using Neuralia.Blockchains.Core.General.Versions;
+using Neuralia.Blockchains.Core.Logging;
 using Neuralia.Blockchains.Core.Network.Exceptions;
 using Neuralia.Blockchains.Core.Services;
 using Neuralia.Blockchains.Core.Tools;
@@ -30,7 +29,6 @@ using Neuralia.Blockchains.Tools.Threading;
 using Neuralium.Core.Classes.Configuration;
 using Neuralium.Core.Classes.Services;
 using Serilog;
-using Zio.FileSystems;
 
 namespace Neuralium.Core.Classes.Runtime {
 
@@ -79,7 +77,7 @@ namespace Neuralium.Core.Classes.Runtime {
 
 					return true;
 				} catch(Exception ex) {
-					Log.Error(ex, "Failed to shutdown system");
+					NLog.Default.Error(ex, "Failed to shutdown system");
 				}
 
 				return false;
@@ -102,6 +100,33 @@ namespace Neuralium.Core.Classes.Runtime {
 			this.delayedTriggerComponent.TriggerAchived += this.InitLateComponents;
 		}
 
+		public virtual async Task Shutdown() {
+
+			LockContext lockContext = null;
+
+			this.applicationLifetime.ApplicationStopping.Register(() => {
+
+				// alert everyone shutdown has completed
+				this.RunRpcCommand(() => this.rpcService.RpcProvider.ShutdownStarted());
+			});
+
+			this.applicationLifetime.ApplicationStopped.Register(() => {
+
+				// alert everyone shutdown has completed
+				this.RunRpcCommand(() => this.rpcService.RpcProvider.ShutdownCompleted());
+			});
+
+			await this.StopChains(lockContext).ConfigureAwait(false);
+
+			this.applicationLifetime.StopApplication();
+		}
+
+		public override async Task Stop() {
+			await base.Stop().ConfigureAwait(false);
+
+			await this.Shutdown().ConfigureAwait(false);
+		}
+
 		protected virtual async Task CreateChains(LockContext lockContext) {
 
 			if(this.appSettings.NeuraliumChainConfiguration.Enabled) {
@@ -118,10 +143,11 @@ namespace Neuralium.Core.Classes.Runtime {
 				// chainRuntimeConfiguration.ServiceExecutionTypes.Add(Enums.INTERPRETATION_SERVICE, Enums.ServiceExecutionTypes.Synchronous);
 
 				this.globalService.AddSupportedChain(NeuraliumBlockchainTypes.NeuraliumInstance.Neuralium, "Neuralium", true);
-				this.neuraliumBlockChainInterface = await NeuraliumChainInstantiationFactory.Instance.CreateNewChain(serviceProvider, lockContext, chainRuntimeConfiguration).ConfigureAwait(false);
+				this.neuraliumBlockChainInterface = await NeuraliumChainInstantiationFactory.Instance.CreateNewChain(this.serviceProvider, lockContext, chainRuntimeConfiguration).ConfigureAwait(false);
 
 				this.delayedTriggerComponent.IncrementTotal();
 				this.neuraliumBlockChainInterface.BlockchainStarted += this.delayedTriggerComponent.IncrementInitedComponetsCount;
+				this.neuraliumBlockChainInterface.Shutdown += () => this.applicationLifetime.StopApplication();
 
 				// register the chain to the rpc Services
 				this.RunRpcCommand(() => this.rpcService[NeuraliumBlockchainTypes.NeuraliumInstance.Neuralium] = this.neuraliumBlockChainInterface);
@@ -168,8 +194,8 @@ namespace Neuralium.Core.Classes.Runtime {
 		protected virtual void SetAppSettings() {
 
 			GlobalSettings.Instance.SetValues<NeuraliumOptionsSetter>(this.PrepareSettings());
-			
-			Log.Information($"Current software version: {GlobalSettings.SoftwareVersion}");
+
+			NLog.Default.Information($"Current software version: {GlobalSettings.SoftwareVersion}");
 		}
 
 		protected virtual GlobalSettings.GlobalSettingsParameters PrepareSettings() {
@@ -215,7 +241,7 @@ namespace Neuralium.Core.Classes.Runtime {
 					try {
 						this.timeService.InitTime();
 					} catch(Exception ex) {
-						Log.Error(ex, "Failed to contact time servers and initialize local time. This is critical and we cannot continue. stopping the application.");
+						NLog.Default.Error(ex, "Failed to contact time servers and initialize local time. This is critical and we cannot continue. stopping the application.");
 
 						throw;
 					}
@@ -223,17 +249,17 @@ namespace Neuralium.Core.Classes.Runtime {
 
 #if TESTNET
 				this.DeleteObsoleteWallets();
-				
+
 #endif
 				this.InitRpc();
 
 				if(this.appSettings.P2PEnabled) {
 					await this.InitNetworking().ConfigureAwait(false);
 				}
-				
+
 				this.RunPreLaunchCode();
 
-				await CreateChains(lockContext).ConfigureAwait(false);
+				await this.CreateChains(lockContext).ConfigureAwait(false);
 
 				this.InitializeChains();
 
@@ -268,28 +294,28 @@ namespace Neuralium.Core.Classes.Runtime {
 			}
 		}
 
-#if TESTNET	
+#if TESTNET
 		protected virtual void DeleteObsoleteWallets() {
-			
-			
+
 			string testnetFlagFilePath = Path.Combine(GlobalsService.GetGeneralSystemFilesDirectoryPath(), ".testnet-wallet-version-flag");
 
 			bool deleteObsoleteFolder = false;
+
 			try {
 				if(File.Exists(testnetFlagFilePath)) {
 					using(SafeArrayHandle data = ByteArray.WrapAndOwn(File.ReadAllBytes(testnetFlagFilePath))) {
 
-						using(var rehydrator = DataSerializationFactory.CreateRehydrator(data)) {
+						using(IDataRehydrator rehydrator = DataSerializationFactory.CreateRehydrator(data)) {
 
 							SoftwareVersion version = new SoftwareVersion();
 							version.Rehydrate(rehydrator);
-							
+
 							if(version < GlobalSettings.SoftwareVersion) {
 								deleteObsoleteFolder = true;
 							}
 						}
 					}
-					
+
 				} else {
 					deleteObsoleteFolder = true;
 				}
@@ -297,21 +323,22 @@ namespace Neuralium.Core.Classes.Runtime {
 			}
 
 			if(deleteObsoleteFolder) {
-				
+
 				try {
 					string neuraliumfolder = Path.Combine(GlobalsService.GetGeneralSystemFilesDirectoryPath(), GlobalsService.TOKEN_CHAIN_NAME);
 					string neuraliumfolderOld = Path.Combine(GlobalsService.GetGeneralSystemFilesDirectoryPath(), "neuraliums");
-					
+
 					if(Directory.Exists(neuraliumfolder)) {
-						
-						Log.Warning("You have a wallet from an older TESTNET version. we are deleting it for you.");
-						
+
+						NLog.Default.Warning("You have a wallet from an older TESTNET version. we are deleting it for you.");
+
 						Directory.Delete(neuraliumfolder, true);
 					}
+
 					if(Directory.Exists(neuraliumfolderOld)) {
-						
-						Log.Warning("You have a wallet from an older TESTNET version. we are deleting it for you.");
-						
+
+						NLog.Default.Warning("You have a wallet from an older TESTNET version. we are deleting it for you.");
+
 						Directory.Delete(neuraliumfolderOld, true);
 					}
 
@@ -319,24 +346,24 @@ namespace Neuralium.Core.Classes.Runtime {
 						File.Delete(testnetFlagFilePath);
 					}
 				} catch {
-							
+
 				}
 			}
 
 			try {
 				if(!File.Exists(testnetFlagFilePath)) {
-					using var dehydrator = DataSerializationFactory.CreateDehydrator();
+					using IDataDehydrator dehydrator = DataSerializationFactory.CreateDehydrator();
 					GlobalSettings.SoftwareVersion.Dehydrate(dehydrator);
 
-					var resultBytes = dehydrator.ToArray();
+					SafeArrayHandle resultBytes = dehydrator.ToArray();
 
 					FileExtensions.EnsureDirectoryStructure(GlobalsService.GetGeneralSystemFilesDirectoryPath());
 
 					FileExtensions.WriteAllBytes(testnetFlagFilePath, resultBytes);
 					resultBytes.Return();
 				}
-			}catch {
-							
+			} catch {
+
 			}
 		}
 #endif
@@ -366,14 +393,14 @@ namespace Neuralium.Core.Classes.Runtime {
 				// and now the actual app initialization
 				await this.InitializeApp(lockContext).ConfigureAwait(false);
 			} catch(Exception ex) {
-				Log.Error(ex, "Failed to initialize app.");
+				NLog.Default.Error(ex, "Failed to initialize app.");
 
 				throw;
 			}
 		}
 
 		protected virtual void RunPreLaunchCode() {
-			
+
 		}
 
 		protected virtual void InitRpc() {
@@ -395,10 +422,11 @@ namespace Neuralium.Core.Classes.Runtime {
 		protected virtual Task StartNetworking(Action startedCallback) {
 
 			this.networkingService.Started += startedCallback;
+
 			return this.networkingService.Start();
 		}
 
-		protected override Task ProcessLoop(LockContext lockContext){
+		protected override Task ProcessLoop(LockContext lockContext) {
 			this.CheckShouldCancel();
 
 			return this.RunLoop();
@@ -409,36 +437,11 @@ namespace Neuralium.Core.Classes.Runtime {
 			return Task.CompletedTask;
 		}
 
-		public virtual async Task Shutdown() {
-
-			LockContext lockContext = null;
-			this.applicationLifetime.ApplicationStopping.Register(() => {
-
-				// alert everyone shutdown has completed
-				this.RunRpcCommand(() => this.rpcService.RpcProvider.ShutdownStarted());
-			});
-
-			this.applicationLifetime.ApplicationStopped.Register(() => {
-
-				// alert everyone shutdown has completed
-				this.RunRpcCommand(() => this.rpcService.RpcProvider.ShutdownCompleted());
-			});
-
-			await this.StopChains(lockContext).ConfigureAwait(false);
-
-			this.applicationLifetime.StopApplication();
-		}
-
-		public override async Task Stop() {
-			await base.Stop().ConfigureAwait(false);
-			
-			await this.Shutdown().ConfigureAwait(false);
-		}
-
 		protected override async Task DisposeAllAsync() {
 
 			LockContext lockContext = null;
 			await base.DisposeAllAsync().ConfigureAwait(false);
+
 			try {
 
 				this.rpcService?.Stop();
@@ -453,10 +456,10 @@ namespace Neuralium.Core.Classes.Runtime {
 					await this.networkingService.Stop().ConfigureAwait(false);
 					this.networkingService.Dispose();
 				} catch(Exception ex) {
-					Log.Verbose("error occured", ex);
+					NLog.Default.Verbose("error occured", ex);
 				}
 			} catch(Exception ex) {
-				Log.Error(ex, "failed to dispose of app server");
+				NLog.Default.Error(ex, "failed to dispose of app server");
 			}
 
 		}

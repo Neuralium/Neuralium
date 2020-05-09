@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26124.0
 MinimumVisualStudioVersion = 15.0.26124.0
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Blockchains.Neuralium", "Blockchains.Neuralium\src\Blockchains.Neuralium.csproj", "{55C4E065-0437-45C8-A495-1272A829B26F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neuralium.Blockchains.Neuralium", "Neuralium.Blockchains.Neuralium\src\Neuralium.Blockchains.Neuralium.csproj", "{55C4E065-0437-45C8-A495-1272A829B26F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neuralium.Api.Common", "Neuralium.Api.Common\Neuralium.Api.Common.csproj", "{372F66AF-BCA6-4526-98EE-9CCF45C00CDA}"
 EndProject

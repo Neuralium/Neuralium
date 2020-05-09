@@ -1,6 +1,6 @@
-using Blockchains.Neuralium.Classes;
+using Neuralium.Blockchains.Neuralium.Classes;
 using Neuralia.Blockchains.Core.Configuration;
-using Neuralia.Blockchains.Tools.Data;
+using Neuralia.Blockchains.Core.Logging;
 using Neuralia.Blockchains.Tools.Data.Arrays;
 
 namespace Neuralium.Core.Classes.Configuration {
@@ -11,6 +11,9 @@ namespace Neuralium.Core.Classes.Configuration {
 		public override void SetOptions(A appSettings, O cmdOptions) {
 			base.SetOptions(appSettings, cmdOptions);
 
+			// make sure we enable desired loggers
+			NLog.EnableLoggers(appSettings);
+			
 			if(cmdOptions == null) {
 				return;
 			}
@@ -50,9 +53,9 @@ namespace Neuralium.Core.Classes.Configuration {
 					appSettings.SerializationType = AppSettingsBase.SerializationTypes.Feeder;
 				}
 			}
-			
+
 			ByteArray.RENT_LARGE_BUFFERS = appSettings.UseArrayPools;
-			
+
 			if(cmdOptions.UseArrayPools.HasValue) {
 				ByteArray.RENT_LARGE_BUFFERS = cmdOptions.UseArrayPools.Value;
 			}

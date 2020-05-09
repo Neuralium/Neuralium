@@ -41,6 +41,9 @@ namespace Neuralium.Core.Classes.Configuration {
 		[Option("config-section", Default = null, Required = false, HelpText = "Choose config section.")]
 		public string ConfigSection { get; set; }
 
+		[Option("config-file", Default = null, Required = false, HelpText = "Choose config file (ignored if used from docker).")]
+		public string ConfigFile { get; set; }
+		
 		[Option("skip-genesis-hash-verification", Default = false, Required = false, HelpText = "if set, the genesis hash verification will be skipped.")]
 		public bool SkipGenesisHashVerification { get; set; }
 
@@ -52,7 +55,7 @@ namespace Neuralium.Core.Classes.Configuration {
 
 		[Option("array-pools", Default = null, Required = false, HelpText = "do we use large buffers?.")]
 		public bool? UseArrayPools { get; set; }
-		
+
 		// // Omitting long name, defaults to name of property, ie "--verbose"
 		// [Option(Default = false, HelpText = "Prints all messages to standard output.")]
 		// public bool Verbose { get; set; }

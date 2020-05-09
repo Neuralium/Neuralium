@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+
+    <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
+    <OutputType>Library</OutputType>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <DefineConstants>$(DefineConstants);SILENT_EXCEPTIONS</DefineConstants>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Neuralium.Blockchains.Neuralium</RootNamespace>
+    <AssemblyName>Neuralium.Blockchains.Neuralium</AssemblyName>
+    <TargetFrameworks>netstandard2.1;netcoreapp3.1</TargetFrameworks>
+
+
+  </PropertyGroup>
+  <PropertyGroup>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <RetainVMGarbageCollection>true</RetainVMGarbageCollection>
+    <ThreadPoolMinThreads>4</ThreadPoolMinThreads>
+    <ThreadPoolMaxThreads>25</ThreadPoolMaxThreads>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Neuralia.Blockchains.Components" Version="1.0.0" />
+    <PackageReference Include="Neuralia.Blockchains.Common" Version="1.0.0" />
+    <PackageReference Include="Neuralia.Blockchains.Tools" Version="1.0.0" />
+    <PackageReference Include="Neuralia.BouncyCastle" Version="1.0.0" />
+
+
+  </ItemGroup>
+    <Import Project="$(MSBuildProjectDirectory)/../../CommonSettings.targets" />
+
+
+</Project>
