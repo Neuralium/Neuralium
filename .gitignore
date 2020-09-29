@@ -221,3 +221,5 @@ project.lock.json
 /Logs/*
 /build/*
 
+/deps
+
