@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 mkdir deps
 mkdir local-source
 cd deps
@@ -11,6 +12,7 @@ git clone -b TESTNET https://github.com/Neuralia/Neuralia.Blockchains.Tools
 git clone -b TESTNET https://github.com/Neuralia/Neuralia.BouncyCastle
 git clone -b TESTNET https://github.com/Neuralia/Neuralia.Blockchain
 
+cd ../
 cd deps/Neuralia.NClap
 
 rm "Neuralia.NClap.1.0.0.nupkg"
