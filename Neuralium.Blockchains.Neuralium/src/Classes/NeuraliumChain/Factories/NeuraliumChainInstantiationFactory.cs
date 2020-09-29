@@ -89,10 +89,11 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Factories {
 
 			INeuraliumAssemblyProvider assemblyProvider = new NeuraliumAssemblyProvider(centralCoordinator);
 
+			INeuraliumAppointmentsProvider appointmentsProvider = new NeuraliumAppointmentsProvider(centralCoordinator);
 			// build the final component
 			NeuraliumChainComponentsInjection componentsInjector = new NeuraliumChainComponentsInjection();
 
-			componentsInjector.ChainComponentProvider = new NeuraliumChainComponentProvider(walletProviderProxy, assemblyProvider, chainFactoryProvider, blockchainProvider, chainStateProvider, chainConfigurationProvider, chainValidationProvider, chainMiningProvider, chainDataLoadProvider, accreditationCertificateProvider, accountSnapshotsProvider, chainNetworkingProvider, interpretationProvider);
+			componentsInjector.ChainComponentProvider = new NeuraliumChainComponentProvider(walletProviderProxy, assemblyProvider, chainFactoryProvider, blockchainProvider, chainStateProvider, chainConfigurationProvider, chainValidationProvider, chainMiningProvider, chainDataLoadProvider, accreditationCertificateProvider, accountSnapshotsProvider, chainNetworkingProvider, interpretationProvider, appointmentsProvider);
 
 			NeuraliumBlockchainManager transactionBlockchainManager = new NeuraliumBlockchainManager(centralCoordinator);
 			NeuraliumGossipManager gossipManager = new NeuraliumGossipManager(centralCoordinator);

@@ -239,7 +239,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Dal {
 		static NeuraliumCardsUtils() {
 		}
 
-		private NeuraliumCardsUtils() {
+		protected NeuraliumCardsUtils() {
 
 		}
 

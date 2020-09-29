@@ -2,12 +2,14 @@ using System;
 using System.Collections.Immutable;
 using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Tools;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions;
+using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.Cryptography.Trees;
 using Neuralia.Blockchains.Core.General.Types;
 using Neuralia.Blockchains.Core.General.Types.Dynamic;
 using Neuralia.Blockchains.Core.General.Types.Specialized;
 using Neuralia.Blockchains.Core.General.Versions;
 using Neuralia.Blockchains.Core.Serialization;
+using Neuralia.Blockchains.Core.Services;
 using Neuralia.Blockchains.Tools.Serialization;
 
 namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.General.V1 {
@@ -34,8 +36,8 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 
 		public DateTime? Start { get; set; }
 
-		public override HashNodeList GetStructuresArray() {
-			HashNodeList nodeList = base.GetStructuresArray();
+		public override HashNodeList GetStructuresArray(Enums.MutableStructureTypes types) {
+			HashNodeList nodeList = base.GetStructuresArray(types);
 
 			nodeList.Add(this.AcceptSAFUTermsOfService);
 			nodeList.Add(this.NumberDays);
@@ -55,7 +57,9 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 			jsonDeserializer.SetProperty("Start", this.Start);
 		}
 
-		public override ImmutableList<AccountId> TargetAccounts => new[] {this.TransactionId.Account}.ToImmutableList();
+		public override Enums.TransactionTargetTypes TargetType => Enums.TransactionTargetTypes.Range;
+		public override AccountId[] ImpactedAccounts => this.TargetAccountsAndSender();
+		public override AccountId[] TargetAccounts => this.GetAccountIds(NeuraliumConstants.DEFAULT_NEURALIUM_SAFU_ACCOUNT);
 
 		protected override void Sanitize() {
 			base.Sanitize();

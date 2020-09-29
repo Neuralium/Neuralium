@@ -71,7 +71,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Processors.Tran
 
 			List<INeuraliumFinalElectionResults> neuraliumElectionResult = publicationResult.OfType<INeuraliumFinalElectionResults>().ToList();
 
-			if(neuraliumElectionResult.Any(r => r.InfrastructureServiceFees?.Value != 0)) {
+			if(neuraliumElectionResult.Any(r => r.InfrastructureServiceFees != null && r.InfrastructureServiceFees.Value != 0)) {
 
 				await this.SetNetworkServiceFees(neuraliumElectionResult.Where(r => (r.InfrastructureServiceFees != null) && (r.InfrastructureServiceFees.Value != 0)).Select(r => r.InfrastructureServiceFees.Value).ToList(), lockContext).ConfigureAwait(false);
 			}
@@ -194,8 +194,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Processors.Tran
 
 			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumTransferTransaction>(async (t, affectedKeysSnapshots, lockContext) => {
 
-				affectedKeysSnapshots.AddAccountId(t.TransactionId.Account);
-				affectedKeysSnapshots.AddAccounts(t.TargetAccounts);
+				affectedKeysSnapshots.AddAccounts(t.ImpactedAccounts);
 
 			}, async (t, parameters, lockContext) => {
 
@@ -208,8 +207,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Processors.Tran
 
 			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumMultiTransferTransaction>(async (t, affectedSnapshots, lockContext) => {
 
-				affectedSnapshots.AddAccountId(t.TransactionId.Account);
-				affectedSnapshots.AddAccounts(t.TargetAccounts);
+				affectedSnapshots.AddAccounts(t.ImpactedAccounts);
 
 			}, async (t, parameters, lockContext) => {
 				
@@ -224,7 +222,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Processors.Tran
 
 			this.TransactionImpactSets.RegisterTransactionImpactSet<IEmittingTransaction>(async (t, affectedKeysSnapshots, lockContext) => {
 
-				affectedKeysSnapshots.AddAccounts(t.TargetAccounts);
+				affectedKeysSnapshots.AddAccounts(t.ImpactedAccounts);
 			}, async (t, parameters, lockContext) => {
 
 				INeuraliumAccountSnapshot recipientAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(t.Recipient, lockContext).ConfigureAwait(false);
@@ -236,7 +234,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Processors.Tran
 
 			this.TransactionImpactSets.RegisterTransactionImpactSet<IMultiEmittingTransaction>(async (t, affectedKeysSnapshots, lockContext) => {
 
-				affectedKeysSnapshots.AddAccounts(t.TargetAccounts);
+				affectedKeysSnapshots.AddAccounts(t.ImpactedAccounts);
 			}, async (t, parameters, lockContext) => {
 
 				foreach(RecipientSet recipientSet in t.Recipients) {
@@ -250,10 +248,10 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Processors.Tran
 
 			this.TransactionImpactSets.RegisterTransactionImpactSet<IDestroyNeuraliumsTransaction>(async (t, affectedKeysSnapshots, lockContext) => {
 
-				affectedKeysSnapshots.AddAccountId(new AccountId(NeuraliumConstants.DEFAULT_MODERATOR_DESTRUCTION_ACCOUNT_ID, Enums.AccountTypes.Standard));
+				affectedKeysSnapshots.AddAccountId(NeuraliumConstants.DEFAULT_MODERATOR_DESTRUCTION_ACCOUNT);
 			}, async (t, parameters, lockContext) => {
 
-				INeuraliumAccountSnapshot deflationAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(new AccountId(NeuraliumConstants.DEFAULT_MODERATOR_DESTRUCTION_ACCOUNT_ID, Enums.AccountTypes.Standard), lockContext).ConfigureAwait(false);
+				INeuraliumAccountSnapshot deflationAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(NeuraliumConstants.DEFAULT_MODERATOR_DESTRUCTION_ACCOUNT, lockContext).ConfigureAwait(false);
 
 				if(deflationAccount != null) {
 					// lets eliminate it all, we are deflating the neuralium
@@ -263,7 +261,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Processors.Tran
 
 			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumSAFUContributionTransaction>(async (t, affectedSnapshots, lockContext) => {
 
-				affectedSnapshots.AddAccounts(t.TargetAccounts);
+				affectedSnapshots.AddAccounts(t.ImpactedAccounts);
 				affectedSnapshots.chainOptions.Add(1);
 
 			}, async (t, parameters, lockContext) => {
@@ -327,7 +325,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Processors.Tran
 
 				senderAccount.AddCollectionEntry(feature);
 
-				INeuraliumAccountSnapshot safuAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(new AccountId(NeuraliumConstants.DEFAULT_NEURALIUM_SAFU_ACCOUNT_ID, Enums.AccountTypes.Standard), lockContext).ConfigureAwait(false);
+				INeuraliumAccountSnapshot safuAccount = await parameters.snapshotCache.GetAccountSnapshotModify<INeuraliumAccountSnapshot>(NeuraliumConstants.DEFAULT_NEURALIUM_SAFU_ACCOUNT, lockContext).ConfigureAwait(false);
 
 				if(safuAccount != null) {
 					safuAccount.Balance += total;
@@ -336,11 +334,11 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Processors.Tran
 
 			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumSAFUTransferTransaction>(async (t, affectedSnapshots, lockContext) => {
 
-				affectedSnapshots.AddAccounts(t.TargetAccounts);
+				affectedSnapshots.AddAccounts(t.ImpactedAccounts);
 
 			}, async (t, parameters, lockContext) => {
 
-				AccountId safuAccountId = new AccountId(NeuraliumConstants.DEFAULT_NEURALIUM_SAFU_ACCOUNT_ID, Enums.AccountTypes.Standard);
+				AccountId safuAccountId = NeuraliumConstants.DEFAULT_NEURALIUM_SAFU_ACCOUNT;
 
 				if(t.TransactionId.Account != safuAccountId) {
 					return;
@@ -363,7 +361,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Processors.Tran
 
 			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumFreezeSuspiciousFundsTransaction>(async (t, affectedSnapshots, lockContext) => {
 
-				affectedSnapshots.AddAccounts(t.TargetAccounts);
+				affectedSnapshots.AddAccounts(t.ImpactedAccounts);
 
 			}, async (t, parameters, lockContext) => {
 				(Dictionary<AccountId, decimal> victims, Dictionary<AccountId, decimal> holders) impacts = t.GetFlatImpactTree();
@@ -389,7 +387,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Processors.Tran
 
 			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumUnfreezeClearedFundsTransaction>(async (t, affectedSnapshots, lockContext) => {
 
-				affectedSnapshots.AddAccounts(t.TargetAccounts);
+				affectedSnapshots.AddAccounts(t.ImpactedAccounts);
 
 			}, async (t, parameters, lockContext) => {
 
@@ -402,7 +400,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Processors.Tran
 
 			this.TransactionImpactSets.RegisterTransactionImpactSet<INeuraliumUnwindStolenFundsTreeTransaction>(async (t, affectedSnapshots, lockContext) => {
 
-				affectedSnapshots.AddAccounts(t.TargetAccounts);
+				affectedSnapshots.AddAccounts(t.ImpactedAccounts);
 
 			}, async (t, parameters, lockContext) => {
 
@@ -609,7 +607,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Processors.Tran
 		}
 
 		private async Task SetNetworkServiceFees(List<decimal> networkServiceFees, LockContext lockContext) {
-			AccountId networkServiceFeesAccount = new AccountId(NeuraliumConstants.DEFAULT_NETWORK_MAINTENANCE_SERVICE_FEES_ACCOUNT_ID, Enums.AccountTypes.Standard);
+			AccountId networkServiceFeesAccount = NeuraliumConstants.DEFAULT_NETWORK_MAINTENANCE_SERVICE_FEES_ACCOUNT;
 
 			if(await this.IsAnyAccountTracked(new[] {networkServiceFeesAccount}.ToList()).ConfigureAwait(false)) {
 

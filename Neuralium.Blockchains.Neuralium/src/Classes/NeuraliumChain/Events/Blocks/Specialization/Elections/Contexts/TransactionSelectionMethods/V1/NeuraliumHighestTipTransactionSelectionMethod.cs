@@ -28,7 +28,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.S
 
 		private readonly ITransactionTipsAllocationMethod transactionSelectionMethod;
 
-		public NeuraliumHighestTipTransactionSelectionMethod(long blockId, BlockChainConfigurations configuration, ITransactionTipsAllocationMethod transactionSelectionMethod, IChainStateProvider chainStateProvider, INeuraliumWalletProviderProxy walletProvider, IElectionContext electionContext, HighestTipTransactionSelectionStrategySettings highestTipTransactionSelectionStrategySettings, IBlockchainTimeService timeService) : base(blockId, configuration, chainStateProvider, walletProvider, electionContext) {
+		public NeuraliumHighestTipTransactionSelectionMethod(long blockId, IChainMiningStatusProvider chainMiningStatusProvider, BlockChainConfigurations configuration, ITransactionTipsAllocationMethod transactionSelectionMethod, IChainStateProvider chainStateProvider, INeuraliumWalletProviderProxy walletProvider, IElectionContext electionContext, HighestTipTransactionSelectionStrategySettings highestTipTransactionSelectionStrategySettings, IBlockchainTimeService timeService) : base(blockId, chainMiningStatusProvider, configuration, chainStateProvider, walletProvider, electionContext) {
 			this.transactionSelectionMethod = transactionSelectionMethod;
 			this.highestTipTransactionSelectionStrategySettings = highestTipTransactionSelectionStrategySettings;
 			this.timeService = timeService;

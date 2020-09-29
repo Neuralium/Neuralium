@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.Tags;
 using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Tools;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions;
+using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.Cryptography.Trees;
 using Neuralia.Blockchains.Core.General.Types;
 using Neuralia.Blockchains.Core.General.Types.Specialized;
@@ -20,8 +21,8 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 		public AccountId Recipient { get; set; } = new AccountId();
 		public Amount Amount { get; set; } = new Amount();
 		
-		public override HashNodeList GetStructuresArray() {
-			HashNodeList nodeList = base.GetStructuresArray();
+		public override HashNodeList GetStructuresArray(Enums.MutableStructureTypes types) {
+			HashNodeList nodeList = base.GetStructuresArray(types);
 
 			nodeList.Add(this.Recipient);
 			nodeList.Add(this.Amount);
@@ -37,7 +38,9 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 			jsonDeserializer.SetProperty("Amount", this.Amount);
 		}
 
-		public override ImmutableList<AccountId> TargetAccounts => new[] {this.Recipient}.ToImmutableList();
+		public override Enums.TransactionTargetTypes TargetType => Enums.TransactionTargetTypes.Range;
+		public override AccountId[] ImpactedAccounts => this.TargetAccountsAndSender();
+		public override AccountId[] TargetAccounts => this.GetAccountIds(this.Recipient);
 
 		protected override void Sanitize() {
 			base.Sanitize();

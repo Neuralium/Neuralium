@@ -2,6 +2,7 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.DataStructures.Type
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Serialization.Blockchain.Utils;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Serialization;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Specialization.Moderator.V1;
+using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.Cryptography.Trees;
 using Neuralia.Blockchains.Core.General.Types.Specialized;
 using Neuralia.Blockchains.Core.Serialization;
@@ -22,8 +23,8 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 
 		public Amount InfrastructureServiceFees { get; set; } = new Amount();
 
-		public override HashNodeList GetStructuresArray() {
-			HashNodeList nodeList = base.GetStructuresArray();
+		public override HashNodeList GetStructuresArray(Enums.MutableStructureTypes types) {
+			HashNodeList nodeList = base.GetStructuresArray(types);
 
 			if(this.CertificateType == AccreditationCertificateTypes.Instance.SDK_PROVIDER) {
 				nodeList.Add(this.ProviderBountyshare);

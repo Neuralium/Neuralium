@@ -5,6 +5,7 @@ using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Interfaces.Acco
 using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Factories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal.Sqlite.AccountSnapshots.Storage;
 using Neuralia.Blockchains.Common.Classes.Tools;
 using Neuralia.Blockchains.Components.Transactions.Identifiers;
@@ -25,7 +26,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Sqlite.Acco
 
 		}
 
-		public override Task InsertNewAccount(AccountId accountId, List<(byte ordinal, SafeArrayHandle key, TransactionId declarationTransactionId)> keys, long inceptionBlockId, bool correlated) {
+		public override Task InsertNewAccount(AccountId accountId, List<(byte ordinal, SafeArrayHandle key, TransactionId declarationTransactionId)> keys, long inceptionBlockId, bool Verified) {
 			throw new NotImplementedException();
 		}
 
@@ -39,10 +40,12 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Sqlite.Acco
 				string tableName = entityType.GetTableName();
 
 				IProperty balanceProperty = entityType.FindProperty(nameof(NeuraliumStandardAccountSnapshotSqliteEntry.Balance));
-				IProperty correlatedProperty = entityType.FindProperty(nameof(NeuraliumStandardAccountSnapshotSqliteEntry.Correlated));
+				IProperty VerifiedProperty = entityType.FindProperty(nameof(NeuraliumStandardAccountSnapshotSqliteEntry.Correlated));
 
-				return db.Database.ExecuteSqlRawAsync($"UPDATE \"{tableName}\" SET \"{balanceProperty.Name}\" = \"{balanceProperty.Name}\" + {amount.Value} WHERE \"{correlatedProperty.Name}\" = true;");
+				return db.Database.ExecuteSqlRawAsync($"UPDATE \"{tableName}\" SET \"{balanceProperty.Name}\" = \"{balanceProperty.Name}\" + {amount.Value} WHERE \"{VerifiedProperty.Name}\" = true;");
 			});
 		}
+
+		public override ICardUtils CardUtils => NeuraliumCardsUtils.Instance;
 	}
 }

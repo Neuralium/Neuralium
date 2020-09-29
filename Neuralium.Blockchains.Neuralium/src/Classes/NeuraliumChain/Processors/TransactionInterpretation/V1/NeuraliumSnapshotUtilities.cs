@@ -6,6 +6,7 @@ using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.DataStructures.Type
 using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Tools.AccountAttributeContexts;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal.Interfaces.AccountSnapshots.Cards;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Tools.AccountAttributeContexts;
+using Neuralia.Blockchains.Tools.Data;
 using Neuralia.Blockchains.Tools.Data.Arrays;
 
 namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Processors.TransactionInterpretation.V1 {
@@ -51,7 +52,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Processors.Tran
 
 		public static decimal GetFreezeImpactAmount(IAccountAttribute accountAttribute) {
 
-			ByteArray context = ByteArray.Wrap(accountAttribute.Context);
+			SafeArrayHandle context = SafeArrayHandle.Wrap(accountAttribute.Context);
 
 			if(!context.IsCleared) {
 
@@ -66,7 +67,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Processors.Tran
 
 		public static decimal GetThreeWayGatedTransferImpactAmount(IAccountAttribute accountAttribute) {
 
-			ByteArray context = ByteArray.Wrap(accountAttribute.Context);
+			SafeArrayHandle context = SafeArrayHandle.Wrap(accountAttribute.Context);
 
 			if(!context.IsCleared) {
 

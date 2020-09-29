@@ -9,10 +9,13 @@ using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers;
 using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Creation.Transactions;
 using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.debugging;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Wallet.Account;
 using Neuralia.Blockchains.Components.Transactions.Identifiers;
 using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.General.Types;
 using Neuralia.Blockchains.Core.General.Types.Specialized;
+using Neuralia.Blockchains.Core.Services;
+using Neuralia.Blockchains.Tools.Cryptography;
 using Neuralia.Blockchains.Tools.Data;
 using Neuralia.Blockchains.Tools.Threading;
 
@@ -21,14 +24,15 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain {
 
 		void SubmitDebugMessage(Action<(TransactionId, SafeArrayHandle)> callback);
 
-		TaskResult<TotalAPI> QueryWalletTotal(Guid accountUuid);
+		TaskResult<TotalAPI> QueryWalletTotal(string accountCode);
 
 		TaskResult<bool> SendNeuraliums(AccountId targetAccountId, Amount amount, Amount tip, string note, CorrelationContext correlationContext, byte expiration = 0);
 
-		TaskResult<TimelineHeader> QueryNeuraliumTimelineHeader(Guid accountUuid);
-		TaskResult<List<TimelineDay>> QueryNeuraliumTimelineSection(Guid accountUuid, DateTime firstday, int skip, int take);
+		TaskResult<TimelineHeader> QueryNeuraliumTimelineHeader(string accountCode);
+		TaskResult<List<TimelineDay>> QueryNeuraliumTimelineSection(string accountCode, DateTime firstday, int skip, int take);
 #if TESTNET || DEVNET
-		TaskResult<bool> RefillNeuraliums(Guid accountUuid, CorrelationContext correlationContext, byte expiration = 0);
+		TaskResult<bool> RefillNeuraliums(string accountCode, CorrelationContext correlationContext, byte expiration = 0);
+		TaskResult<bool> BypassAppointmentVerification(string accountCode);
 #endif
 
 		TaskResult<List<object>> QueryNeuraliumTransactionPool();
@@ -94,15 +98,15 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain {
 
 	#region API methods
 
-		public TaskResult<TotalAPI> QueryWalletTotal(Guid accountUuid) {
+		public TaskResult<TotalAPI> QueryWalletTotal(string accountCode) {
 
 			return this.RunTaskMethodAsync(async lc => {
 
-				if(accountUuid == Guid.Empty) {
-					accountUuid = (await this.centralCoordinator.ChainComponentProvider.WalletProvider.GetActiveAccount(lc).ConfigureAwait(false)).AccountUuid;
+				if(string.IsNullOrWhiteSpace(accountCode)) {
+					accountCode = (await this.centralCoordinator.ChainComponentProvider.WalletProvider.GetActiveAccount(lc).ConfigureAwait(false)).AccountCode;
 				}
 
-				return await this.centralCoordinator.ChainComponentProvider.WalletProvider.GetAccountBalance(accountUuid, true, lc).ConfigureAwait(false);
+				return await this.centralCoordinator.ChainComponentProvider.WalletProvider.GetAccountBalance(accountCode, true, lc).ConfigureAwait(false);
 			});
 		}
 
@@ -110,10 +114,10 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain {
 
 			return this.RunTaskMethodAsync(async lc => {
 
-				Guid accountUuid = (await this.centralCoordinator.ChainComponentProvider.WalletProvider.GetActiveAccount(lc).ConfigureAwait(false)).AccountUuid;
+				string accountCode = (await this.centralCoordinator.ChainComponentProvider.WalletProvider.GetActiveAccount(lc).ConfigureAwait(false)).AccountCode;
 
 				using(ManualResetEventSlim resetEvent = new ManualResetEventSlim(false)) {
-					ICreateNeuraliumTransferTransactionWorkflow workflow = this.NeuraliumChainFactoryProvider.WorkflowFactory.CreateSendNeuraliumsWorkflow(accountUuid, new AccountId(targetAccountId), amount, tip, note, correlationContext, expiration);
+					ICreateNeuraliumTransferTransactionWorkflow workflow = this.NeuraliumChainFactoryProvider.WorkflowFactory.CreateSendNeuraliumsWorkflow(accountCode, new AccountId(targetAccountId), amount, tip, note, correlationContext, expiration);
 
 					workflow.Success += w => {
 						resetEvent.Set();
@@ -131,30 +135,31 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain {
 
 		}
 
-		public TaskResult<TimelineHeader> QueryNeuraliumTimelineHeader(Guid accountUuid) {
+		public TaskResult<TimelineHeader> QueryNeuraliumTimelineHeader(string accountCode) {
 
 			return this.RunTaskMethodAsync(lc => {
-				return this.centralCoordinator.ChainComponentProvider.WalletProvider.GetTimelineHeader(accountUuid, lc);
+				return this.centralCoordinator.ChainComponentProvider.WalletProvider.GetTimelineHeader(accountCode, lc);
 			});
 		}
 
-		public TaskResult<List<TimelineDay>> QueryNeuraliumTimelineSection(Guid accountUuid, DateTime firstday, int skip, int take) {
+		public TaskResult<List<TimelineDay>> QueryNeuraliumTimelineSection(string accountCode, DateTime firstday, int skip, int take) {
 
 			return this.RunTaskMethodAsync(lc => {
-				return this.centralCoordinator.ChainComponentProvider.WalletProvider.GetTimelineSection(accountUuid, firstday, lc, skip, take);
+				
+				return this.centralCoordinator.ChainComponentProvider.WalletProvider.GetTimelineSection(accountCode, firstday, lc, skip, take);
 			});
 		}
 #if TESTNET || DEVNET
-		public TaskResult<bool> RefillNeuraliums(Guid accountUuid, CorrelationContext correlationContext, byte expiration = 0) {
+		public TaskResult<bool> RefillNeuraliums(string accountCode, CorrelationContext correlationContext, byte expiration = 0) {
 
 			return this.RunTaskMethodAsync(async lc => {
 
-				if(accountUuid == Guid.Empty) {
-					accountUuid = (await this.centralCoordinator.ChainComponentProvider.WalletProvider.GetActiveAccount(lc).ConfigureAwait(false)).AccountUuid;
+				if(string.IsNullOrWhiteSpace(accountCode)) {
+					accountCode = (await this.centralCoordinator.ChainComponentProvider.WalletProvider.GetActiveAccount(lc).ConfigureAwait(false)).AccountCode;
 				}
 
 				using(ManualResetEventSlim resetEvent = new ManualResetEventSlim(false)) {
-					ICreateNeuraliumRefillTransactionWorkflow workflow = this.NeuraliumChainFactoryProvider.WorkflowFactory.CreateRefillNeuraliumsWorkflow(accountUuid, correlationContext, expiration);
+					ICreateNeuraliumRefillTransactionWorkflow workflow = this.NeuraliumChainFactoryProvider.WorkflowFactory.CreateRefillNeuraliumsWorkflow(accountCode, correlationContext, expiration);
 
 					workflow.Success += w => {
 						resetEvent.Set();
@@ -170,6 +175,37 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain {
 				}
 			});
 		}
+		
+		public TaskResult<bool> BypassAppointmentVerification(string accountCode) {
+
+			
+			return this.RunTaskMethodAsync(async lc => {
+
+				if(string.IsNullOrWhiteSpace(accountCode)) {
+					accountCode = (await this.centralCoordinator.ChainComponentProvider.WalletProvider.GetActiveAccount(lc).ConfigureAwait(false)).AccountCode;
+				}
+
+				var account = await this.centralCoordinator.ChainComponentProvider.WalletProvider.GetWalletAccount(accountCode, lc).ConfigureAwait(false);
+				
+				await this.centralCoordinator.ChainComponentProvider.WalletProvider.ScheduleTransaction((provider, token, lc2) => {
+					account.AccountAppointment = new WalletAccount.AccountAppointmentDetails();
+
+					account.AccountAppointment.AppointmentVerified = true;
+					account.AccountAppointment.RequesterId = new TransactionId(account.GetAccountId(), GlobalRandom.GetNext()).ToGuid();
+					account.AccountAppointment.AppointmentConfirmationCode = GlobalsService.TESTING_APPOINTMENT_CODE;
+					account.AccountAppointment.AppointmentConfirmationCodeExpiration = DateTime.Now.AddYears(1);
+					account.AccountAppointment.AppointmentStatus = Enums.AppointmentStatus.AppointmentCompleted;
+					
+					return Task.FromResult(true);
+				}, lc).ConfigureAwait(false);
+
+				this.centralCoordinator.ChainComponentProvider.AppointmentsProviderBase.OperatingMode = Enums.OperationStatus.Appointment;
+				
+				return true;
+				
+			});
+		}
+
 #endif
 
 		public TaskResult<List<object>> QueryNeuraliumTransactionPool() {

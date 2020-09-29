@@ -8,6 +8,7 @@ using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Tools;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Tags;
 using Neuralia.Blockchains.Common.Classes.Tools.Serialization;
+using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.Cryptography.Trees;
 using Neuralia.Blockchains.Core.General.Types;
 using Neuralia.Blockchains.Core.General.Types.Specialized;
@@ -30,8 +31,8 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 
 		public List<RecipientSet> Recipients { get; } = new List<RecipientSet>();
 		
-		public override HashNodeList GetStructuresArray() {
-			HashNodeList nodeList = base.GetStructuresArray();
+		public override HashNodeList GetStructuresArray(Enums.MutableStructureTypes types) {
+			HashNodeList nodeList = base.GetStructuresArray(types);
 
 			nodeList.Add(this.Amount);
 
@@ -60,7 +61,9 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 			});
 		}
 
-		public override ImmutableList<AccountId> TargetAccounts => this.Recipients.Select(r => r.Recipient).ToImmutableList();
+		public override Enums.TransactionTargetTypes TargetType => Enums.TransactionTargetTypes.Range;
+		public override AccountId[] ImpactedAccounts => this.TargetAccountsAndSender();
+		public override AccountId[] TargetAccounts => this.Recipients.Select(r => r.Recipient).ToArray();
 
 		protected override void Sanitize() {
 			base.Sanitize();
@@ -84,7 +87,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 			this.Recipients.Clear();
 
 			AccountIdGroupSerializer.AccountIdGroupSerializerRehydrateParameters<AccountId> parameters = new AccountIdGroupSerializer.AccountIdGroupSerializerRehydrateParameters<AccountId> {
-				RehydrateExtraData = (accountId, offset, index, dh) => {
+				RehydrateExtraData = (accountId, offset, index, totalIndex, dh) => {
 
 					RecipientSet entry = new RecipientSet(accountId);
 
@@ -101,7 +104,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 			base.DehydrateHeader(dehydrator);
 
 			AccountIdGroupSerializer.AccountIdGroupSerializerDehydrateParameters<RecipientSet, AccountId> parameters = new AccountIdGroupSerializer.AccountIdGroupSerializerDehydrateParameters<RecipientSet, AccountId> {
-				DehydrateExtraData = (entry, AccountId, offset, index, dh) => {
+				DehydrateExtraData = (entry, AccountId, offset, index, totalIndex, dh) => {
 
 					entry.Amount.Dehydrate(dehydrator);
 				}

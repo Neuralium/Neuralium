@@ -2,9 +2,9 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Wallet.Keys;
 
 namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Wallet.Keys {
 
-	public interface INeuraliumNtruWalletKey : INtruWalletKey {
+	public interface INeuraliumNTRUWalletKey : INTRUWalletKey {
 	}
 
-	public class NeuraliumNtruWalletKey : NtruWalletKey, INeuraliumNtruWalletKey {
+	public class NeuraliumNTRUWalletKey : NTRUWalletKey, INeuraliumNTRUWalletKey {
 	}
 }

@@ -10,4 +10,4 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		public NeuraliumChainNetworkingProvider(IBlockchainNetworkingService networkingService, INeuraliumCentralCoordinator centralCoordinator) : base(networkingService, centralCoordinator) {
 		}
 	}
-}
+} 

@@ -31,7 +31,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.S
 
 			HashNodeList hashNodeList = new HashNodeList();
 
-			hashNodeList.Add(this.BountyAllocations);
+			hashNodeList.Add(this.BountyAllocations.OrderBy(e => e));
 			hashNodeList.Add(this.InfrastructureServiceFees);
 
 			return hashNodeList;

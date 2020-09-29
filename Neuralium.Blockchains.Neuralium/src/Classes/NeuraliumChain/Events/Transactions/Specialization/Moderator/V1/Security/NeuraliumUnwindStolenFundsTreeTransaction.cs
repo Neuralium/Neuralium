@@ -6,6 +6,7 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Seria
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Serialization;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Specialization.Moderator;
+using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.Cryptography.Trees;
 using Neuralia.Blockchains.Core.General;
 using Neuralia.Blockchains.Core.General.Types;
@@ -35,7 +36,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 	/// </summary>
 	public class NeuraliumUnwindStolenFundsTreeTransaction : ModerationTransaction, INeuraliumUnwindStolenFundsTreeTransaction {
 
-		private ImmutableList<AccountId> accountIds;
+		private AccountId[] accountIds;
 
 		public ushort FreezeId { get; set; }
 		public Text EventDescription { get; set; } = new Text();
@@ -59,8 +60,8 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 			jsonDeserializer.SetArray("AccountRestoreImpacts", this.AccountRestoreImpacts);
 		}
 
-		public override HashNodeList GetStructuresArray() {
-			HashNodeList hasNodes = base.GetStructuresArray();
+		public override HashNodeList GetStructuresArray(Enums.MutableStructureTypes types) {
+			HashNodeList hasNodes = base.GetStructuresArray(types);
 
 			hasNodes.Add(this.FreezeId);
 			hasNodes.Add(this.EventDescription);
@@ -70,14 +71,16 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 			return hasNodes;
 		}
 
-		public override ImmutableList<AccountId> TargetAccounts {
+		public override Enums.TransactionTargetTypes TargetType => Enums.TransactionTargetTypes.Range;
+		public override AccountId[] ImpactedAccounts =>this.TargetAccounts;
+		public override AccountId[] TargetAccounts {
 			get {
 				if(this.accountIds == null) {
 
 					List<AccountId> combinedAccounts = this.AccountRestoreImpacts.Select(a => a.AccountId).ToList();
 					combinedAccounts.AddRange(this.AccountUnwindImpacts.Select(a => a.AccountId));
 
-					this.accountIds = combinedAccounts.ToImmutableList();
+					this.accountIds = combinedAccounts.ToArray();
 				}
 
 				return this.accountIds;

@@ -12,6 +12,7 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal;
 using Neuralia.Blockchains.Common.Classes.Services;
 using Neuralia.Blockchains.Core.Configuration;
 using Neuralia.Blockchains.Core.Logging;
+using Neuralia.Blockchains.Core.P2p.Connections;
 using Neuralia.Blockchains.Core.Services;
 using Neuralium.Core.Classes.Configuration;
 using Neuralium.Core.Classes.General;
@@ -21,6 +22,7 @@ using Neuralium.Core.Resources;
 using Serilog;
 using Serilog.Configuration;
 using Serilog.Enrichers;
+using Neuralia.Blockchains.Core;
 
 namespace Neuralium.Core.Classes.Runtime {
 	public class Bootstrap {
@@ -47,6 +49,8 @@ namespace Neuralium.Core.Classes.Runtime {
 
 			services.AddSingleton<IFileFetchService, FileFetchService>();
 			services.AddSingleton<IHttpService, HttpService>();
+			
+			services.AddSingleton<IPortMappingService, PortMappingService>();
 
 			services.AddSingleton<IBlockchainTimeService, BlockchainTimeService>();
 			services.AddSingleton<ITimeService>(x => x.GetService<IBlockchainTimeService>());
@@ -96,7 +100,7 @@ namespace Neuralium.Core.Classes.Runtime {
 
 		public static string GetExecutingDirectoryName() {
 
-			return AppDomain.CurrentDomain.BaseDirectory;
+			return FileUtilities.GetExecutingDirectory();
 
 			throw new ApplicationException("Invalid execution directory");
 		}

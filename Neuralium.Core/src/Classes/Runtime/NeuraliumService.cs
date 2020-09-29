@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
+using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.Configuration;
 using Neuralia.Blockchains.Core.Logging;
 using Neuralia.Blockchains.Tools;
@@ -113,7 +114,7 @@ NLog.Default.Error(ex, "Timer exception");
 
 				this.applicationLifetime.StopApplication();
 
-				NLog.Default.Warning("Application service failed to start.");
+				NLog.Default.Warning(ex,"Application service failed to start.");
 
 			}
 		}
@@ -149,7 +150,7 @@ NLog.Default.Error(ex, "Timer exception");
 			NLog.Default.Information(NeuraliumAppTranslationsManager.Instance.TOSPresentation);
 
 			// now we check if the license has been accepted
-			string slaFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ".neuralium-sla");
+			string slaFilePath = Path.Combine(FileUtilities.GetExecutingDirectory(), ".neuralium-sla");
 
 			if(this.options.AcceptSoftwareLicenseAgreement == SLA_ACCEPTANCE) {
 				try {
@@ -219,7 +220,7 @@ NLog.Default.Error(ex, "Timer exception");
 
 			//TimeSpan elapsed = DateTimeEx.CurrentTime - ;
 
-			DateTime limit = new DateTime(2020, 5, 11, 23, 0, 0, DateTimeKind.Utc);
+			DateTime limit = new DateTime(2020, 10, 9, 23, 0, 0, DateTimeKind.Utc);
 
 			if(DateTimeEx.CurrentTime > limit) {
 
@@ -240,21 +241,21 @@ NLog.Default.Error(ex, "Timer exception");
 		private readonly AutoResetEvent autoResetEvent = new AutoResetEvent(false);
 		protected virtual void CheckDevnetDelay() {
 			//TimeSpan allowDelay = TimeSpan.FromDays(5);
-			TimeSpan allowDelay = new DateTime(2019, 9, 4, 23, 0, 0, DateTimeKind.Utc) - DateTimeEx.CurrentTime;
+			DateTime limit = new DateTime(2021, 11, 30, 23, 0, 0, DateTimeKind.Utc);
 
-			var limit = new DateTime(2019, 10, 14, 23, 0, 0, DateTimeKind.Utc);
 			if(DateTimeEx.CurrentTime > limit) {
-			
+
 				Console.BackgroundColor = ConsoleColor.Black;
 				Console.ForegroundColor = ConsoleColor.Red;
-				NLog.Default.Fatal("This TESTNET release has expired! It can not be used anymore. Please download a more recent version from https://www.neuralium.com. [EXPIRED DEVNET].");
-			
+				NLog.Default.Fatal("This DEVNET release has expired! It can not be used anymore. Please download a more recent version from https://www.neuralium.com. [EXPIRED TESTNET].");
+
 				throw new TrialTimeoutException();
-			} else {
-				TimeSpan remaining = limit - DateTimeEx.CurrentTime;
-			
-				NLog.Default.Warning($"This TESTNET release is still valid for {remaining.Days} days and {remaining.Hours} hours.");
 			}
+
+			TimeSpan remaining = limit - DateTimeEx.CurrentTime;
+			
+			NLog.Default.Warning($"This DEVNET release is still valid for {remaining.Days} days and {remaining.Hours} hours.");
+
 		}
 #endif
 
@@ -273,7 +274,9 @@ NLog.Default.Error(ex, "Timer exception");
 
 				try {
 					try {
+#if TESTNET || DEVNET
 						this.autoResetEvent?.Dispose();
+#endif
 					} catch(Exception ex) {
 						NLog.Default.Verbose("error occured", ex);
 					}

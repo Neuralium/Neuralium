@@ -21,7 +21,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Dal {
 		}
 
 		public override IWalletAccountSnapshotFileInfo CreateWalletSnapshotFileInfo(IWalletAccount account, WalletPassphraseDetails walletPassphraseDetails) {
-			return new NeuraliumWalletAccountSnapshotFileInfo(account, this.GetWalletAccountSnapshotPath(account.AccountUuid), this.centralCoordinator.ChainComponentProvider.ChainConfigurationProvider.NeuraliumBlockChainConfiguration, this.centralCoordinator.BlockchainServiceSet, this, walletPassphraseDetails);
+			return new NeuraliumWalletAccountSnapshotFileInfo(account, this.GetWalletAccountSnapshotPath(account.AccountCode), this.centralCoordinator.ChainComponentProvider.ChainConfigurationProvider.NeuraliumBlockChainConfiguration, this.centralCoordinator.BlockchainServiceSet, this, walletPassphraseDetails);
 
 		}
 
@@ -30,30 +30,30 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Dal {
 
 		}
 
-		public override IWalletTransactionCacheFileInfo CreateWalletTransactionCacheFileInfo(IWalletAccount account, WalletPassphraseDetails walletPassphraseDetails) {
+		public override IWalletGenerationCacheFileInfo CreateWalletGenerationCacheFileInfo(IWalletAccount account, WalletPassphraseDetails walletPassphraseDetails) {
 
-			return new NeuraliumWalletTransactionCacheFileInfo(account, this.GetWalletTransactionCachePath(account.AccountUuid), this.centralCoordinator.ChainComponentProvider.ChainConfigurationProvider.NeuraliumBlockChainConfiguration, this.centralCoordinator.BlockchainServiceSet, this, walletPassphraseDetails);
+			return new NeuraliumWalletGenerationCacheFileInfo(account, this.GetWalletGenerationCachePath(account.AccountCode), this.centralCoordinator.ChainComponentProvider.ChainConfigurationProvider.NeuraliumBlockChainConfiguration, this.centralCoordinator.BlockchainServiceSet, this, walletPassphraseDetails);
 		}
 
 		public override IWalletTransactionHistoryFileInfo CreateWalletTransactionHistoryFileInfo(IWalletAccount account, WalletPassphraseDetails walletPassphraseDetails) {
 
-			return new NeuraliumWalletTransactionHistoryFileInfo(account, this.GetWalletTransactionHistoryPath(account.AccountUuid), this.centralCoordinator.ChainComponentProvider.ChainConfigurationProvider.NeuraliumBlockChainConfiguration, this.centralCoordinator.BlockchainServiceSet, this, walletPassphraseDetails);
+			return new NeuraliumWalletTransactionHistoryFileInfo(account, this.GetWalletTransactionHistoryPath(account.AccountCode), this.centralCoordinator.ChainComponentProvider.ChainConfigurationProvider.NeuraliumBlockChainConfiguration, this.centralCoordinator.BlockchainServiceSet, this, walletPassphraseDetails);
 		}
 
 		public override IWalletElectionsHistoryFileInfo CreateWalletElectionsHistoryFileInfo(IWalletAccount account, WalletPassphraseDetails walletPassphraseDetails) {
-			return new NeuraliumWalletElectionsHistoryFileInfo(account, this.GetWalletElectionsHistoryPath(account.AccountUuid), this.centralCoordinator.ChainComponentProvider.ChainConfigurationProvider.NeuraliumBlockChainConfiguration, this.centralCoordinator.BlockchainServiceSet, this, walletPassphraseDetails);
+			return new NeuraliumWalletElectionsHistoryFileInfo(account, this.GetWalletElectionsHistoryPath(account.AccountCode), this.centralCoordinator.ChainComponentProvider.ChainConfigurationProvider.NeuraliumBlockChainConfiguration, this.centralCoordinator.BlockchainServiceSet, this, walletPassphraseDetails);
 		}
 
 		public override IWalletElectionsStatisticsFileInfo CreateWalletElectionsStatisticsFileInfo(IWalletAccount account, WalletPassphraseDetails walletPassphraseDetails) {
-			return new NeuraliumWalletElectionsStatisticsFileInfo(account, this.GetWalletElectionsStatisticsPath(account.AccountUuid), this.centralCoordinator.ChainComponentProvider.ChainConfigurationProvider.NeuraliumBlockChainConfiguration, this.centralCoordinator.BlockchainServiceSet, this, walletPassphraseDetails);
+			return new NeuraliumWalletElectionsStatisticsFileInfo(account, this.GetWalletElectionsStatisticsPath(account.AccountCode), this.centralCoordinator.ChainComponentProvider.ChainConfigurationProvider.NeuraliumBlockChainConfiguration, this.centralCoordinator.BlockchainServiceSet, this, walletPassphraseDetails);
 		}
 
 		public INeuraliumWalletTimelineFileInfo CreateNeuraliumWalletTimelineFileInfo(IWalletAccount account, WalletPassphraseDetails walletPassphraseDetails) {
-			return new NeuraliumWalletTimelineFileInfo(account, this.GetNeuraliumWalletTimelinePath(account.AccountUuid), this.centralCoordinator.ChainComponentProvider.ChainConfigurationProvider.ChainConfiguration, this.centralCoordinator.BlockchainServiceSet, this, walletPassphraseDetails);
+			return new NeuraliumWalletTimelineFileInfo(account, this.GetNeuraliumWalletTimelinePath(account.AccountCode), this.centralCoordinator.ChainComponentProvider.ChainConfigurationProvider.ChainConfiguration, this.centralCoordinator.BlockchainServiceSet, this, walletPassphraseDetails);
 		}
 
-		public virtual string GetNeuraliumWalletTimelinePath(Guid accountUuid) {
-			return Path.Combine(this.GetWalletAccountsContentsFolderPath(accountUuid), NEURALIUM_WALLET_TIMELINE_FILE_NAME);
+		public virtual string GetNeuraliumWalletTimelinePath(string accountCode) {
+			return Path.Combine(this.GetWalletAccountsContentsFolderPath(accountCode), NEURALIUM_WALLET_TIMELINE_FILE_NAME);
 		}
 	}
 }

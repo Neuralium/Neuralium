@@ -6,7 +6,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 	// 	printing values for NeuraliumTransactionTypes
 	// 	_____________________________________
 	// 	GENESIS = 1;
-	// SIMPLE_PRESENTATION = 2;
+	// STANDARD_PRESENTATION = 2;
 	// JOINT_PRESENTATION = 3;
 	// KEY_CHANGE = 4;
 	// ACCREDITATION_CERTIFICATE = 5;

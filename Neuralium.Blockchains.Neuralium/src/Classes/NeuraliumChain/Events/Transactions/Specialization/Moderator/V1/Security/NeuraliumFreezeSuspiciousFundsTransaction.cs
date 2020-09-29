@@ -9,6 +9,7 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Serializatio
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Specialization.Moderator;
 using Neuralia.Blockchains.Components.Transactions.Identifiers;
+using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.Cryptography.Trees;
 using Neuralia.Blockchains.Core.General;
 using Neuralia.Blockchains.Core.General.Types;
@@ -30,7 +31,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 
 	public class NeuraliumFreezeSuspiciousFundsTransaction : ModerationTransaction, INeuraliumFreezeSuspiciousFundsTransaction {
 
-		private ImmutableList<AccountId> accountIds;
+		private AccountId[] accountIds;
 
 		public ushort FreezeId { get; set; }
 		public Text EventDescription { get; set; } = new Text();
@@ -45,18 +46,20 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 			jsonDeserializer.SetArray("SuspectTransactionFreezeTree", this.SuspectTransactionFreezeTree);
 		}
 
-		public override HashNodeList GetStructuresArray() {
-			HashNodeList hasNodes = base.GetStructuresArray();
+		public override HashNodeList GetStructuresArray(Enums.MutableStructureTypes types) {
+			HashNodeList hasNodes = base.GetStructuresArray(types);
 
 			hasNodes.Add(this.SuspectTransactionFreezeTree);
 
 			return hasNodes;
 		}
 
-		public override ImmutableList<AccountId> TargetAccounts {
+		public override Enums.TransactionTargetTypes TargetType => Enums.TransactionTargetTypes.Range;
+		public override AccountId[] ImpactedAccounts =>this.TargetAccounts;
+		public override AccountId[] TargetAccounts {
 			get {
 				if(this.accountIds == null) {
-					static void GetAaccounts(IEnumerable<TransactionFlowNode> flows, ISet<AccountId> accountIdsSet) {
+					static void GetAccounts(IEnumerable<TransactionFlowNode> flows, ISet<AccountId> accountIdsSet) {
 
 						foreach(TransactionFlowNode flow in flows) {
 
@@ -70,14 +73,14 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 								}
 							}
 
-							GetAaccounts(flow.OutgoingSuspectTransactions, accountIdsSet);
+							GetAccounts(flow.OutgoingSuspectTransactions, accountIdsSet);
 						}
 					}
 
 					HashSet<AccountId> accountIdsSet = new HashSet<AccountId>();
-					GetAaccounts(this.SuspectTransactionFreezeTree, accountIdsSet);
+					GetAccounts(this.SuspectTransactionFreezeTree, accountIdsSet);
 
-					this.accountIds = accountIdsSet.ToImmutableList();
+					this.accountIds = accountIdsSet.ToArray();
 				}
 
 				return this.accountIds;

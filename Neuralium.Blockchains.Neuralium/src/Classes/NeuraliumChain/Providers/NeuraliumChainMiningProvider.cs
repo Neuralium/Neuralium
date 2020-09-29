@@ -21,6 +21,7 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Wallet.Account;
 using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.General.Types;
 using Neuralia.Blockchains.Core.General.Types.Specialized;
+using Neuralia.Blockchains.Core.Network.AppointmentValidatorProtocol;
 using Neuralia.Blockchains.Tools.Locking;
 
 namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
@@ -37,7 +38,10 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		}
 		
 		public override bool MiningAllowed => true;
-		
+		protected override IAppointmentValidatorDelegate CreateAppointmentValidatorDelegate() {
+			return new NeuraliumAppointmentValidatorDelegate(this.centralCoordinator);
+		}
+
 		public override async Task<BlockElectionDistillate> PrepareBlockElectionContext(IBlock currentBlock, AccountId miningAccountId, LockContext lockContext) {
 			NeuraliumBlockElectionDistillate blockElectionDistillate = (NeuraliumBlockElectionDistillate) await base.PrepareBlockElectionContext(currentBlock, miningAccountId, lockContext).ConfigureAwait(false);
 

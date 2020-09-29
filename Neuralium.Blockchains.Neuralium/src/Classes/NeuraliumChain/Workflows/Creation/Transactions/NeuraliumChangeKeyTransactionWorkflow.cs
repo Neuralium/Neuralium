@@ -7,7 +7,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Creat
 	public interface INeuraliumCreateChangeKeyTransactionWorkflow : ICreateChangeKeyTransactionWorkflow<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> {
 	}
 
-	public class NeuraliumCreateChangeKeyTransactionWorkflow : CreateChangeKeyTransactionWorkflow<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider, INeuraliumAssemblyProvider>, INeuraliumCreateChangeKeyTransactionWorkflow {
+	public class NeuraliumCreateChangeKeyTransactionWorkflow : CreateChangeKeyTransactionWorkflow<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider>, INeuraliumCreateChangeKeyTransactionWorkflow {
 
 		public NeuraliumCreateChangeKeyTransactionWorkflow(INeuraliumCentralCoordinator centralCoordinator, byte expiration, string note, byte changingKeyOrdinal, CorrelationContext correlationContext) : base(centralCoordinator, expiration, note, changingKeyOrdinal, correlationContext) {
 

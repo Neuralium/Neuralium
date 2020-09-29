@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Neuralium.Blockchains.Neuralium.Classes;
@@ -10,6 +11,7 @@ using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain;
 using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.DataStructures.Timeline;
 using Microsoft.AspNetCore.SignalR;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.DataStructures;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.DataStructures.ExternalAPI;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.DataStructures.ExternalAPI.Wallet;
 using Neuralia.Blockchains.Components.Transactions.Identifiers;
@@ -18,6 +20,7 @@ using Neuralia.Blockchains.Core.Configuration;
 using Neuralia.Blockchains.Core.General.Types;
 using Neuralia.Blockchains.Core.Logging;
 using Neuralia.Blockchains.Core.Network;
+using Neuralia.Blockchains.Core.P2p.Connections;
 using Neuralia.Blockchains.Core.Services;
 using Neuralia.Blockchains.Core.Tools;
 using Neuralia.Blockchains.Tools;
@@ -39,11 +42,11 @@ namespace Neuralium.Core.Classes.General {
 
 	public interface IRpcClientEvents {
 		Task ReturnClientLongRunningEvent(int correlationId, int result, string error);
-		Task LongRunningStatusUpdate(int correlationId, ushort eventId, byte eventType, object message);
+		Task LongRunningStatusUpdate(int correlationId, ushort eventId, byte eventType, ushort blockchainType, object message);
 
 		Task EnterWalletPassphrase(int correlationId, ushort chainType, int keyCorrelationCode, int attempt);
-		Task EnterKeysPassphrase(int correlationId, ushort chainType, int keyCorrelationCode, Guid accountID, string keyname, int attempt);
-		Task RequestCopyWalletKeyFile(int correlationId, ushort chainType, int keyCorrelationCode, Guid accountID, string keyname, int attempt);
+		Task EnterKeysPassphrase(int correlationId, ushort chainType, int keyCorrelationCode, string accountCode, string keyname, int attempt);
+		Task RequestCopyWalletKeyFile(int correlationId, ushort chainType, int keyCorrelationCode, string accountCode, string keyname, int attempt);
 
 		Task AccountTotalUpdated(string accountId, object total);
 		Task RequestCopyWallet(int correlationId, ushort chainType);
@@ -54,7 +57,7 @@ namespace Neuralium.Core.Classes.General {
 
 		Task MiningStatusChanged(ushort chainType, bool isMining);
 
-		Task WalletCreationStarted(int correlationId);
+		Task walletCreationStarted(int correlationId);
 		Task WalletCreationEnded(int correlationId);
 
 		Task AccountCreationStarted(int correlationId);
@@ -63,22 +66,16 @@ namespace Neuralium.Core.Classes.General {
 		Task AccountCreationStep(int correlationId, string stepName, int stepIndex, int stepTotal);
 		Task AccountCreationError(int correlationId, string error);
 
-		Task KeyGenerationStarted(int correlationId, string keyName, int keyIndex, int keyTotal);
-		Task KeyGenerationEnded(int correlationId, string keyName, int keyIndex, int keyTotal);
-		Task KeyGenerationMessage(int correlationId, string keyName, string message, int keyIndex, int keyTotal);
-		Task KeyGenerationError(int correlationId, string keyName, string error);
-		Task KeyGenerationPercentageUpdate(int correlationId, string keyName, int percentage);
+		Task KeyGenerationStarted(int correlationId, ushort chainType, string keyName, int keyIndex, int keyTotal);
+		Task KeyGenerationEnded(int correlationId, ushort chainType, string keyName, int keyIndex, int keyTotal);
+		Task KeyGenerationError(int correlationId, ushort chainType, string keyName, string error);
+		Task KeyGenerationPercentageUpdate(int correlationId, ushort chainType, string keyName, int percentage);
 
-		Task AccountPublicationStarted(int correlationId);
-		Task AccountPublicationEnded(int correlationId);
+		Task AccountPublicationStarted(int correlationId, ushort chainType);
+		Task AccountPublicationEnded(int correlationId, ushort chainType);
 		Task RequireNodeUpdate(ushort chainType, string chainName);
-
-		Task AccountPublicationPOWNonceIteration(int correlationId, int nonce, int difficulty);
-		Task AccountPublicationPOWNonceFound(int correlationId, int nonce, int difficulty, List<int> powSolutions);
-
-		Task AccountPublicationMessage(int correlationId, string message);
-		Task AccountPublicationStep(int correlationId, string stepName, int stepIndex, int stepTotal);
-		Task AccountPublicationError(int correlationId, string error);
+		
+		Task AccountPublicationError(int correlationId, ushort chainType, string error);
 
 		Task WalletSyncStarted(ushort chainType, long currentBlockId, long blockHeight, decimal percentage);
 		Task WalletSyncEnded(ushort chainType, long currentBlockId, long blockHeight, decimal percentage);
@@ -90,12 +87,12 @@ namespace Neuralium.Core.Classes.General {
 		Task BlockchainSyncUpdate(ushort chainType, long currentBlockId, long publicBlockHeight, decimal percentage, string estimatedTimeRemaining);
 		Task BlockchainSyncError(ushort chainType, string error);
 
-		Task TransactionSent(int correlationId, string transactionId);
-		Task TransactionConfirmed(string transactionId, object transaction);
-		Task TransactionReceived(string transactionId);
-		Task TransactionMessage(string transactionId, string message);
-		Task TransactionRefused(string transactionId, string reason);
-		Task TransactionError(int correlationId, string transactionId, List<ushort> errorCodes);
+		Task TransactionSent(int correlationId, ushort chainType, string transactionId);
+		Task TransactionConfirmed(ushort chainType, string transactionId, object transaction);
+		Task TransactionReceived(ushort chainType, string transactionId);
+		Task TransactionMessage(ushort chainType, string transactionId, string message);
+		Task TransactionRefused(ushort chainType, string transactionId, string reason);
+		Task TransactionError(int correlationId, ushort chainType, string transactionId, List<ushort> errorCodes);
 
 		Task MiningStarted(ushort chainType);
 		Task MiningEnded(ushort chainType, int status);
@@ -113,7 +110,7 @@ namespace Neuralium.Core.Classes.General {
 		Task DigestInserted(ushort chainType, int digestId, DateTime timestamp, string hash);
 
 		Task Message(string message, DateTime timestamp, string level, object[] properties);
-		Task Error(int correlationId, string error);
+		Task Error(int correlationId, ushort chainType, string error);
 
 		Task Alert(int messageCode);
 
@@ -126,29 +123,36 @@ namespace Neuralium.Core.Classes.General {
 
 		Task ElectionContextCached(ushort chainType, long blockId, long maturityId, long difficulty);
 		Task ElectionProcessingCompleted(ushort chainType, long blockId, int electionResultCount);
+
+		Task AppointmentPuzzleBegin(ushort chainType, int secretCode, List<string> puzzles, List<string> instructions);
+		Task AppointmentVerificationCompleted(ushort chainType, bool verified, string appointmentConfirmationCode);
+		Task InvalidPuzzleEngineVersion(ushort chainType, int requiredVersion, int minimumSupportedVersion, int maximumSupportedVersion);
 		
+		Task POWBegin(ushort chainType, long difficulty);
+		Task POWIteration(ushort chainType, long nonce, long difficulty);
+		Task POWSolution(ushort chainType, long nonce, int solution, long difficulty);
 	}
 
 	public interface IRpcClientEventsExtended : IRpcClientEvents {
 	}
 
 	public interface IRpcProvider : IRpcServerMethods, IRpcClientMethods {
-		bool ConsoleMessagesEnabled { get; }
+		public bool ConsoleMessagesEnabled { get; }
 
-		Task ValueOnChainEventRaised(CorrelationContext? correlationContext, BlockchainSystemEventType eventType, BlockchainType chainType, object[] extraParameters);
-		void TotalPeersUpdated(int count);
-		void ShutdownCompleted();
-		void ShutdownStarted();
-		void LogMessage(string message, DateTime timestamp, string level, object[] properties);
+		public Task ValueOnChainEventRaised(CorrelationContext? correlationContext, BlockchainSystemEventType eventType, BlockchainType chainType, object[] extraParameters);
+		public void TotalPeersUpdated(int count);
+		public void ShutdownCompleted();
+		public void ShutdownStarted();
+		public void LogMessage(string message, DateTime timestamp, string level, object[] properties);
 	}
 
 	public interface IRpcProvider<RPC_HUB, RCP_CLIENT> : IRpcProvider
 		where RPC_HUB : RpcHub<RCP_CLIENT>
 		where RCP_CLIENT : class, IRpcClient {
 
-		IRpcService<RPC_HUB, RCP_CLIENT> RpcService { get; set; }
+		public IRpcService<RPC_HUB, RCP_CLIENT> RpcService { get; set; }
 
-		IHubContext<RPC_HUB, RCP_CLIENT> HubContext { get; set; }
+		public IHubContext<RPC_HUB, RCP_CLIENT> HubContext { get; set; }
 	}
 
 	public class RpcProvider<RPC_HUB, RCP_CLIENT> : IRpcProvider<RPC_HUB, RCP_CLIENT>
@@ -173,6 +177,23 @@ namespace Neuralium.Core.Classes.General {
 
 				return this.ConsoleMessagesEnabled;
 			});
+		}
+
+		public Task<bool> TestP2pPort() {
+			try {
+				INetworkingService networkingService = DIService.Instance.GetService<INetworkingService>();
+
+
+				if(networkingService?.IsStarted ?? false) {
+					return networkingService.TestP2pPort();
+				}
+
+				throw new ApplicationException("Networking service not started");
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed to test for p2p port");
+
+				throw new HubException("Failed to test for p2p port");
+			}
 		}
 
 		public Task<object> QuerySystemInfo() {
@@ -210,6 +231,30 @@ namespace Neuralium.Core.Classes.General {
 			return Task.FromResult("pong");
 		}
 
+		public async Task<object> GetPortMappingStatus()
+		{
+			try {
+				IPortMappingService portMappingService = DIService.Instance.GetService<IPortMappingService>();
+				return await portMappingService.GetPortMappingStatus().ConfigureAwait(false);
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed tto get port mappings");
+
+				throw new HubException("Failed to get port mappings");
+			}
+		}
+
+		public Task<bool> ConfigurePortMappingMode(bool useUPnP, bool usePmP, int natDeviceIndex)
+		{
+			try {
+				IPortMappingService portMappingService = DIService.Instance.GetService<IPortMappingService>();
+				return portMappingService.ConfigurePortMappingMode(useUPnP, usePmP, natDeviceIndex);
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed to get port mappings");
+
+				throw new HubException("Failed to get port mappings");
+			}
+		}
+
 		public Task<byte> GetPublicIPMode() {
 			try {
 				INetworkingService networkingService = DIService.Instance.GetService<INetworkingService>();
@@ -228,6 +273,19 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
+		public Task SetUILocale(string locale) {
+			try {
+				GlobalSettings.Instance.SetLocale(locale);
+				NLog.Default.Information($"Locale changed to {locale}");
+				
+				return Task.CompletedTask;
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed to set locale");
+
+				throw new HubException("Failed to set locale");
+			}
+		}
+
 		public async Task<byte> GetMiningRegistrationIpMode(ushort chainType) {
 			try {
 				IPMode mode = await this.GetChainInterface(chainType).GetMiningRegistrationIpMode().awaitableTask.ConfigureAwait(false);
@@ -237,6 +295,21 @@ namespace Neuralium.Core.Classes.General {
 				NLog.Default.Error(ex, "Failed to Query chain status API");
 
 				throw new HubException("Failed to query chain status");
+			}
+		}
+		public Task<List<object>> QueryPeerConnectionDetails() {
+			try {
+				INetworkingService networkingService = DIService.Instance.GetService<INetworkingService>();
+
+				if(networkingService?.IsStarted ?? false)
+					return Task.FromResult(networkingService.ConnectionStore.PeerConnectionsDetails.ToArray().ToList<object>());
+
+				return Task.FromResult(new List<object>());
+			} catch(Exception ex)
+			{
+				var message = $"{nameof(QueryPeerConnectionDetails)} Failed";
+				NLog.Default.Error(ex, message);
+				throw new HubException(message);
 			}
 		}
 
@@ -399,7 +472,7 @@ namespace Neuralium.Core.Classes.General {
 				if(eventType == BlockchainSystemEventTypes.Instance.TransactionReceived) {
 
 					// alert the client of the event
-					return this.HubContext?.Clients?.All?.TransactionReceived((string) extraParameters[0]);
+					return this.HubContext?.Clients?.All?.TransactionReceived(chainType.Value, (string) extraParameters[0]);
 				}
 
 				if(eventType == BlockchainSystemEventTypes.Instance.MiningStarted) {
@@ -448,7 +521,7 @@ namespace Neuralium.Core.Classes.General {
 				if(eventType == BlockchainSystemEventTypes.Instance.RequestKeyPassphrase) {
 
 					// alert the client of the event
-					return this.HubContext?.Clients?.All?.EnterKeysPassphrase(correlationContext?.CorrelationId ?? 0, chainType.Value, (int) extraParameters[0], (Guid) extraParameters[1], extraParameters[2].ToString(), (int) extraParameters[3]);
+					return this.HubContext?.Clients?.All?.EnterKeysPassphrase(correlationContext?.CorrelationId ?? 0, chainType.Value, (int) extraParameters[0], (string) extraParameters[1], extraParameters[2].ToString(), (int) extraParameters[3]);
 
 				}
 
@@ -460,55 +533,55 @@ namespace Neuralium.Core.Classes.General {
 
 				if(eventType == BlockchainSystemEventTypes.Instance.RequestCopyKeyFile) {
 					// alert the client of the event
-					return this.HubContext?.Clients?.All?.RequestCopyWalletKeyFile(correlationContext?.CorrelationId ?? 0, chainType.Value, (int) extraParameters[0], (Guid) extraParameters[1], extraParameters[2].ToString(), (int) extraParameters[3]);
+					return this.HubContext?.Clients?.All?.RequestCopyWalletKeyFile(correlationContext?.CorrelationId ?? 0, chainType.Value, (int) extraParameters[0], (string) extraParameters[1], extraParameters[2].ToString(), (int) extraParameters[3]);
 
 				}
-
-				if(eventType == BlockchainSystemEventTypes.Instance.AccountPublicationPOWNonceIteration) {
-
-					// alert the client of the event
-					return this.HubContext?.Clients?.All?.AccountPublicationPOWNonceIteration(correlationContext?.CorrelationId ?? 0, (int) extraParameters[0], (int) extraParameters[1]);
-
-				}
-
-				if(eventType == BlockchainSystemEventTypes.Instance.AccountPublicationPOWNonceFound) {
-
-					// alert the client of the event
-					return this.HubContext?.Clients?.All?.AccountPublicationPOWNonceFound(correlationContext?.CorrelationId ?? 0, (int) extraParameters[0], (int) extraParameters[1], (List<int>) extraParameters[2]);
-
-				}
+				//
+				// if(eventType == BlockchainSystemEventTypes.Instance.AccountPublicationPOWNonceIteration) {
+				//
+				// 	// alert the client of the event
+				// 	return this.HubContext?.Clients?.All?.AccountPublicationPOWNonceIteration(correlationContext?.CorrelationId ?? 0, (int) extraParameters[0], (long) extraParameters[1]);
+				//
+				// }
+				//
+				// if(eventType == BlockchainSystemEventTypes.Instance.AccountPublicationPOWNonceFound) {
+				//
+				// 	// alert the client of the event
+				// 	return this.HubContext?.Clients?.All?.AccountPublicationPOWNonceFound(correlationContext?.CorrelationId ?? 0, (int) extraParameters[0], (long) extraParameters[1], (List<int>) extraParameters[2]);
+				//
+				// }
 
 				if(eventType == BlockchainSystemEventTypes.Instance.TransactionError) {
 
 					// alert the client of the event
-					return this.HubContext?.Clients?.All?.TransactionError(correlationContext?.CorrelationId ?? 0, (extraParameters[0]?.ToString()??""), (List<ushort>) extraParameters[1]);
+					return this.HubContext?.Clients?.All?.TransactionError(correlationContext?.CorrelationId ?? 0,chainType.Value,  (extraParameters[0]?.ToString()??""), (List<ushort>) extraParameters[1]);
 
 				}
 
 				if(eventType == BlockchainSystemEventTypes.Instance.TransactionSent) {
 
 					// alert the client of the event
-					return this.HubContext?.Clients?.All?.TransactionSent(correlationContext?.CorrelationId ?? 0, (string) extraParameters[0]);
+					return this.HubContext?.Clients?.All?.TransactionSent(correlationContext?.CorrelationId ?? 0, chainType.Value, (string) extraParameters[0]);
 
 				}
 
 				if(eventType == BlockchainSystemEventTypes.Instance.KeyGenerationStarted) {
 
 					// alert the client of the event
-					return this.HubContext?.Clients?.All?.KeyGenerationStarted(correlationContext?.CorrelationId ?? 0, (string) extraParameters[0], (int) extraParameters[1], (int) extraParameters[2]);
+					return this.HubContext?.Clients?.All?.KeyGenerationStarted(correlationContext?.CorrelationId ?? 0,chainType.Value,  (string) extraParameters[0], (int) extraParameters[1], (int) extraParameters[2]);
 
 				}
 
 				if(eventType == BlockchainSystemEventTypes.Instance.KeyGenerationEnded) {
 
 					// alert the client of the event
-					return this.HubContext?.Clients?.All?.KeyGenerationEnded(correlationContext?.CorrelationId ?? 0, (string) extraParameters[0], (int) extraParameters[1], (int) extraParameters[2]);
+					return this.HubContext?.Clients?.All?.KeyGenerationEnded(correlationContext?.CorrelationId ?? 0,chainType.Value,  (string) extraParameters[0], (int) extraParameters[1], (int) extraParameters[2]);
 
 				}
 
 				if(eventType == BlockchainSystemEventTypes.Instance.KeyGenerationPercentageUpdate) {
 					// alert the client of the event
-					return this.HubContext?.Clients?.All?.KeyGenerationPercentageUpdate(correlationContext?.CorrelationId ?? 0, (string) extraParameters[0], (int) extraParameters[1]);
+					return this.HubContext?.Clients?.All?.KeyGenerationPercentageUpdate(correlationContext?.CorrelationId ?? 0, chainType.Value, (string) extraParameters[0], (int) extraParameters[1]);
 
 				}
 
@@ -516,7 +589,7 @@ namespace Neuralium.Core.Classes.General {
 
 					// alert the client of the event
 					//await this.HubContext?.Clients?.All?.AccountPublicationCompleted(sessionCorrelationId, (Guid)parameters[0], (bool)parameters[1], (long)parameters[2]);
-					return this.HubContext?.Clients?.All?.AccountPublicationEnded(correlationContext?.CorrelationId ?? 0);
+					return this.HubContext?.Clients?.All?.AccountPublicationEnded(correlationContext?.CorrelationId ?? 0, chainType.Value);
 
 				}
 
@@ -545,6 +618,38 @@ namespace Neuralium.Core.Classes.General {
 					return this.HubContext?.Clients?.All?.ElectionProcessingCompleted((ushort) extraParameters[0], (long) extraParameters[1], (int) extraParameters[2]);
 				}
 				
+				if(eventType == BlockchainSystemEventTypes.Instance.Error) {
+
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.Error(correlationContext?.CorrelationId ?? 0, (ushort) extraParameters[0], extraParameters[1]?.ToString()??"");
+				}
+				if(eventType == BlockchainSystemEventTypes.Instance.AppointmentPuzzleBegin) {
+
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.AppointmentPuzzleBegin(chainType.Value, (int) extraParameters[0], ((List<string>) extraParameters[1]), ((List<string>) extraParameters[2]));
+				}
+				if(eventType == BlockchainSystemEventTypes.Instance.AppointmentVerificationCompleted) {
+
+					// alert the client of the event
+
+					return this.HubContext?.Clients?.All?.AppointmentVerificationCompleted(chainType.Value, (bool) extraParameters[0], ((long?) extraParameters[1])?.ToString()??"");
+				}
+				if(eventType == BlockchainSystemEventTypes.Instance.InvalidPuzzleEngineVersion) {
+
+					// alert the client of the event
+					return this.HubContext?.Clients?.All?.InvalidPuzzleEngineVersion(chainType.Value, (int) extraParameters[0], (int) extraParameters[1], (int) extraParameters[2]);
+				}
+				
+				if(eventType == NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.POWBegin) {
+					return this.HubContext?.Clients?.All?.POWBegin(chainType.Value, (long) extraParameters[0]);
+				}
+				if(eventType == NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.POWIteration) {
+					return this.HubContext?.Clients?.All?.POWIteration(chainType.Value, (long) extraParameters[0], (long) extraParameters[1]);
+				}
+				if(eventType == NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.POWSolution) {
+					return this.HubContext?.Clients?.All?.POWSolution(chainType.Value, (long) extraParameters[0], (int) extraParameters[1], (long) extraParameters[2]);
+				}
+				
 				NLog.Default.Debug($"Event {eventType.Value} was not handled");
 
 				if(correlationContext.HasValue) {
@@ -557,7 +662,7 @@ namespace Neuralium.Core.Classes.General {
 					}
 
 					// alert the client of the event
-					return this.HubContext?.Clients?.All?.LongRunningStatusUpdate(correlationContext?.CorrelationId ?? 0, eventType.Value, 1, parameter);
+					return this.HubContext?.Clients?.All?.LongRunningStatusUpdate(correlationContext?.CorrelationId ?? 0, eventType.Value, 1, chainType.Value, parameter);
 
 					//};
 				}
@@ -601,7 +706,7 @@ namespace Neuralium.Core.Classes.General {
 					}
 
 					// alert the client of the event
-					this.HubContext?.Clients?.All?.LongRunningStatusUpdate(correlationContext?.CorrelationId ?? 0, eventType.Value, 2, parameter);
+					this.HubContext?.Clients?.All?.LongRunningStatusUpdate(correlationContext?.CorrelationId ?? 0, eventType.Value, 2, chainType.Value, parameter);
 
 					return default;
 
@@ -612,7 +717,7 @@ namespace Neuralium.Core.Classes.General {
 			// if(action != null) {
 			//
 			// 	if(!correlationContext.HasValue || correlationContext.Value.IsNew) {
-			// 		// if we had no previous correlation id, then its an uncorrelated event, so we give it one
+			// 		// if we had no previous correlation id, then its an unVerified event, so we give it one
 			// 		result = this.CreateServerLongRunningEvent(action);
 			//
 			// 		return result.task;
@@ -696,14 +801,26 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
-		public async Task<bool> IsWalletSynced(ushort chainType) {
+		public Task<bool> IsWalletSynced(ushort chainType) {
 			try {
-				return await this.GetChainInterface(chainType).IsWalletSynced().awaitableTask.ConfigureAwait(false);
+				return this.GetChainInterface(chainType).IsWalletSynced().awaitableTask;
 
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to check if wallet is synced");
 
 				throw new HubException("Failed to check if wallet is synced");
+			}
+		}
+
+		public async Task<int> GetCurrentOperatingMode(ushort chainType) {
+			try {
+				var operatingMode = await this.GetChainInterface(chainType).GetCurrentOperatingMode().awaitableTask.ConfigureAwait(false);
+
+				return (int)operatingMode;
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed to get operating mode");
+
+				throw new HubException("Failed to get operating mode");
 			}
 		}
 
@@ -749,6 +866,16 @@ namespace Neuralium.Core.Classes.General {
 				throw new HubException("Failed to query block heights");
 			}
 		}
+		public async Task<int> QueryDigestHeight(ushort chainType) {
+			try {
+				return await this.GetChainInterface(chainType).QueryDigestHeight().awaitableTask.ConfigureAwait(false);
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed to Query block height API");
+
+				throw new HubException("Failed to query block heights");
+			}
+		}
+		
 
 		public async Task<long> QueryLowestAccountBlockSyncHeight(ushort chainType) {
 			try {
@@ -814,9 +941,47 @@ namespace Neuralium.Core.Classes.General {
 			return this.CreateClientLongRunningEvent((correlationContext, resetEvent) => this.GetChainInterface(chainType).LoadWallet(correlationContext, passphrase).awaitableTask);
 		}
 
-		public async Task<int> CreateNewWallet(ushort chainType, string accountName, bool encryptWallet, bool encryptKey, bool encryptKeysIndividually, ImmutableDictionary<string, string> passphrases, bool publishAccount) {
+		public async Task<object> QueryAppointmentConfirmationResult(ushort chainType, string accountCode) {
 			try {
-				return await this.CreateClientLongRunningEvent((correlationContext, resetEvent) => this.GetChainInterface(chainType).CreateNewWallet(correlationContext, accountName, encryptWallet, encryptKey, encryptKeysIndividually, passphrases?.ToImmutableDictionary(e => int.Parse(e.Key), e => e.Value), publishAccount).awaitableTask).ConfigureAwait(false);
+				return await this.GetChainInterface(chainType).QueryAppointmentConfirmationResult(accountCode).awaitableTask.ConfigureAwait(false);
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed to check if account can be published wallet");
+
+				throw new HubException("Failed to load wallet");
+			}
+		}
+		
+		public async Task<object> CanPublishAccount(ushort chainType, string accountCode) {
+			try {
+				return await this.GetChainInterface(chainType).CanPublishAccount(accountCode).awaitableTask.ConfigureAwait(false);
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed to check if account can be published wallet");
+
+				throw new HubException("Failed to load wallet");
+			}
+		}
+
+		public Task SetSMSConfirmationCode(ushort chainType, string accountCode, long confirmationCode) {
+			try {
+				return this.GetChainInterface(chainType).SetSMSConfirmationCode(accountCode, confirmationCode).awaitableTask;
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed to set SMS confirmation code");
+
+				throw new HubException("Failed to set SMS confirmation code");
+			}
+		}
+		
+		public Task SetSMSConfirmationCodeString(ushort chainType, string accountCode, string confirmationCode) {
+			if(long.TryParse(confirmationCode, out long code)) {
+				return this.SetSMSConfirmationCode(chainType, accountCode, code);
+			}
+			
+			throw new HubException("Invalid confirmation code");
+		}
+
+		public async Task<int> CreateNewWallet(ushort chainType, string accountName, int accountType, bool encryptWallet, bool encryptKey, bool encryptKeysIndividually, ImmutableDictionary<string, string> passphrases, bool publishAccount) {
+			try {
+				return await this.CreateClientLongRunningEvent((correlationContext, resetEvent) => this.GetChainInterface(chainType).CreateNewWallet(correlationContext, accountName, (Enums.AccountTypes)accountType, encryptWallet, encryptKey, encryptKeysIndividually, passphrases?.ToImmutableDictionary(e => int.Parse(e.Key), e => e.Value), publishAccount).awaitableTask).ConfigureAwait(false);
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to load wallet");
 
@@ -824,9 +989,9 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
-		public async Task<List<object>> QueryWalletTransactionHistory(ushort chainType, Guid accountUuid) {
+		public async Task<List<object>> QueryWalletTransactionHistory(ushort chainType, string accountCode) {
 			try {
-				List<WalletTransactionHistoryHeaderAPI> result = await this.GetChainInterface(chainType).QueryWalletTransactionHistory(accountUuid).awaitableTask.ConfigureAwait(false);
+				List<WalletTransactionHistoryHeaderAPI> result = await this.GetChainInterface(chainType).QueryWalletTransactionHistory(accountCode).awaitableTask.ConfigureAwait(false);
 
 				return result.Cast<object>().ToList();
 			} catch(Exception ex) {
@@ -836,9 +1001,9 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
-		public async Task<object> QueryWalletTransationHistoryDetails(ushort chainType, Guid accountUuid, string transactionId) {
+		public async Task<object> QueryWalletTransactionHistoryDetails(ushort chainType, string accountCode, string transactionId) {
 			try {
-				return await this.GetChainInterface(chainType).QueryWalletTransationHistoryDetails(accountUuid, transactionId).awaitableTask.ConfigureAwait(false);
+				return await this.GetChainInterface(chainType).QueryWalletTransactionHistoryDetails(accountCode, transactionId).awaitableTask.ConfigureAwait(false);
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to query wallet transaction history details");
 
@@ -869,9 +1034,9 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
-		public async Task<Guid> QueryDefaultWalletAccountUuid(ushort chainType) {
+		public async Task<string> QueryDefaultWalletAccountCode(ushort chainType) {
 			try {
-				return await this.GetChainInterface(chainType).QueryDefaultWalletAccountUuid().awaitableTask.ConfigureAwait(false);
+				return await this.GetChainInterface(chainType).QueryDefaultWalletAccountCode().awaitableTask.ConfigureAwait(false);
 
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to query wallet default account uuid");
@@ -880,19 +1045,30 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
-		public async Task<object> QueryWalletAccountDetails(ushort chainType, Guid accountUuid) {
+		public async Task<object> QueryWalletAccountDetails(ushort chainType, string accountCode) {
 			try {
-				return await this.GetChainInterface(chainType).QueryWalletAccountDetails(accountUuid).awaitableTask.ConfigureAwait(false);
+				return await this.GetChainInterface(chainType).QueryWalletAccountDetails(accountCode).awaitableTask.ConfigureAwait(false);
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to query wallet account details");
 
 				throw new HubException("Failed to load wallet account details");
 			}
 		}
-
-		public async Task<string> QueryWalletAccountPresentationTransactionId(ushort chainType, Guid accountUuid) {
+		
+		public async Task<object> QueryWalletAccountAppointmentDetails(ushort chainType, string accountCode) {
 			try {
-				TransactionId transactionId = await this.GetChainInterface(chainType).QueryWalletAccountPresentationTransactionId(accountUuid).awaitableTask.ConfigureAwait(false);
+				return await this.GetChainInterface(chainType).QueryWalletAccountAppointmentDetails(accountCode).awaitableTask.ConfigureAwait(false);
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed to query wallet account appointment details");
+
+				throw new HubException("Failed to load wallet account appointment details");
+			}
+		}
+		
+
+		public async Task<string> QueryWalletAccountPresentationTransactionId(ushort chainType, string accountCode) {
+			try {
+				TransactionId transactionId = await this.GetChainInterface(chainType).QueryWalletAccountPresentationTransactionId(accountCode).awaitableTask.ConfigureAwait(false);
 
 				return transactionId.ToString();
 			} catch(Exception ex) {
@@ -902,9 +1078,29 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
-		public async Task<int> CreateAccount(ushort chainType, string accountName, bool publishAccount, bool encryptKeys, bool encryptKeysIndividually, ImmutableDictionary<string, string> passphrases) {
+		public Task<string> Test(string data) {
 			try {
-				return await this.CreateClientLongRunningEvent((correlationContext, resetEvent) => this.GetChainInterface(chainType).CreateAccount(correlationContext, accountName, publishAccount, encryptKeys, encryptKeysIndividually, passphrases?.ToImmutableDictionary(e => int.Parse(e.Key), e => e.Value)).awaitableTask).ConfigureAwait(false);
+				return this.GetNeuraliumChainInterface().Test(data).awaitableTask;
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed to test");
+
+				throw new HubException("Failed to test");
+			}
+		}
+
+		public Task<int> RequestAppointment(ushort chainType, string accountCode, int preferredRegion) {
+			try {
+				return this.GetChainInterface(chainType).RequestAppointment(accountCode, preferredRegion).awaitableTask;
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed to request appointment");
+
+				throw new HubException("Failed to request appointment");
+			}
+		}
+
+		public async Task<int> CreateStandardAccount(ushort chainType, string accountName, int accountType, bool publishAccount, bool encryptKeys, bool encryptKeysIndividually, ImmutableDictionary<string, string> passphrases) {
+			try {
+				return await this.CreateClientLongRunningEvent((correlationContext, resetEvent) => this.GetChainInterface(chainType).CreateStandardAccount(correlationContext, accountName, (Enums.AccountTypes)accountType, publishAccount, encryptKeys, encryptKeysIndividually, passphrases?.ToImmutableDictionary(e => int.Parse(e.Key), e => e.Value)).awaitableTask).ConfigureAwait(false);
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to create account");
 
@@ -912,9 +1108,9 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
-		public async Task<bool> SetActiveAccount(ushort chainType, Guid accountUuid) {
+		public async Task<bool> SetActiveAccount(ushort chainType, string accountCode) {
 			try {
-				return await this.GetChainInterface(chainType).SetActiveAccount(accountUuid).awaitableTask.ConfigureAwait(false);
+				return await this.GetChainInterface(chainType).SetActiveAccount(accountCode).awaitableTask.ConfigureAwait(false);
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to query wallet accounts");
 
@@ -946,11 +1142,11 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
-		public Task<int> PublishAccount(ushort chainType, Guid? accountUuid) {
-			return this.CreateClientLongRunningEvent((correlationId, resetEvent) => this.GetChainInterface(chainType).PresentAccountPublicly(correlationId, accountUuid).awaitableTask);
+		public Task<int> PublishAccount(ushort chainType, string accountCode) {
+			return this.CreateClientLongRunningEvent((correlationId, resetEvent) => this.GetChainInterface(chainType).PresentAccountPublicly(correlationId, accountCode).awaitableTask);
 		}
 
-		public Task StartMining(ushort chainType, string delegateAccountId) {
+		public Task StartMining(ushort chainType, string delegateAccountId, int tier = 0) {
 
 			return Task.Run(() => {
 
@@ -963,7 +1159,7 @@ namespace Neuralium.Core.Classes.General {
 							delegateId = AccountId.FromString(delegateAccountId);
 						}
 
-						await this.GetChainInterface(chainType).EnableMining(null, delegateId).ConfigureAwait(false);
+						await this.GetChainInterface(chainType).EnableMining(null, tier, delegateId).ConfigureAwait(false);
 
 					} catch(Exception ex) {
 						NLog.Default.Error(ex, "Failed to enable mining");
@@ -1031,6 +1227,28 @@ namespace Neuralium.Core.Classes.General {
 				throw new HubException("Failed to query wallet sync status");
 			}
 		}
+		
+		public async Task<string> QueryDecomposedBlockJson(ushort chainType, long blockId) {
+			try {
+				return await this.GetChainInterface(chainType).QueryDecomposedBlockJson(blockId).awaitableTask.ConfigureAwait(false);
+
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed to query block");
+
+				throw new HubException("Failed to query block");
+			}
+		}
+		
+		public async Task<object> QueryDecomposedBlock(ushort chainType, long blockId) {
+			try {
+				return await this.GetChainInterface(chainType).QueryDecomposedBlock(blockId).awaitableTask.ConfigureAwait(false);
+
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed to query block");
+
+				throw new HubException("Failed to query block");
+			}
+		}
 
 		public async Task<string> QueryBlock(ushort chainType, long blockId) {
 			try {
@@ -1043,6 +1261,36 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
+		public async Task<byte[]> QueryBlockBytes(ushort chainType, long blockId) {
+			try {
+				var data = await this.GetChainInterface(chainType).LoadBlockBytes(blockId).awaitableTask.ConfigureAwait(false);
+
+				return data?.ToExactByteArrayCopy();
+
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed to query block");
+
+				throw new HubException("Failed to query block");
+			}
+		}
+		
+		public async Task<string> GetBlockSizeAndHash(ushort chainType, long blockId) {
+			try {
+				var result = await this.GetChainInterface(chainType).GetBlockSizeAndHash(blockId).awaitableTask.ConfigureAwait(false);
+
+				if(result == null) {
+					return null;
+				}
+
+				return JsonSerializer.Serialize(new GetBlockSizeAndHashAPI{Hash = result.Value.hash.ToExactByteArrayCopy(), Channels = result.Value.sizes.Entries.Select(e => e.Key.ToString()).ToArray(), Sizes = result.Value.sizes.Entries.Select(e => e.Value).ToArray()});
+
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed to query block");
+
+				throw new HubException("Failed to query block");
+			}
+		}
+		
 		public async Task<byte[]> QueryCompressedBlock(ushort chainType, long blockId) {
 			try {
 				return await this.GetChainInterface(chainType).QueryCompressedBlock(blockId).awaitableTask.ConfigureAwait(false);
@@ -1066,6 +1314,7 @@ namespace Neuralium.Core.Classes.General {
 				throw new HubException("Failed to query block binary transactions");
 			}
 		}
+		
 
 		public async Task<object> QueryElectionContext(ushort chainType, long blockId) {
 			try {
@@ -1126,9 +1375,9 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
-		public async Task<bool> CreateNextXmssKey(ushort chainType, Guid accountUuid, byte ordinal) {
+		public async Task<bool> CreateNextXmssKey(ushort chainType, string accountCode, byte ordinal) {
 			try {
-				return await this.GetChainInterface(chainType).CreateNextXmssKey(accountUuid, ordinal).awaitableTask.ConfigureAwait(false);
+				return await this.GetChainInterface(chainType).CreateNextXmssKey(accountCode, ordinal).awaitableTask.ConfigureAwait(false);
 
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to create next xmss key");
@@ -1137,9 +1386,9 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
-		public async Task<byte[]> SignXmssMessage(ushort chainType, Guid accountUuid, byte[] message) {
+		public async Task<byte[]> SignXmssMessage(ushort chainType, string accountCode, byte[] message) {
 			try {
-				SafeArrayHandle signature = await this.GetChainInterface(chainType).SignXmssMessage(accountUuid, ByteArray.WrapAndOwn(message)).awaitableTask.ConfigureAwait(false);
+				SafeArrayHandle signature = await this.GetChainInterface(chainType).SignXmssMessage(accountCode, SafeArrayHandle.WrapAndOwn(message)).awaitableTask.ConfigureAwait(false);
 
 				byte[] result = signature.ToExactByteArrayCopy();
 
@@ -1154,13 +1403,24 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
+		public async Task SetPuzzleAnswers(ushort chainType, List<int> answers) {
+			try {
+				await this.GetChainInterface(chainType).SetPuzzleAnswers(answers).awaitableTask.ConfigureAwait(false);
+				
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed to set puzzle answer");
+
+				throw new HubException("Failed to set puzzle answer");
+			}
+		}
+
 	#endregion
 
 	#region neuralium chain queries
 
-		public async Task<object> QueryAccountTotalNeuraliums(Guid accountUuid) {
+		public async Task<object> QueryAccountTotalNeuraliums(string accountCode) {
 			try {
-				return await this.GetNeuraliumChainInterface().QueryWalletTotal(accountUuid).awaitableTask.ConfigureAwait(false);
+				return await this.GetNeuraliumChainInterface().QueryWalletTotal(accountCode).awaitableTask.ConfigureAwait(false);
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to Query wallet total");
 
@@ -1179,10 +1439,10 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
-		public async Task<object> QueryNeuraliumTimelineHeader(Guid accountUuid) {
+		public async Task<object> QueryNeuraliumTimelineHeader(string accountCode) {
 
 			try {
-				return await this.GetNeuraliumChainInterface().QueryNeuraliumTimelineHeader(accountUuid).awaitableTask.ConfigureAwait(false);
+				return await this.GetNeuraliumChainInterface().QueryNeuraliumTimelineHeader(accountCode).awaitableTask.ConfigureAwait(false);
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to query neuralium timeline header");
 
@@ -1190,10 +1450,10 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
-		public async Task<List<object>> QueryNeuraliumTimelineSection(Guid accountUuid, DateTime firstday, int skip, int take) {
+		public async Task<List<object>> QueryNeuraliumTimelineSection(string accountCode, DateTime firstday, int skip, int take) {
 
 			try {
-				List<TimelineDay> results = await this.GetNeuraliumChainInterface().QueryNeuraliumTimelineSection(accountUuid, firstday, skip, take).awaitableTask.ConfigureAwait(false);
+				List<TimelineDay> results = await this.GetNeuraliumChainInterface().QueryNeuraliumTimelineSection(accountCode, firstday, skip, take).awaitableTask.ConfigureAwait(false);
 
 				return results.Cast<object>().ToList();
 			} catch(Exception ex) {
@@ -1204,15 +1464,19 @@ namespace Neuralium.Core.Classes.General {
 		}
 
 #if TESTNET || DEVNET
-		public async Task<int> RefillNeuraliums(Guid accountUuid) {
+		public async Task<int> RefillNeuraliums(string accountCode) {
 
 			try {
-				return await this.CreateClientLongRunningEvent((correlationContext, resetEvent) => this.GetNeuraliumChainInterface().RefillNeuraliums(accountUuid, correlationContext).awaitableTask).ConfigureAwait(false);
+				return await this.CreateClientLongRunningEvent((correlationContext, resetEvent) => this.GetNeuraliumChainInterface().RefillNeuraliums(accountCode, correlationContext).awaitableTask).ConfigureAwait(false);
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to refill neuraliums");
 
 				throw new HubException("Failed to refill neuraliums");
 			}
+		}
+		
+		public Task<bool> BypassAppointmentVerification(string accountCode) {
+			return this.GetNeuraliumChainInterface().BypassAppointmentVerification(accountCode).awaitableTask;
 		}
 #endif
 
@@ -1384,7 +1648,7 @@ namespace Neuralium.Core.Classes.General {
 				try {
 					await action(correlationId, longRunningEvent).ConfigureAwait(false);
 
-					// alert clients that this correlated method has returned
+					// alert clients that this Verified method has returned
 					this.HubContext?.Clients?.All?.ReturnClientLongRunningEvent(correlationId.CorrelationId, 0, "");
 
 				} catch(Exception ex) {

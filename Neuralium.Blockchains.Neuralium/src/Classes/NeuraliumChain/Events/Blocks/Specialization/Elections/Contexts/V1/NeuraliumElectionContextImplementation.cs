@@ -69,7 +69,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.S
 
 		public void Rehydrate(IDataRehydrator rehydrator, IElectionContextRehydrationFactory electionContextRehydrationFactory) {
 
-			MiningTierUtils.RehydrateMiningSet<decimal, Amount>(this.MiningTierBounties, 0, rehydrator, v => (decimal) v);
+			MiningTierUtils.RehydrateDecimalMiningSet(this.MiningTierBounties, rehydrator, 0);
 
 			this.MaintenanceServiceFeesEnabled = rehydrator.ReadBool();
 			this.MaintenanceServiceFees = rehydrator.ReadRehydratable<SimplePercentage>();

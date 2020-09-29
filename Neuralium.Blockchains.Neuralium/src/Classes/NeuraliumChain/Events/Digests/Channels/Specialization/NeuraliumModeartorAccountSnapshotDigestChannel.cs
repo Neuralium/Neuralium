@@ -3,16 +3,16 @@ using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Digests.Chan
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Digests.Channels.Specialization;
 
 namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Digests.Channels.Specialization {
-	public interface INeuraliumStandardAccountSnapshotDigestChannel : IStandardAccountSnapshotDigestChannel<NeuraliumStandardAccountSnapshotDigestChannelCard>, INeuraliumDigestChannel {
+	public interface INeuraliumModeratorAccountSnapshotDigestChannel : IModeratorAccountSnapshotDigestChannel<NeuraliumStandardAccountSnapshotDigestChannelCard>, INeuraliumDigestChannel {
 	}
 
-	public class NeuraliumStandardAccountSnapshotDigestChannel : StandardAccountSnapshotDigestChannel<NeuraliumStandardAccountSnapshotDigestChannelCard>, INeuraliumStandardAccountSnapshotDigestChannel {
+	public class NeuraliumModeratorAccountSnapshotDigestChannel : ModeratorAccountSnapshotDigestChannel<NeuraliumStandardAccountSnapshotDigestChannelCard>, INeuraliumModeratorAccountSnapshotDigestChannel {
 		[Flags]
 		public enum AccountSnapshotDigestChannelBands {
 			Wallets
 		}
 
-		public NeuraliumStandardAccountSnapshotDigestChannel(int groupSize, string folder) : base(groupSize, folder) {
+		public NeuraliumModeratorAccountSnapshotDigestChannel(int groupSize, string folder) : base(groupSize, folder) {
 		}
 
 		protected override NeuraliumStandardAccountSnapshotDigestChannelCard CreateNewCardInstance() {

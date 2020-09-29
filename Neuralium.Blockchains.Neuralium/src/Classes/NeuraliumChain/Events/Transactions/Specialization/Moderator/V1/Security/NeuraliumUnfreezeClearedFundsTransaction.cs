@@ -5,6 +5,7 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Seria
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Serialization;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Specialization.Moderator;
+using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.Cryptography.Trees;
 using Neuralia.Blockchains.Core.General;
 using Neuralia.Blockchains.Core.General.Types;
@@ -28,8 +29,8 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 
 		public List<AccountUnfreeze> Accounts { get; } = new List<AccountUnfreeze>();
 
-		public override HashNodeList GetStructuresArray() {
-			HashNodeList hasNodes = new HashNodeList();
+		public override HashNodeList GetStructuresArray(Enums.MutableStructureTypes types) {
+			HashNodeList hasNodes = base.GetStructuresArray(types);
 
 			hasNodes.Add(this.FreezeId);
 			hasNodes.Add(this.Reason);
@@ -45,7 +46,9 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 			jsonDeserializer.SetArray("Accounts", this.Accounts);
 		}
 
-		public override ImmutableList<AccountId> TargetAccounts => this.Accounts.Select(e => e.AccountId).ToImmutableList();
+		public override Enums.TransactionTargetTypes TargetType => Enums.TransactionTargetTypes.Range;
+		public override AccountId[] ImpactedAccounts =>this.TargetAccounts;
+		public override AccountId[] TargetAccounts => this.Accounts.Select(e => e.AccountId).ToArray();
 
 		protected override void RehydrateContents(ChannelsEntries<IDataRehydrator> dataChannels, ITransactionRehydrationFactory rehydrationFactory) {
 			base.RehydrateContents(dataChannels, rehydrationFactory);

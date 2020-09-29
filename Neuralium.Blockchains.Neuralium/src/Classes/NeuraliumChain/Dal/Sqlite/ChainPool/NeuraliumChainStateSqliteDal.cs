@@ -29,10 +29,10 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Sqlite.Chai
 			}).Select(e => (e.Item1, e.Item2)).ToList();
 		}
 
-		protected override void PrepareTransactionEntry(NeuraliumChainPoolSqlitePublicTransactions entry, ITransactionEnvelope transactionEnvelope, DateTime chainInception) {
-			base.PrepareTransactionEntry(entry, transactionEnvelope, chainInception);
+		protected override void PrepareTransactionEntry(NeuraliumChainPoolSqlitePublicTransactions entry, ITransactionEnvelope signedTransactionEnvelope, DateTime chainInception) {
+			base.PrepareTransactionEntry(entry, signedTransactionEnvelope, chainInception);
 
-			if(transactionEnvelope.Contents.RehydratedTransaction is ITipTransaction tipTransaction) {
+			if(signedTransactionEnvelope.Contents.RehydratedEvent is ITipTransaction tipTransaction) {
 				entry.Tip = tipTransaction.Tip.Value;
 			}
 

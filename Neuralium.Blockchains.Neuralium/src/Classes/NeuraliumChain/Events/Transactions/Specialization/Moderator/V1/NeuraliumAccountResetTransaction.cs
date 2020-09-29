@@ -6,5 +6,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 	}
 
 	public class NeuraliumAccountResetTransaction : AccountResetTransaction, INeuraliumAccountResetTransaction {
+		public NeuraliumAccountResetTransaction() : base() {
+		}
 	}
 }

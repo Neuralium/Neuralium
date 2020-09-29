@@ -6,16 +6,16 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Digests.Chan
 
 namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Digests.Channels.Specialization {
 
-	public interface INeuraliumStandardAccountKeysDigestChannel : IStandardAccountKeysDigestChannel<NeuraliumStandardAccountKeysDigestChannelCard>, INeuraliumDigestChannel {
+	public interface INeuraliumServerAccountKeysDigestChannel : IServerAccountKeysDigestChannel<NeuraliumStandardAccountKeysDigestChannelCard>, INeuraliumDigestChannel {
 	}
 
-	public class NeuraliumStandardAccountKeysDigestChannel : StandardAccountKeysDigestChannel<NeuraliumStandardAccountKeysDigestChannelCard>, INeuraliumStandardAccountKeysDigestChannel {
+	public class NeuraliumServerAccountKeysDigestChannel : ServerAccountKeysDigestChannel<NeuraliumStandardAccountKeysDigestChannelCard>, INeuraliumServerAccountKeysDigestChannel {
 		[Flags]
 		public enum AccountKeysDigestChannelBands {
 			Wallets
 		}
 
-		public NeuraliumStandardAccountKeysDigestChannel(int groupSize, string folder) : base(groupSize, folder) {
+		public NeuraliumServerAccountKeysDigestChannel(int groupSize, string folder) : base(groupSize, folder) {
 		}
 
 		protected override NeuraliumStandardAccountKeysDigestChannelCard CreateNewCardInstance() {

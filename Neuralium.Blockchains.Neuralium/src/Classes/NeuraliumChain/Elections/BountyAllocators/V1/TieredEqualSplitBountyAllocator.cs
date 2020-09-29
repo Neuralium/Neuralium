@@ -15,11 +15,7 @@ using Serilog;
 
 namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Elections.BountyAllocators.V1 {
 	public class TieredEqualSplitBountyAllocator : BountyAllocator {
-
-		public const decimal FULL_SHARE_PEER_ALLOCATION = 1; // 100%
-		public const decimal SIMPLE_SHARE_PEER_ALLOCATION = 0.66M; // 100%
-		public const decimal NO_SHARE_PEER_ALLOCATION = 0.33M; // 33%
-
+		
 		public TieredEqualSplitBountyAllocator(IBountyAllocationMethod bountyAllocationMethod) : base(bountyAllocationMethod) {
 		}
 
@@ -79,7 +75,13 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Elections.Bount
 			Dictionary<Enums.MiningTiers, bool> tierHasElected = MiningTierUtils.FillMiningTierSet(electionContext.MiningTiers, false);
 
 			foreach(Enums.MiningTiers tier in tierHasElected.Keys.ToArray()) {
-				tierHasElected.SetTierValue(tier, tierElected.GetTierValue(tier)?.Any()??false);
+				var tierEntry = tierElected.GetTierValue(tier);
+
+				if(MiningTierUtils.IsFirstOrSecondTier(tier) && tierEntry != null) {
+					// make sure we have ONLY server entries in the first 2 tiers
+					tierEntry = tierEntry.Where(e => e.Key.IsServer).ToDictionary(e => e.Key, e => e.Value);
+				}
+				tierHasElected.SetTierValue(tier, tierEntry?.Any()??false);
 			}
 
 			bool firstTierEnabled = MiningTierUtils.HasTier(electionContext.MiningTiers, Enums.MiningTiers.FirstTier);
@@ -106,7 +108,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Elections.Bount
 				}
 			}
 
-			if(secondTierEnabled && !hasSecondTiers && firstTierEnabled) {
+			if(secondTierEnabled && !hasSecondTiers && firstTierEnabled && hasFirstTiers) {
 				// ok, we have no second tier miners. the bounty will splill to the first tier miners
 				tierEffectiveBounties[Enums.MiningTiers.FirstTier] += tierEffectiveBounties.GetTierValue(Enums.MiningTiers.SecondTier);
 			}

@@ -9,6 +9,10 @@ using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Sqlite.ChainPoo
 using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Sqlite.ChainState;
 using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal.Interfaces.AppointmentRegistry;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal.Interfaces.Gates;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal.Sqlite.AppointmentRegistry;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal.Sqlite.Gates;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal.Wallet;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Serialization.Blockchain.Utils;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Digests;
@@ -17,6 +21,8 @@ using Neuralia.Blockchains.Common.Classes.Tools;
 using Neuralia.Blockchains.Core.Configuration;
 using Neuralia.Blockchains.Core.DataAccess;
 using Neuralia.Blockchains.Core.Tools;
+using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Interfaces.Gates;
+using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Sqlite.Gates;
 
 namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Factories {
 	public interface INeuraliumChainDalCreationFactory : IChainDalCreationFactory<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> {
@@ -24,15 +30,20 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Factories {
 	}
 
 	public class NeuraliumChainDalCreationFactory : ChainDalCreationFactory<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider>, INeuraliumChainDalCreationFactory {
-
+		
 		// contexts
 		public virtual Func<AppSettingsBase.SerializationTypes, INeuraliumChainStateContext> CreateChainStateContextFunc => EntityFrameworkContext.CreateContext<NeuraliumChainStateSqliteContext>;
 
 		// contexts
 		public virtual Func<AppSettingsBase.SerializationTypes, INeuraliumChainPoolContext> CreateChainPoolContextFunc => EntityFrameworkContext.CreateContext<NeuraliumChainPoolSqliteContext>;
 
-		// here are replaceable injection functions
 		public virtual Func<string, BlockchainServiceSet, AppSettingsBase.SerializationTypes, INeuraliumChainPoolDal> CreateChainPoolDalFunc => (folderPath, serviceSet, serializationType) => new NeuraliumChainPoolSqliteDal(folderPath, serviceSet, GlobalSettings.SoftwareVersion, this, serializationType);
+
+		public virtual Func<AppSettingsBase.SerializationTypes, IAppointmentRegistryContext> CreateAppointmentRegistryContextFunc => EntityFrameworkContext.CreateContext<AppointmentRegistrySqliteContext>;
+
+		public virtual Func<string, BlockchainServiceSet, AppSettingsBase.SerializationTypes, IAppointmentRegistryDal> CreateAppointmentRegistryDalFunc => (folderPath, serviceSet, serializationType) => new AppointmentRegistrySqliteDal(folderPath, serviceSet, GlobalSettings.SoftwareVersion, this, serializationType);
+
+		// here are replaceable injection functions
 
 		public virtual Func<AppSettingsBase.SerializationTypes, INeuraliumStandardAccountSnapshotContext> CreateStandardAccountSnapshotContextFunc => EntityFrameworkContext.CreateContext<NeuraliumStandardAccountSnapshotSqliteContext>;
 		public virtual Func<int, string, BlockchainServiceSet, AppSettingsBase.SerializationTypes, INeuraliumStandardAccountSnapshotDal> CreateStandardAccountSnapshotDalFunc => (groupSize, folderPath, serviceSet, serializationType) => new NeuraliumStandardAccountSnapshotSqliteDal(groupSize, folderPath, serviceSet, GlobalSettings.SoftwareVersion, this, serializationType);
@@ -52,11 +63,31 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Factories {
 		public virtual Func<AppSettingsBase.SerializationTypes, INeuraliumTrackedAccountsContext> CreateTrackedAccountsSnapshotContextFunc => EntityFrameworkContext.CreateContext<NeuraliumTrackedAccountsSqliteContext>;
 		public virtual Func<int, string, BlockchainServiceSet, AppSettingsBase.SerializationTypes, INeuraliumTrackedAccountsDal> CreateTrackedAccountsSnapshotDalFunc => (groupSize, folderPath, serviceSet, serializationType) => new NeuraliumTrackedAccountsSqliteDal(groupSize, folderPath, serviceSet, GlobalSettings.SoftwareVersion, this, serializationType);
 
+		
+		// contexts
+		public virtual Func<AppSettingsBase.SerializationTypes, INeuraliumGatesContext> CreateGatesContextFunc => EntityFrameworkContext.CreateContext<NeuraliumGatesSqliteContext>;
+		// here are replaceable injection functions
+		public virtual Func<string, BlockchainServiceSet, AppSettingsBase.SerializationTypes, INeuraliumGatesDal> CreateGatesDalFunc => (folderPath, serviceSet, serializationType) => new NeuraliumGatesSqliteDal(folderPath, serviceSet, GlobalSettings.SoftwareVersion, this, serializationType);
+
+
+		
 		// here are replaceable injection functions
 		public virtual Func<string, BlockchainServiceSet, AppSettingsBase.SerializationTypes, INeuraliumChainStateDal> CreateChainStateDalFunc => (folderPath, serviceSet, serializationType) => new NeuraliumChainStateSqliteDal(folderPath, serviceSet, GlobalSettings.SoftwareVersion, this, serializationType);
 
 		public override Func<INeuraliumCentralCoordinator, string, FileSystemWrapper, IWalletSerialisationFal> CreateWalletSerialisationFal => (centralCoordinator, chainWalletDirectoryPath, fileSystem) => new NeuraliumWalletSerialisationFal(centralCoordinator, chainWalletDirectoryPath, fileSystem);
 
+		public override GATES_DAL CreateGatesDal<GATES_DAL, STANDARD_GATE_SNAPSHOT, JOINT_GATE_SNAPSHOT>(string folderPath, BlockchainServiceSet serviceSet, AppSettingsBase.SerializationTypes serializationType) {
+			return (GATES_DAL) this.CreateGatesDalFunc(folderPath, serviceSet, serializationType);
+		}
+		
+		public override IGatesDal CreateGatesDal(string folderPath, BlockchainServiceSet serviceSet, AppSettingsBase.SerializationTypes serializationType) {
+			return (IGatesDal) this.CreateGatesDalFunc(folderPath, serviceSet, serializationType);
+		}
+
+		public override GATES_CONTEXT CreateGatesContext<GATES_CONTEXT>(AppSettingsBase.SerializationTypes serializationType) {
+			return (GATES_CONTEXT) this.CreateGatesContextFunc(serializationType);
+		}
+		
 		public override CHAIN_STATE_DAL CreateChainStateDal<CHAIN_STATE_DAL, CHAIN_STATE_SNAPSHOT>(string folderPath, BlockchainServiceSet serviceSet, AppSettingsBase.SerializationTypes serializationType) {
 			return (CHAIN_STATE_DAL) this.CreateChainStateDalFunc(folderPath, serviceSet, serializationType);
 		}
@@ -73,6 +104,14 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Factories {
 
 		public override CHAIN_POOL_CONTEXT CreateChainPoolContext<CHAIN_POOL_CONTEXT>(AppSettingsBase.SerializationTypes serializationType) {
 			return (CHAIN_POOL_CONTEXT) this.CreateChainPoolContextFunc(serializationType);
+		}
+
+		public override APPOINTMENT_CONTEXT_CONTEXT CreateAppointmentRegistryContext<APPOINTMENT_CONTEXT_CONTEXT>(AppSettingsBase.SerializationTypes serializationType) {
+			return (APPOINTMENT_CONTEXT_CONTEXT) this.CreateAppointmentRegistryContextFunc(serializationType);
+		}
+		
+		public override APPOINTMENT_REGISTRY_DAL CreateAppointmentRegistryDal<APPOINTMENT_REGISTRY_DAL>(string folderPath, BlockchainServiceSet serviceSet, AppSettingsBase.SerializationTypes serializationType) {
+			return (APPOINTMENT_REGISTRY_DAL) this.CreateAppointmentRegistryDalFunc(folderPath, serviceSet, serializationType);
 		}
 
 		public override STANDARD_ACCOUNT_SNAPSHOT_DAL CreateStandardAccountSnapshotDal<STANDARD_ACCOUNT_SNAPSHOT_DAL>(int groupSize, string folderPath, BlockchainServiceSet serviceSet, AppSettingsBase.SerializationTypes serializationType) {
@@ -129,6 +168,15 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Factories {
 
 		public INeuraliumChainPoolContext CreateChainPoolContext(AppSettingsBase.SerializationTypes serializationType) {
 			return this.CreateChainPoolContext<INeuraliumChainPoolContext>(serializationType);
+		}
+
+		public IAppointmentRegistryContext CreateAppointmentRegistryContext(AppSettingsBase.SerializationTypes serializationType) {
+			return this.CreateAppointmentRegistryContext<IAppointmentRegistryContext>(serializationType);
+		}
+
+		
+		public IAppointmentRegistryDal CreateAppointmentRegistryDal(string folderPath, BlockchainServiceSet serviceSet, AppSettingsBase.SerializationTypes serializationType) {
+			return this.CreateAppointmentRegistryDal<IAppointmentRegistryDal>(folderPath, serviceSet, serializationType);
 		}
 
 		public INeuraliumChainStateDal CreateChainStateDal(string folderPath, BlockchainServiceSet serviceSet, AppSettingsBase.SerializationTypes serializationType) {

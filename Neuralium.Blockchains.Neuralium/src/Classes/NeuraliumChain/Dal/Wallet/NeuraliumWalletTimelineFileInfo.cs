@@ -118,7 +118,11 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 
 					litedbDal.Open(db => {
 
-						if(litedbDal.CollectionExists<NeuraliumWalletTimelineDay>(db) && ((entry.Id != 0) || litedbDal.Exists<NeuraliumWalletTimeline>(k => (k.Id == entry.Id) || (k.TransactionId == entry.TransactionId), db))) {
+						if(entry.CreditType == NeuraliumWalletTimeline.CreditTypes.Election && litedbDal.CollectionExists<NeuraliumWalletTimelineDay>(db) && ((entry.Id != 0) || litedbDal.Exists<NeuraliumWalletTimeline>(k => (k.Id == entry.Id) || (k.BlockId == entry.BlockId), db))) {
+							return;
+						}
+						
+						if(entry.CreditType != NeuraliumWalletTimeline.CreditTypes.Election && litedbDal.CollectionExists<NeuraliumWalletTimelineDay>(db) && ((entry.Id != 0) || litedbDal.Exists<NeuraliumWalletTimeline>(k => (k.Id == entry.Id) || (k.TransactionId == entry.TransactionId), db))) {
 							return;
 						}
 
@@ -255,7 +259,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 						return litedbDal.All<NeuraliumWalletTimelineDay>(db).Max(d => d.Timestamp);
 					}
 
-					return DateTime.MinValue;
+					return DateTimeEx.MinValue;
 				});
 
 			}, lockContext);

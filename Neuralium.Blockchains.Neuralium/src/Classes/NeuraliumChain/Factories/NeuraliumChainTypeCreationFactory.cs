@@ -32,9 +32,9 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Factories {
 			return new NeuraliumXmssMTWalletKey();
 		}
 
-		public override IQTeslaWalletKey CreateNewQTeslaWalletKey() {
-			return new NeuraliumQTeslaWalletKey();
-		}
+		// public override IQTeslaWalletKey CreateNewQTeslaWalletKey() {
+		// 	return new NeuraliumQTeslaWalletKey();
+		// }
 
 		public override ISecretWalletKey CreateNewSecretWalletKey() {
 			return new NeuraliumSecretWalletKey();
@@ -52,8 +52,16 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Factories {
 			return new NeuraliumSecretPentaWalletKey();
 		}
 
-		public override INtruWalletKey CreateNewNtruWalletKey() {
-			return new NeuraliumNtruWalletKey();
+		public override ITripleXmssWalletKey CreateNewTripleXmssWalletKey() {
+			return new NeuraliumTripleXmssWalletKey();
+		}
+
+		public override INTRUPrimeWalletKey CreateNewNTRUPrimeWalletKey() {
+			return new NeuraliumNTRUPrimeWalletKey();
+		}
+
+		public override INTRUWalletKey CreateNewNTRUWalletKey() {
+			return new NeuraliumNTRUWalletKey();
 		}
 
 		public override IMcElieceWalletKey CreateNewMcElieceWalletKey() {
@@ -72,8 +80,8 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Factories {
 			return new NeuraliumWalletAccountKeyLog();
 		}
 
-		public override IWalletTransactionCache CreateNewWalletAccountTransactionCache() {
-			return new NeuraliumWalletTransactionCache();
+		public override IWalletGenerationCache CreateNewWalletAccountGenerationCache() {
+			return new NeuraliumWalletGenerationCache();
 		}
 
 		public override IWalletTransactionHistory CreateNewWalletAccountTransactionHistory() {

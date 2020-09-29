@@ -24,8 +24,8 @@ namespace Neuralium.Core.Controllers {
 			this.rpcProvider = DIService.Instance.GetService<IRpcProvider>();
 		}
 
-		public Task StartMining(ushort chainType, string delegateAccountId) {
-			return this.rpcProvider.StartMining(chainType, delegateAccountId);
+		public Task StartMining(ushort chainType, string delegateAccountId, int tier = 0) {
+			return this.rpcProvider.StartMining(chainType, delegateAccountId, tier);
 		}
 
 		public Task StopMining(ushort chainType) {
@@ -76,6 +76,10 @@ namespace Neuralium.Core.Controllers {
 			return this.rpcProvider.WalletKeyFileCopied(correlationId, chainType, keyCorrelationCode);
 		}
 
+		public Task<bool> TestP2pPort() {
+			return this.rpcProvider.TestP2pPort();
+		}
+
 		public Task<object> QuerySystemInfo() {
 			return this.rpcProvider.QuerySystemInfo();
 		}
@@ -87,6 +91,10 @@ namespace Neuralium.Core.Controllers {
 		/// <returns>[{"Id":1,"Name":"Neuralium","Enabled":true,"Started":true}]</returns>
 		public Task<List<object>> QuerySupportedChains() {
 			return this.rpcProvider.QuerySupportedChains();
+		}
+
+		public Task SetUILocale(string locale) {
+			return this.rpcProvider.SetUILocale(locale);
 		}
 
 		public Task<byte> GetMiningRegistrationIpMode(ushort chainType) {
@@ -109,6 +117,10 @@ namespace Neuralium.Core.Controllers {
 			return this.rpcProvider.IsWalletSynced(chainType);
 		}
 
+		public Task<int> GetCurrentOperatingMode(ushort chainType) {
+			return this.rpcProvider.GetCurrentOperatingMode(chainType);
+		}
+
 		public Task<bool> SyncBlockchain(ushort chainType, bool force) {
 			return this.rpcProvider.SyncBlockchain(chainType, force);
 		}
@@ -129,24 +141,31 @@ namespace Neuralium.Core.Controllers {
 		///     ping the server
 		/// </summary>
 		/// <returns></returns>
-		public Task Test() {
-			return Task.CompletedTask;
-		}
-
-		/// <summary>
-		///     ping the server
-		/// </summary>
-		/// <returns></returns>
 		public Task<string> Ping() {
 			return this.rpcProvider.Ping();
 		}
+		
+		public Task<object> GetPortMappingStatus()
+		{
+			return this.rpcProvider.GetPortMappingStatus();
+		}
 
+		public Task<bool> ConfigurePortMappingMode(bool useUPnP, bool usePmP, int natDeviceIndex)
+		{
+			return this.rpcProvider.ConfigurePortMappingMode(useUPnP, usePmP, natDeviceIndex);
+		}
+		
 		public Task<byte> GetPublicIPMode() {
 			return this.rpcProvider.GetPublicIPMode();
 		}
 
 		public Task<int> QueryTotalConnectedPeersCount() {
 			return this.rpcProvider.QueryTotalConnectedPeersCount();
+		}
+
+		public Task<List<object>> QueryPeerConnectionDetails()
+		{
+			return this.rpcProvider.QueryPeerConnectionDetails();
 		}
 
 		public Task<bool> QueryMiningPortConnectable() {
@@ -198,24 +217,56 @@ namespace Neuralium.Core.Controllers {
 			return this.rpcProvider.QueryBlock(chainType, blockId);
 		}
 
+		public Task<object> QueryDecomposedBlock(ushort chainType, long blockId) {
+			return this.rpcProvider.QueryDecomposedBlock(chainType, blockId);
+		}
+
+		public Task<string> QueryDecomposedBlockJson(ushort chainType, long blockId) {
+			return this.rpcProvider.QueryDecomposedBlockJson(chainType, blockId);
+		}
+
 		public Task<byte[]> QueryCompressedBlock(ushort chainType, long blockId) {
 			return this.rpcProvider.QueryCompressedBlock(chainType, blockId);
+		}
+
+		public Task<byte[]> QueryBlockBytes(ushort chainType, long blockId) {
+			return this.rpcProvider.QueryBlockBytes(chainType, blockId);
+		}
+
+		public Task<string> GetBlockSizeAndHash(ushort chainType, long blockId) {
+			return this.rpcProvider.GetBlockSizeAndHash(chainType, blockId);
 		}
 
 		public Task<List<object>> QueryBlockBinaryTransactions(ushort chainType, long blockId) {
 			return this.rpcProvider.QueryBlockBinaryTransactions(chainType, blockId);
 		}
 
-		public Task<int> CreateAccount(ushort chainType, string accountName, bool publishAccount, bool encryptKeys, bool encryptKeysIndividually, ImmutableDictionary<string, string> passphrases) {
-			return this.rpcProvider.CreateAccount(chainType, accountName, publishAccount, encryptKeys, encryptKeysIndividually, passphrases);
+		public Task<int> CreateStandardAccount(ushort chainType, string accountName, int accountType, bool publishAccount, bool encryptKeys, bool encryptKeysIndividually, ImmutableDictionary<string, string> passphrases) {
+			return this.rpcProvider.CreateStandardAccount(chainType, accountName, accountType, publishAccount, encryptKeys, encryptKeysIndividually, passphrases);
 		}
 
-		public Task<bool> SetActiveAccount(ushort chainType, Guid accountUuid) {
-			return this.rpcProvider.SetActiveAccount(chainType, accountUuid);
+		public Task<bool> SetActiveAccount(ushort chainType, string accountCode) {
+			return this.rpcProvider.SetActiveAccount(chainType, accountCode);
 		}
 
-		public Task<int> CreateNewWallet(ushort chainType, string accountName, bool encryptWallet, bool encryptKey, bool encryptKeysIndividualy, ImmutableDictionary<string, string> passphrases, bool publishAccount) {
-			return this.rpcProvider.CreateNewWallet(chainType, accountName, encryptWallet, encryptKey, encryptKeysIndividualy, passphrases, publishAccount);
+		public Task<object> QueryAppointmentConfirmationResult(ushort chainType, string accountCode) {
+			return this.rpcProvider.QueryAppointmentConfirmationResult(chainType, accountCode);
+		}
+
+		public Task<object> CanPublishAccount(ushort chainType, string accountCode) {
+			return this.rpcProvider.CanPublishAccount(chainType, accountCode);
+		}
+
+		public Task SetSMSConfirmationCode(ushort chainType, string accountCode, long confirmationCode) {
+			return this.rpcProvider.SetSMSConfirmationCode(chainType, accountCode, confirmationCode);
+		}
+
+		public Task SetSMSConfirmationCodeString(ushort chainType, string accountCode, string confirmationCode) {
+			return this.rpcProvider.SetSMSConfirmationCodeString(chainType, accountCode, confirmationCode);
+		}
+
+		public Task<int> CreateNewWallet(ushort chainType, string accountName, int accountType, bool encryptWallet, bool encryptKey, bool encryptKeysIndividualy, ImmutableDictionary<string, string> passphrases, bool publishAccount) {
+			return this.rpcProvider.CreateNewWallet(chainType, accountName, accountType, encryptWallet, encryptKey, encryptKeysIndividualy, passphrases, publishAccount);
 		}
 
 		public Task<bool> SetWalletPassphrase(int correlationId, string passphrase, bool setKeysToo) {
@@ -226,12 +277,12 @@ namespace Neuralium.Core.Controllers {
 			return this.rpcProvider.SetKeysPassphrase(correlationId, passphrase);
 		}
 
-		public Task<List<object>> QueryWalletTransactionHistory(ushort chainType, Guid accountUuid) {
-			return this.rpcProvider.QueryWalletTransactionHistory(chainType, accountUuid);
+		public Task<List<object>> QueryWalletTransactionHistory(ushort chainType, string accountCode) {
+			return this.rpcProvider.QueryWalletTransactionHistory(chainType, accountCode);
 		}
 
-		public Task<object> QueryWalletTransationHistoryDetails(ushort chainType, Guid accountUuid, string transactionId) {
-			return this.rpcProvider.QueryWalletTransationHistoryDetails(chainType, accountUuid, transactionId);
+		public Task<object> QueryWalletTransactionHistoryDetails(ushort chainType, string accountCode, string transactionId) {
+			return this.rpcProvider.QueryWalletTransactionHistoryDetails(chainType, accountCode, transactionId);
 		}
 
 		public Task<List<object>> QueryWalletAccounts(ushort chainType) {
@@ -243,20 +294,32 @@ namespace Neuralium.Core.Controllers {
 			return this.rpcProvider.QueryDefaultWalletAccountId(chainType);
 		}
 
-		public Task<Guid> QueryDefaultWalletAccountUuid(ushort chainType) {
-			return this.rpcProvider.QueryDefaultWalletAccountUuid(chainType);
+		public Task<string> QueryDefaultWalletAccountCode(ushort chainType) {
+			return this.rpcProvider.QueryDefaultWalletAccountCode(chainType);
 		}
 
-		public Task<object> QueryWalletAccountDetails(ushort chainType, Guid accountUuid) {
-			return this.rpcProvider.QueryWalletAccountDetails(chainType, accountUuid);
+		public Task<object> QueryWalletAccountDetails(ushort chainType, string accountCode) {
+			return this.rpcProvider.QueryWalletAccountDetails(chainType, accountCode);
 		}
 
-		public Task<string> QueryWalletAccountPresentationTransactionId(ushort chainType, Guid accountUuid) {
-			return this.rpcProvider.QueryWalletAccountPresentationTransactionId(chainType, accountUuid);
+		public Task<object> QueryWalletAccountAppointmentDetails(ushort chainType, string accountCode) {
+			return this.rpcProvider.QueryWalletAccountAppointmentDetails(chainType, accountCode);
 		}
 
-		public Task<int> PublishAccount(ushort chainType, Guid? accountUuid) {
-			return this.rpcProvider.PublishAccount(chainType, accountUuid);
+		public Task<string> QueryWalletAccountPresentationTransactionId(ushort chainType, string accountCode) {
+			return this.rpcProvider.QueryWalletAccountPresentationTransactionId(chainType, accountCode);
+		}
+
+		public Task<string> Test(string data) {
+			return this.rpcProvider.Test(data);
+		}
+
+		public Task<int> RequestAppointment(ushort chainType, string accountCode, int preferredRegion) {
+			return this.rpcProvider.RequestAppointment(chainType, accountCode, preferredRegion);
+		}
+
+		public Task<int> PublishAccount(ushort chainType, string accountCode) {
+			return this.rpcProvider.PublishAccount(chainType, accountCode);
 		}
 
 		public Task<List<object>> QueryMiningHistory(ushort chainType, int page, int pageSize, byte maxLevel) {
@@ -279,29 +342,37 @@ namespace Neuralium.Core.Controllers {
 
 	#region Neuralium chain queries
 
-		public Task<bool> CreateNextXmssKey(ushort chainType, Guid accountUuid, byte ordinal) {
-			return this.rpcProvider.CreateNextXmssKey(chainType, accountUuid, ordinal);
+		public Task<bool> CreateNextXmssKey(ushort chainType, string accountCode, byte ordinal) {
+			return this.rpcProvider.CreateNextXmssKey(chainType, accountCode, ordinal);
 		}
 
 		public Task<int> SendNeuraliums(string targetAccountId, decimal amount, decimal tip, string note) {
 			return this.rpcProvider.SendNeuraliums(targetAccountId, amount, tip, note);
 		}
 
-		public Task<object> QueryNeuraliumTimelineHeader(Guid accountUuid) {
-			return this.rpcProvider.QueryNeuraliumTimelineHeader(accountUuid);
+		public Task<object> QueryNeuraliumTimelineHeader(string accountCode) {
+			return this.rpcProvider.QueryNeuraliumTimelineHeader(accountCode);
 		}
 
-		public Task<List<object>> QueryNeuraliumTimelineSection(Guid accountUuid, DateTime firstday, int skip, int take) {
-			return this.rpcProvider.QueryNeuraliumTimelineSection(accountUuid, firstday, skip, take);
+		public Task<List<object>> QueryNeuraliumTimelineSection(string accountCode, DateTime firstday, int skip, int take) {
+			return this.rpcProvider.QueryNeuraliumTimelineSection(accountCode, firstday, skip, take);
 		}
 
-		public Task<byte[]> SignXmssMessage(ushort chainType, Guid accountUuid, byte[] message) {
-			return this.rpcProvider.SignXmssMessage(chainType, accountUuid, message);
+		public Task<byte[]> SignXmssMessage(ushort chainType, string accountCode, byte[] message) {
+			return this.rpcProvider.SignXmssMessage(chainType, accountCode, message);
+		}
+
+		public Task SetPuzzleAnswers(ushort chainType, List<int> answers) {
+			return this.rpcProvider.SetPuzzleAnswers(chainType, answers);
 		}
 
 #if TESTNET || DEVNET
-		public Task<int> RefillNeuraliums(Guid accountUuid) {
-			return this.rpcProvider.RefillNeuraliums(accountUuid);
+		public Task<int> RefillNeuraliums(string accountCode) {
+			return this.rpcProvider.RefillNeuraliums(accountCode);
+		}
+
+		public Task<bool> BypassAppointmentVerification(string accountCode) {
+			return this.rpcProvider.BypassAppointmentVerification(accountCode);
 		}
 #endif
 
@@ -317,8 +388,8 @@ namespace Neuralium.Core.Controllers {
 			return this.rpcProvider.RestoreWalletNarballBackup(source, dest);
 		}
 
-		public Task<object> QueryAccountTotalNeuraliums(Guid accountUuid) {
-			return this.rpcProvider.QueryAccountTotalNeuraliums(accountUuid);
+		public Task<object> QueryAccountTotalNeuraliums(string accountCode) {
+			return this.rpcProvider.QueryAccountTotalNeuraliums(accountCode);
 		}
 
 	#endregion

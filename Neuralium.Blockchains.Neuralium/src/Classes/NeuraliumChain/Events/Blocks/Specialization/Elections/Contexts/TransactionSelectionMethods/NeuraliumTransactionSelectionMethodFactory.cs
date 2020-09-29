@@ -12,7 +12,7 @@ using Neuralia.Blockchains.Common.Classes.Tools;
 namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.Specialization.Elections.Contexts.TransactionSelectionMethods {
 	public class NeuraliumTransactionSelectionMethodFactory : TransactionSelectionMethodFactory {
 
-		public override ITransactionSelectionMethod CreateTransactionSelectionMethod(TransactionSelectionMethodType type, long blockId, BlockElectionDistillate blockElectionDistillate, BlockChainConfigurations configuration, IChainStateProvider chainStateProvider, IWalletProvider walletProvider, BlockchainServiceSet serviceSet) {
+		public override ITransactionSelectionMethod CreateTransactionSelectionMethod(TransactionSelectionMethodType type, long blockId, IChainMiningStatusProvider chainMiningStatusProvider, BlockElectionDistillate blockElectionDistillate, BlockChainConfigurations configuration, IChainStateProvider chainStateProvider, IWalletProvider walletProvider, BlockchainServiceSet serviceSet) {
 
 			if(blockElectionDistillate.ElectionContext is INeuraliumElectionContext neuraliumElectionContext) {
 
@@ -30,12 +30,12 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Blocks.S
 				if(type == NeuraliumTransactionSelectionMethodTypes.Instance.HighestTips) {
 
 					// ok, nothing special here, lets just maximize profits by choosing the highest paying transactions
-					return new NeuraliumHighestTipTransactionSelectionMethod(blockId, configuration, neuraliumElectionContext.TransactionTipsAllocationMethod, chainStateProvider, (INeuraliumWalletProviderProxy) walletProvider, blockElectionDistillate.ElectionContext, ((NeuraliumBlockChainConfigurations) configuration).HighestTipTransactionSelectionStrategySettings, serviceSet.BlockchainTimeService);
+					return new NeuraliumHighestTipTransactionSelectionMethod(blockId, chainMiningStatusProvider, configuration, neuraliumElectionContext.TransactionTipsAllocationMethod, chainStateProvider, (INeuraliumWalletProviderProxy) walletProvider, blockElectionDistillate.ElectionContext, ((NeuraliumBlockChainConfigurations) configuration).HighestTipTransactionSelectionStrategySettings, serviceSet.BlockchainTimeService);
 
 				}
 			}
 
-			return base.CreateTransactionSelectionMethod(type, blockId, blockElectionDistillate, configuration, chainStateProvider, walletProvider, serviceSet);
+			return base.CreateTransactionSelectionMethod(type, blockId, chainMiningStatusProvider, blockElectionDistillate, configuration, chainStateProvider, walletProvider, serviceSet);
 		}
 	}
 }

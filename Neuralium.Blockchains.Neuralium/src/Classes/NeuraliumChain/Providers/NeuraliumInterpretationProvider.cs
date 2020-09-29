@@ -106,11 +106,11 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			if(processor is INeuraliumTransactionInterpretationProcessor<ACCOUNT_SNAPSHOT, STANDARD_ACCOUNT_SNAPSHOT, STANDARD_ACCOUNT_ATTRIBUTE_SNAPSHOT, JOINT_ACCOUNT_MEMBERS_SNAPSHOT, JOINT_ACCOUNT_SNAPSHOT, JOINT_ACCOUNT_ATTRIBUTE_SNAPSHOT, STANDARD_ACCOUNT_KEY_SNAPSHOT, ACCREDITATION_CERTIFICATE_SNAPSHOT, ACCREDITATION_CERTIFICATE_ACCOUNT_SNAPSHOT, CHAIN_OPTIONS_SNAPSHOT> neuraliumTransactionInterpretationProcessor) {
 				neuraliumTransactionInterpretationProcessor.ApplyUniversalBasicBountiesCallback += async (bounty, blockId) => {
 
-					List<IWalletAccount> selectedAccounts = accountsList.Where(a => a.GetAccountId().AccountType == Enums.AccountTypes.Standard).ToList();
+					List<IWalletAccount> selectedAccounts = accountsList.Where(a => a.GetAccountId().IsStandard).ToList();
 
 					foreach(IWalletAccount account in selectedAccounts) {
 
-						await this.CentralCoordinator.ChainComponentProvider.WalletProvider.ApplyUniversalBasicBounties(account.AccountUuid, bounty, blockId, lockContext).ConfigureAwait(false);
+						await this.CentralCoordinator.ChainComponentProvider.WalletProvider.ApplyUniversalBasicBounties(account.AccountCode, bounty, blockId, lockContext).ConfigureAwait(false);
 					}
 				};
 			}
@@ -133,7 +133,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		public override async Task InterpretGenesisBlockSnapshots(IGenesisBlock genesisBlock, LockContext lockContext) {
 			await base.InterpretGenesisBlockSnapshots(genesisBlock, lockContext).ConfigureAwait(false);
 
-			IEnumerable<INeuraliumGenesisAccountPresentationTransaction> otherModeratorAccounts = genesisBlock.ConfirmedMasterTransactions.OfType<INeuraliumGenesisAccountPresentationTransaction>();
+			IEnumerable<INeuraliumGenesisAccountPresentationTransaction> otherModeratorAccounts = genesisBlock.ConfirmedIndexedTransactions.OfType<INeuraliumGenesisAccountPresentationTransaction>();
 
 			this.HandleNeuraliumsModeratorExtraAccounts(otherModeratorAccounts);
 		}
@@ -209,9 +209,9 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			}
 		}
 
-		protected override void HandleChainOperatingRulesTransaction(IChainOperatingRulesTransaction chainOperatingRulesTransaction, LockContext lockContext) {
+		protected override async Task HandleChainOperatingRulesTransaction(IChainOperatingRulesTransaction chainOperatingRulesTransaction, LockContext lockContext) {
 
-			base.HandleChainOperatingRulesTransaction(chainOperatingRulesTransaction, lockContext);
+			await base.HandleChainOperatingRulesTransaction(chainOperatingRulesTransaction, lockContext).ConfigureAwait(false);
 
 			if(chainOperatingRulesTransaction is INeuraliumChainOperatingRulesTransaction neuraliumChainOperatingRulesTransaction) {
 

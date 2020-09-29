@@ -12,11 +12,13 @@ using Microsoft.Extensions.Options;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions;
 using Neuralia.Blockchains.Common.Classes.Services;
+using Neuralia.Blockchains.Common.Classes.Tools;
 using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.Configuration;
 using Neuralia.Blockchains.Core.Extensions;
 using Neuralia.Blockchains.Core.General.Versions;
 using Neuralia.Blockchains.Core.Logging;
+using Neuralia.Blockchains.Core.Network;
 using Neuralia.Blockchains.Core.Network.Exceptions;
 using Neuralia.Blockchains.Core.Services;
 using Neuralia.Blockchains.Core.Tools;
@@ -26,6 +28,7 @@ using Neuralia.Blockchains.Tools.Data.Arrays;
 using Neuralia.Blockchains.Tools.Locking;
 using Neuralia.Blockchains.Tools.Serialization;
 using Neuralia.Blockchains.Tools.Threading;
+using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.debugging.Test;
 using Neuralium.Core.Classes.Configuration;
 using Neuralium.Core.Classes.Services;
 using Serilog;
@@ -204,18 +207,11 @@ namespace Neuralium.Core.Classes.Runtime {
 			// thats our current version. manually set for now.
 
 			//FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(Assembly.GetAssembly(typeof(NeuraliumApp)).Location);
-			parameters.softwareVersion = new SoftwareVersion(0, 0, 1, 5, "TESTNET trial run V", this.VersionValidationCallback);
+			parameters.softwareVersion = new SoftwareVersion(BlockchainConstants.DefaultVersion, this.VersionValidationCallback);
 			parameters.appSettings = this.appSettings;
 			parameters.cmdOptions = this.CmdOptions;
 			parameters.nodeInfo = new NodeInfo(Enums.GossipSupportTypes.Full, Enums.PeerTypes.FullNode);
-
-#if TESTNET
-			parameters.networkId = NeuraliumConstants.TEST_NETWORK_ID;
-#elif DEVNET
-			parameters.networkId = NeuraliumConstants.DEV_NETWORK_ID;
-#else
-			parameters.networkId = NeuraliumConstants.MAIN_NETWORK_ID;
-#endif
+			parameters.networkId = NetworkConstants.CURRENT_NETWORK_ID;
 
 			return parameters;
 		}
@@ -227,7 +223,7 @@ namespace Neuralium.Core.Classes.Runtime {
 		/// <param name="other"></param>
 		/// <returns></returns>
 		private bool VersionValidationCallback(SoftwareVersion localVersion, SoftwareVersion other) {
-			SoftwareVersion minimumAcceptable = new SoftwareVersion(0, 0, 1, 5);
+			SoftwareVersion minimumAcceptable = new SoftwareVersion(BlockchainConstants.DefaultVersion);
 
 			return (other <= localVersion) && (other >= minimumAcceptable);
 		}
@@ -273,6 +269,12 @@ namespace Neuralium.Core.Classes.Runtime {
 				}
 
 				this.delayedTriggerComponent.Start();
+
+				#if DEVNET || TESTNET
+				if(this.CmdOptions.Test) {
+					//await Test().ConfigureAwait(false);
+				}
+				#endif
 			} catch(P2pException p2pEx) {
 				if(p2pEx.InnerException is SocketException socketException) {
 					if(socketException.ErrorCode == 98) {
@@ -294,7 +296,7 @@ namespace Neuralium.Core.Classes.Runtime {
 			}
 		}
 
-#if TESTNET
+#if DEVNET || TESTNET
 		protected virtual void DeleteObsoleteWallets() {
 
 			string testnetFlagFilePath = Path.Combine(GlobalsService.GetGeneralSystemFilesDirectoryPath(), ".testnet-wallet-version-flag");
@@ -303,7 +305,7 @@ namespace Neuralium.Core.Classes.Runtime {
 
 			try {
 				if(File.Exists(testnetFlagFilePath)) {
-					using(SafeArrayHandle data = ByteArray.WrapAndOwn(File.ReadAllBytes(testnetFlagFilePath))) {
+					using(SafeArrayHandle data = SafeArrayHandle.WrapAndOwn(File.ReadAllBytes(testnetFlagFilePath))) {
 
 						using(IDataRehydrator rehydrator = DataSerializationFactory.CreateRehydrator(data)) {
 
@@ -365,6 +367,10 @@ namespace Neuralium.Core.Classes.Runtime {
 			} catch {
 
 			}
+		}
+
+		protected async Task Test() {
+			await this.neuraliumBlockChainInterface.Test("").awaitableTask.ConfigureAwait(false);
 		}
 #endif
 		/// <summary>

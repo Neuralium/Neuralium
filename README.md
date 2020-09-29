@@ -4,7 +4,7 @@
 [![Build Status](http://jenkins.neuralium.com/buildStatus/icon?job=Neuralium.Node-Linux-Arm64&subject=Linux-ARM64)](http://jenkins.neuralium.com/job/Neuralium.Node-ARM64/)
 [![Build Status](http://jenkins.neuralium.com/buildStatus/icon?job=Neuralium.Node-Win64&subject=Windows-x64)](http://jenkins.neuralium.com/job/Neuralium.Node-Win64/)
 
-##### Version:  Release Candidate V
+##### Version:  Release Candidate VI
 
 The Neuralium crypto token console server node
 
@@ -30,6 +30,8 @@ The actual command line interface for the Server node.
  - Neuralia.Blockchains.Core
  - Neuralia.Blockchains.Common
  - Neuralia.Blockchains.Components
+ - Neuralia.NClap
+ - Neuralia.Open.Nat
 
 Then, simply invoke the right build file for your needs
 >cd targets

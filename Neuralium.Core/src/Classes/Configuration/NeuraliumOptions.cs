@@ -31,10 +31,7 @@ namespace Neuralium.Core.Classes.Configuration {
 
 		[Option("no-wallet", Default = false, Required = false, HelpText = "Will skip the creation or loading of the wallet startup if set.")]
 		public bool NoWallet { get; set; }
-
-		[Option("no-contract-chain", Default = false, Required = false, HelpText = "Will disable the contract chain if set.")]
-		public bool NoContractChain { get; set; }
-
+		
 		[Option("no-neuraliums-chain", Default = false, Required = false, HelpText = "Will disable the neuraliums chain if set.")]
 		public bool NoNeuraliumsChain { get; set; }
 
@@ -50,12 +47,18 @@ namespace Neuralium.Core.Classes.Configuration {
 		[Option("skip-digest-hash-verification", Default = false, Required = false, HelpText = "if set, the digest hash verification will be skipped.")]
 		public bool SkipDigestHashVerification { get; set; }
 
-		[Option('p', "port", Default = null, Required = false, HelpText = "Will skip the RPC server startup if set.")]
+		[Option('p', "port", Default = null, Required = false, HelpText = "Overrides the external port.")]
 		public int? Port { get; set; }
 
+		[Option( "rpc-port", Default = null, Required = false, HelpText = "Overrides the rpc port.")]
+		public int? RpcPort { get; set; }
+		
 		[Option("array-pools", Default = null, Required = false, HelpText = "do we use large buffers?.")]
 		public bool? UseArrayPools { get; set; }
 
+		[Option("test", Default = false, Required = false, HelpText = "Choose config file (ignored if used from docker).")]
+		public bool Test { get; set; }
+		
 		// // Omitting long name, defaults to name of property, ie "--verbose"
 		// [Option(Default = false, HelpText = "Prints all messages to standard output.")]
 		// public bool Verbose { get; set; }

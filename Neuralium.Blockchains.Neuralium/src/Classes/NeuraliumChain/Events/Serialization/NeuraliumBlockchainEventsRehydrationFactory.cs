@@ -20,6 +20,7 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Digests.Seri
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Envelopes;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Messages;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Messages.Serialization;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Messages.Specialization.General.Appointments;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Messages.Specialization.General.Elections;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Serialization;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Serialization.Exceptions;
@@ -30,6 +31,8 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Specialization;
 using Neuralia.Blockchains.Core.General.Versions;
 using Neuralia.Blockchains.Tools.Serialization;
+using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Messages.Specialization.General.Appointments;
+using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Messages.Specialization.Moderation;
 
 namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serialization {
 
@@ -69,15 +72,15 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serializ
 			}
 		}
 
-		public override IMasterTransaction CreateMasterTransaction(IDehydratedTransaction dehydratedTransaction) {
+		public override IIndexedTransaction CreateIndexedTransaction(IDehydratedTransaction dehydratedTransaction) {
 
 			ITransaction transaction = this.CreateTransaction(dehydratedTransaction);
 
-			if(transaction is IMasterTransaction masterTransaction) {
-				return masterTransaction;
+			if(transaction is IIndexedTransaction indexedTransaction) {
+				return indexedTransaction;
 			}
 
-			throw new ApplicationException("Created transaction is not a master transaction.");
+			throw new ApplicationException("Created transaction is not a indexed transaction.");
 		}
 
 		//		public override TransactionSerializationMap CreateTransactionDehydrationMap(byte type, byte version, ByteArray keyLengths) {
@@ -254,7 +257,41 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serializ
 						// a very rare case where it is not scopped for the chain
 						return new PassiveElectionCandidacyMessage();
 					}
-
+				} else if(version.Type == BlockchainMessageTypes.Instance.INITIATION_APPOINTMENT_REQUESTED) {
+					if(version == (1, 0)) {
+						// a very rare case where it is not scopped for the chain
+						return new NeuraliumInitiationAppointmentRequestMessage();
+					}
+				} else if(version.Type == BlockchainMessageTypes.Instance.APPOINTMENT_REQUESTED) {
+					if(version == (1, 0)) {
+						// a very rare case where it is not scopped for the chain
+						return new NeuraliumAppointmentRequestMessage();
+					}
+				} else if(version.Type == BlockchainMessageTypes.Instance.APPOINTMENT_REQUEST_CONFIRMATION) {
+					if(version == (1, 0)) {
+						// a very rare case where it is not scopped for the chain
+						return new NeuraliumAppointmentRequestConfirmationMessage();
+					}
+				} else if(version.Type == BlockchainMessageTypes.Instance.APPOINTMENT_CONTEXT) {
+					if(version == (1, 0)) {
+						// a very rare case where it is not scopped for the chain
+						return new NeuraliumAppointmentContextMessage();
+					}
+				} else if(version.Type == BlockchainMessageTypes.Instance.APPOINTMENT_TRIGGER) {
+					if(version == (1, 0)) {
+						// a very rare case where it is not scopped for the chain
+						return new NeuraliumAppointmentTriggerMessage();
+					}
+				} else if(version.Type == BlockchainMessageTypes.Instance.APPOINTMENT_VERIFICATION_RESULTS) {
+					if(version == (1, 0)) {
+						// a very rare case where it is not scopped for the chain
+						return new NeuraliumAppointmentVerificationResultsMessage();
+					}
+				} else if(version.Type == BlockchainMessageTypes.Instance.APPOINTMENT_VERIFICATION_CONFIRMATION) {
+					if(version == (1, 0)) {
+						// a very rare case where it is not scopped for the chain
+						return new NeuraliumAppointmentVerificationConfirmationMessage();
+					}
 				} else {
 					throw new UnrecognizedMessageException(this.centralCoordinator.ChainId, this.centralCoordinator.ChainName);
 				}
@@ -301,7 +338,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serializ
 						transaction = new NeuraliumGenesisElectionPoolPresentationTransaction();
 					}
 
-				} else if(version.Type == TransactionTypes.Instance.SIMPLE_PRESENTATION) {
+				} else if(version.Type == TransactionTypes.Instance.STANDARD_PRESENTATION) {
 					if(version == (1, 0)) {
 						transaction = new NeuraliumStandardPresentationTransaction();
 					}
@@ -329,16 +366,6 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serializ
 				} else if(version.Type == TransactionTypes.Instance.ACCREDITATION_CERTIFICATE) {
 					if(version == (1, 0)) {
 						transaction = new NeuraliumChainAccreditationCertificateTransaction();
-					}
-
-				} else if(version.Type == TransactionTypes.Instance.DEBUG_KEYED) {
-					if(version == (1, 0)) {
-						transaction = new NeuraliumDebugKeyedTransaction();
-					}
-
-				} else if(version.Type == TransactionTypes.Instance.DEBUG) {
-					if(version == (1, 0)) {
-						transaction = new NeuraliumDebugTransaction();
 					}
 
 				} else if(version.Type == TransactionTypes.Instance.MODERATION_KEY_CHANGE) {
@@ -433,19 +460,35 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Serializ
 		}
 
 		public override IEnvelope CreateNewEnvelope(ComponentVersion<EnvelopeType> version) {
-			if(version == EnvelopeTypes.Instance.Message) {
+			if(version == EnvelopeTypes.Instance.SignedMessage) {
 				if(version == (1, 0)) {
-					return new NeuraliumMessageEnvelope();
+					return new NeuraliumSignedMessageEnvelope();
 				}
 			} else if(version == EnvelopeTypes.Instance.Block) {
 				if(version == (1, 0)) {
 					return new NeuraliumBlockEnvelope();
 				}
-			} else if(version == EnvelopeTypes.Instance.Transaction) {
+			} else if(version == EnvelopeTypes.Instance.SignedTransaction) {
 				if(version == (1, 0)) {
 					return new NeuraliumTransactionEnvelope();
 				}
-			} else {
+			}
+			else if(version == EnvelopeTypes.Instance.PresentationTransaction) {
+				if(version == (1, 0)) {
+					return new NeuraliumPresentationTransactionEnvelope();
+				}
+			}
+			else if(version == EnvelopeTypes.Instance.InitiationAppointment) {
+				if(version == (1, 0)) {
+					return new NeuraliumInitiationAppointmentMessageEnvelope();
+				}
+			}  
+			else if(version == EnvelopeTypes.Instance.ModeratorSignedMessage) {
+				if(version == (1, 0)) {
+					return new NeuraliumModeratorSignedMessageEnvelope();
+				}
+			}
+			else {
 				throw new UnrecognizedEnvelopeException(this.centralCoordinator.ChainId, this.centralCoordinator.ChainName);
 			}
 

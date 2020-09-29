@@ -45,12 +45,16 @@ namespace Neuralium.Core.Classes.Configuration {
 			if(cmdOptions.Port.HasValue) {
 				appSettings.Port = cmdOptions.Port.Value;
 			}
+			
+			if(cmdOptions.RpcPort.HasValue) {
+				appSettings.RpcPort = cmdOptions.RpcPort.Value;
+			}
 
 			if(!string.IsNullOrWhiteSpace(cmdOptions.SerializationType)) {
 				if(cmdOptions.SerializationType.ToUpper() == "MASTER") {
-					appSettings.SerializationType = AppSettingsBase.SerializationTypes.Master;
+					appSettings.SerializationType = AppSettingsBase.SerializationTypes.Main;
 				} else if(cmdOptions.SerializationType.ToUpper() == "FEEDER") {
-					appSettings.SerializationType = AppSettingsBase.SerializationTypes.Feeder;
+					appSettings.SerializationType = AppSettingsBase.SerializationTypes.Secondary;
 				}
 			}
 

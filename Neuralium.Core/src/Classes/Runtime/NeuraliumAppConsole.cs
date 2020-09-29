@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,7 +35,9 @@ using Neuralia.Blockchains.Tools.Data.Arrays;
 using Neuralia.Blockchains.Tools.Serialization;
 using Neuralium.Core.Classes.Configuration;
 using Neuralium.Core.Classes.Services;
+using Newtonsoft.Json;
 using Serilog;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Neuralium.Core.Classes.Runtime {
 	public interface INeuraliumAppDebug : INeuraliumApp {
@@ -93,14 +96,14 @@ namespace Neuralium.Core.Classes.Runtime {
 
 #if TESTNET || DEVNET
 			if(items[0] == "refill") {
-				this.neuraliumBlockChainInterface.RefillNeuraliums(Guid.Empty, new CorrelationContext());
+				this.neuraliumBlockChainInterface.RefillNeuraliums("", new CorrelationContext());
 
 				return;
 			}
 
 			if(items[0] == "refill5") {
 				for(int i = 0; i < 5; i++) {
-					this.neuraliumBlockChainInterface.RefillNeuraliums(Guid.Empty, new CorrelationContext());
+					this.neuraliumBlockChainInterface.RefillNeuraliums("", new CorrelationContext());
 				}
 
 				return;
@@ -108,7 +111,7 @@ namespace Neuralium.Core.Classes.Runtime {
 #endif
 
 			if(items[0] == "create") {
-				this.neuraliumBlockChainInterface.CreateNewWallet(new CorrelationContext(), "test", false, false, false, null, false);
+				this.neuraliumBlockChainInterface.CreateNewWallet(new CorrelationContext(), "teeeest", Enums.AccountTypes.User, false, false, false, null, false);
 
 				return;
 			}
@@ -180,7 +183,7 @@ namespace Neuralium.Core.Classes.Runtime {
 				passprhases.Add(2, "qwerty2");
 				passprhases.Add(3, "qwerty3");
 
-				bool result = await this.neuraliumBlockChainInterface.CreateNewWallet(new CorrelationContext(), items[1], true, true, true, passprhases.ToImmutableDictionary(), false).awaitableTask.ConfigureAwait(false);
+				bool result = await this.neuraliumBlockChainInterface.CreateNewWallet(new CorrelationContext(), items[1], Enums.AccountTypes.User, true, true, true, passprhases.ToImmutableDictionary(), false).awaitableTask.ConfigureAwait(false);
 
 				Console.WriteLine($"create new account, result {result}");
 
@@ -189,7 +192,7 @@ namespace Neuralium.Core.Classes.Runtime {
 
 			if(items[0] == "newacc") {
 
-				bool result = await this.neuraliumBlockChainInterface.CreateNewAccount(new CorrelationContext(), items[1], false, false, null).awaitableTask.ConfigureAwait(false);
+				bool result = await this.neuraliumBlockChainInterface.CreateNewStandardAccount(new CorrelationContext(), items[1], Enums.AccountTypes.User, false, false, null).awaitableTask.ConfigureAwait(false);
 
 				Console.WriteLine($"create new account, result {result}");
 
@@ -197,11 +200,25 @@ namespace Neuralium.Core.Classes.Runtime {
 			}
 
 			if(items[0] == "setacc") {
-				bool result = await this.neuraliumBlockChainInterface.SetActiveAccount(items[1]).awaitableTask.ConfigureAwait(false);
+				var accounts = await neuraliumBlockChainInterface.QueryWalletAccounts().awaitableTask.ConfigureAwait(false);
 
-				Console.WriteLine($"set new account, result {result}");
+				var account = accounts.SingleOrDefault(e => e.FriendlyName == items[1]);
+
+				if(account != null) {
+					bool result = await this.neuraliumBlockChainInterface.SetActiveAccount(account.AccountCode).awaitableTask.ConfigureAwait(false);
+
+					Console.WriteLine($"set new account, result {result}");
+				}
 
 				return;
+			}
+
+			if(items[0] == "acc") {
+				var accounts = await neuraliumBlockChainInterface.QueryWalletAccounts().awaitableTask.ConfigureAwait(false);
+
+				foreach(var acc in accounts) {
+					Console.WriteLine($"Name: {acc.FriendlyName}, code: {acc.AccountCode}, Id: {acc.AccountId}, Status: {(Enums.PublicationStatus)acc.Status}");
+				}
 			}
 
 			if(items[0] == "send") {
@@ -213,6 +230,9 @@ namespace Neuralium.Core.Classes.Runtime {
 			if(items[0] == "present") {
 				CorrelationContext cc = new CorrelationContext();
 				cc.InitializeNew();
+				//this.neuraliumBlockChainInterface.BypassAppointmentVerification("");
+				
+				await neuraliumBlockChainInterface.BypassAppointmentVerification("").awaitableTask.ConfigureAwait(false);
 				this.neuraliumBlockChainInterface.PresentAccountPublicly(cc, null);
 
 				return;
@@ -227,7 +247,7 @@ namespace Neuralium.Core.Classes.Runtime {
 				TypeSerializer.Serialize(password, bytes.AsSpan());
 				string sdas = ByteArray.Wrap(bytes).ToBase64();
 
-				SafeArrayHandle signature = await this.neuraliumBlockChainInterface.SignXmssMessage(Guid.Empty, ByteArray.WrapAndOwn(bytes)).awaitableTask.ConfigureAwait(false);
+				SafeArrayHandle signature = await this.neuraliumBlockChainInterface.SignXmssMessage("", SafeArrayHandle.WrapAndOwn(bytes)).awaitableTask.ConfigureAwait(false);
 
 				Console.WriteLine(signature.Entry.ToBase64());
 
@@ -237,28 +257,31 @@ namespace Neuralium.Core.Classes.Runtime {
 			if(items[0] == "timeline") {
 				CorrelationContext cc = new CorrelationContext();
 				cc.InitializeNew();
-				TimelineHeader result = await this.neuraliumBlockChainInterface.QueryNeuraliumTimelineHeader(Guid.Empty).awaitableTask.ConfigureAwait(false);
+				TimelineHeader result = await this.neuraliumBlockChainInterface.QueryNeuraliumTimelineHeader("").awaitableTask.ConfigureAwait(false);
 
-				List<TimelineDay> result2 = await this.neuraliumBlockChainInterface.QueryNeuraliumTimelineSection(Guid.Empty, DateTime.Parse(result.FirstDay), 0, 5).awaitableTask.ConfigureAwait(false);
+				List<TimelineDay> result2 = await this.neuraliumBlockChainInterface.QueryNeuraliumTimelineSection("", DateTime.Parse(result.FirstDay), 0, 5).awaitableTask.ConfigureAwait(false);
 
 				return;
 			}
 
 			if(items[0] == "test") {
-				long para = 1;
-				
-				//this.neuraliumBlockChainInterface.Test("");
-				SynthesizedBlockAPI api = new NeuraliumSynthesizedBlockApi();
-
-				api.BlockId = 13;
-				api.AccountId = new AccountId("{SRB}").ToString();
-				api.RejectedTransactions.Add(new TransactionId("{SRB}:MGYNY").ToString(), 1001);
 
 				
-				string json = JsonSerializer.Serialize(api);
+				this.neuraliumBlockChainInterface.Test(items[1]);
 
-				string block = await this.neuraliumBlockChainInterface.Test(json).awaitableTask.ConfigureAwait(false);
-				NLog.Default.Information(block);
+				
+
+				// var s = await this.neuraliumBlockChainInterface.QueryDecomposedBlock(2).awaitableTask.ConfigureAwait(false);
+				//
+				// JsonSerializerSettings settings = new JsonSerializerSettings();
+				// settings.TypeNameHandling = TypeNameHandling.Auto;
+				//
+				// string data = Newtonsoft.Json.JsonConvert.SerializeObject(s, Formatting.None, settings);
+				//
+				// var restored = Newtonsoft.Json.JsonConvert.DeserializeObject<NeuraliumDecomposedBlockAPI>(data, settings);
+				//
+				// int gg = 0;
+				//string block = await this.neuraliumBlockChainInterface.Test(items[1]).awaitableTask.ConfigureAwait(false);
 
 				//var ff = this.test(gg.ConfirmedGeneralTransactions.Values.ToList()[5]);
 				// BrotliCompression compressor = new BrotliCompression();
@@ -282,7 +305,7 @@ namespace Neuralium.Core.Classes.Runtime {
 				string block = await this.neuraliumBlockChainInterface.QueryBlock(int.Parse(items[1])).awaitableTask.ConfigureAwait(false);
 				NLog.Default.Information(block);
 
-				await File.WriteAllTextAsync("/home/jdb/block2.json", block).ConfigureAwait(false);
+				await File.WriteAllTextAsync("~/block2.json", block).ConfigureAwait(false);
 			}
 
 			if(items[0] == "gen") {
@@ -331,11 +354,11 @@ namespace Neuralium.Core.Classes.Runtime {
 
 				string resulssst = JsonSerializer.Serialize(veee, settingseee);
 
-				await File.WriteAllTextAsync("/home/jdb/genesis.json", resulssst).ConfigureAwait(false);
+				await File.WriteAllTextAsync("~/genesis.json", resulssst).ConfigureAwait(false);
 			}
 
 			if(items[0] == "total") {
-				TotalAPI total = await this.neuraliumBlockChainInterface.QueryWalletTotal(Guid.Empty).awaitableTask.ConfigureAwait(false);
+				TotalAPI total = await this.neuraliumBlockChainInterface.QueryWalletTotal("").awaitableTask.ConfigureAwait(false);
 
 				Console.WriteLine($"We have {total.Total} neuraliums in total with {total.ReservedCredit} reserved credit and {total.ReservedDebit} reserved debit. {total.Total - total.ReservedDebit} are available for spending");
 
@@ -362,7 +385,7 @@ namespace Neuralium.Core.Classes.Runtime {
 			if(items[0] == "loadkey") {
 				Console.WriteLine("loading key...");
 
-				Guid acc = await this.neuraliumBlockChainInterface.CentralCoordinator.ChainComponentProvider.WalletProvider.GetAccountUuid(null).ConfigureAwait(false);
+				string acc = await this.neuraliumBlockChainInterface.CentralCoordinator.ChainComponentProvider.WalletProvider.GetAccountCode(null).ConfigureAwait(false);
 				IWalletKey key = await this.neuraliumBlockChainInterface.CentralCoordinator.ChainComponentProvider.WalletProvider.LoadKey(acc, GlobalsService.TRANSACTION_KEY_NAME, null).ConfigureAwait(false);
 
 				Console.WriteLine("Key load done...");
@@ -373,7 +396,7 @@ namespace Neuralium.Core.Classes.Runtime {
 
 				IBlock results = await this.neuraliumBlockChainInterface.LoadBlock(1).awaitableTask.ConfigureAwait(false);
 
-				ByteArray previousHash = ByteArray.WrapAndOwn(new byte[] {1, 2, 3, 4, 5});
+				SafeArrayHandle previousHash = SafeArrayHandle.WrapAndOwn(new byte[] {1, 2, 3, 4, 5});
 				SafeArrayHandle hash1 = BlockchainHashingUtils.GenerateBlockHash(results, previousHash);
 
 				Console.WriteLine("Key load done...");
@@ -392,7 +415,7 @@ namespace Neuralium.Core.Classes.Runtime {
 			if(items[0] == "historyt") {
 				Console.WriteLine("showing transaction history...");
 
-				List<WalletTransactionHistoryHeaderAPI> results = await this.neuraliumBlockChainInterface.QueryWalletTransactionHistory(Guid.Empty).awaitableTask.ConfigureAwait(false);
+				List<WalletTransactionHistoryHeaderAPI> results = await this.neuraliumBlockChainInterface.QueryWalletTransactionHistory("").awaitableTask.ConfigureAwait(false);
 
 				foreach(WalletTransactionHistoryHeaderAPI entry in results) {
 					NLog.Default.Information($"Transaction entry: {entry}");
@@ -418,7 +441,7 @@ namespace Neuralium.Core.Classes.Runtime {
 				Console.WriteLine("registering for mining...");
 
 				if(items[1] == "1") {
-					await this.neuraliumBlockChainInterface.EnableMining(null).ConfigureAwait(false);
+					await this.neuraliumBlockChainInterface.EnableMining(null, 0, null).ConfigureAwait(false);
 				}
 
 				if(items[1] == "0") {
@@ -462,7 +485,7 @@ namespace Neuralium.Core.Classes.Runtime {
 
 				List<WalletAccountAPI> accounts = await this.neuraliumBlockChainInterface.QueryWalletAccounts().awaitableTask.ConfigureAwait(false);
 
-				this.neuraliumBlockChainInterface.QueryWalletAccountPresentationTransactionId(accounts[0].AccountUuid);
+				this.neuraliumBlockChainInterface.QueryWalletAccountPresentationTransactionId(accounts[0].AccountCode);
 
 				//							if(items.Length > 1) {
 				//								TransactionId uuid = TransactionId.Parse(items[1]);

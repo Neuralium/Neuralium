@@ -39,19 +39,20 @@ using Neuralia.Blockchains.Core.General.Versions;
 using Neuralia.Blockchains.Core.Services;
 using Neuralia.Blockchains.Tools;
 using Neuralia.Blockchains.Tools.Locking;
+using System.Text.RegularExpressions;
 
 namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 
 	public interface INeuraliumWalletProvider : IWalletProvider {
 
-		Task<decimal> GetUsableAccountBalance(Guid accountUuid, LockContext lockContext);
+		Task<decimal> GetUsableAccountBalance(string accountCode, LockContext lockContext);
 		Task<TotalAPI> GetAccountBalance(bool includeReserved, LockContext lockContext);
 		Task<TotalAPI> GetAccountBalance(AccountId accountId, bool includeReserved, LockContext lockContext);
-		Task<TotalAPI> GetAccountBalance(Guid accountUuid, bool includeReserved, LockContext lockContext);
-		Task<TimelineHeader> GetTimelineHeader(Guid accountUuid, LockContext lockContext);
-		Task<List<TimelineDay>> GetTimelineSection(Guid accountUuid, DateTime firstday, LockContext lockContext, int skip = 0, int take = 1);
+		Task<TotalAPI> GetAccountBalance(string accountCode, bool includeReserved, LockContext lockContext);
+		Task<TimelineHeader> GetTimelineHeader(string accountCode, LockContext lockContext);
+		Task<List<TimelineDay>> GetTimelineSection(string accountCode, DateTime firstday, LockContext lockContext, int skip = 0, int take = 1);
 
-		Task ApplyUniversalBasicBounties(Guid accountUuid, Amount bounty, BlockId blockId, LockContext lockContext);
+		Task ApplyUniversalBasicBounties(string accountCode, Amount bounty, BlockId blockId, LockContext lockContext);
 	}
 
 	public interface INeuraliumWalletProviderInternal : INeuraliumWalletProvider, IWalletProviderInternal {
@@ -80,7 +81,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 					throw new ApplicationException("Invalid account");
 				}
 
-				if(this.WalletFileInfo.Accounts[account.AccountUuid] is INeuraliumAccountFileInfo neuraliumAccountFileInfo) {
+				if(this.WalletFileInfo.Accounts[account.AccountCode] is INeuraliumAccountFileInfo neuraliumAccountFileInfo) {
 					NeuraliumWalletTimeline neuraliumWalletTimeline = new NeuraliumWalletTimeline();
 					INeuraliumWalletTimelineFileInfo neuraliumWalletTimelineFileInfo = neuraliumAccountFileInfo.WalletTimelineFileInfo;
 
@@ -102,12 +103,27 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 					await neuraliumWalletTimelineFileInfo.InsertTimelineEntry(neuraliumWalletTimeline, lockContext).ConfigureAwait(false);
 
 					this.centralCoordinator.PostSystemEvent(NeuraliumSystemEventGenerator.NeuraliumNeuraliumTimelineUpdated());
+
+					await this.SendTotal(account.GetAccountId(), lockContext).ConfigureAwait(false);
 				}
 			}
 
 			return historyEntry;
 		}
 
+		protected override async Task UpdateLocalTransactionHistoryEntry(IWalletTransactionHistoryFileInfo transactionHistoryFileInfo, ITransaction transaction, TransactionId transactionId, WalletTransactionHistory.TransactionStatuses status, LockContext lockContext) {
+			await base.UpdateLocalTransactionHistoryEntry(transactionHistoryFileInfo, transaction, transactionId, status, lockContext).ConfigureAwait(false);
+			
+			// sometimes tip transactions had a tip, but the tip was removed if not caught by a miner. in this case, we update our history to reflect this.
+			if(status == WalletTransactionHistory.TransactionStatuses.Confirmed && transaction is ITipTransaction tipTransaction && transactionHistoryFileInfo is INeuraliumWalletTransactionHistoryFileInfo neuraliumWalletTransactionHistoryFileInfo) {
+				await neuraliumWalletTransactionHistoryFileInfo.UpdateTransactionTip(transactionId, tipTransaction.Tip.Value, lockContext).ConfigureAwait(false);
+			}
+
+			if(transactionHistoryFileInfo is INeuraliumWalletTransactionHistoryFileInfo neuraliumWalletTransactionHistoryFile) {
+				await this.SendTotal(transactionId.Account, lockContext).ConfigureAwait(false);
+			}
+		}
+		
 		public override async Task<IWalletTransactionHistoryFileInfo> UpdateLocalTransactionHistoryEntry(ITransaction transaction, TransactionId transactionId, WalletTransactionHistory.TransactionStatuses status, BlockId blockId, LockContext lockContext) {
 			this.EnsureWalletIsLoaded();
 			IWalletTransactionHistoryFileInfo historyEntry = await base.UpdateLocalTransactionHistoryEntry(transaction, transactionId, status, blockId, lockContext).ConfigureAwait(false);
@@ -119,7 +135,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 				throw new ApplicationException("Invalid account");
 			}
 
-			if(historyEntry is INeuraliumWalletTransactionHistoryFileInfo neuraliumWalletTransactionHistoryFileInfo && this.WalletFileInfo.Accounts[account.AccountUuid] is INeuraliumAccountFileInfo neuraliumAccountFileInfo) {
+			if(historyEntry is INeuraliumWalletTransactionHistoryFileInfo neuraliumWalletTransactionHistoryFileInfo && this.WalletFileInfo.Accounts[account.AccountCode] is INeuraliumAccountFileInfo neuraliumAccountFileInfo) {
 				INeuraliumWalletTimelineFileInfo neuraliumWalletTimelineFileInfo = neuraliumAccountFileInfo.WalletTimelineFileInfo;
 
 				if(status == WalletTransactionHistory.TransactionStatuses.Confirmed) {
@@ -137,14 +153,18 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 				}
 
 				this.centralCoordinator.PostSystemEvent(NeuraliumSystemEventGenerator.NeuraliumNeuraliumTimelineUpdated());
+				AccountId targetAccountId = transactionId.Account;
+
+				TotalAPI total = await this.GetAccountBalance(targetAccountId, true, lockContext).ConfigureAwait(false);
+				this.centralCoordinator.PostSystemEvent(NeuraliumSystemEventGenerator.NeuraliumAccountTotalUpdated(targetAccountId.SequenceId, targetAccountId.AccountType, total));
 			}
 
 			return historyEntry;
 		}
 
-		public override async Task<List<IWalletTransactionHistory>> InsertTransactionHistoryEntry(ITransaction transaction, string note, BlockId blockId, LockContext lockContext) {
+		public override async Task<List<IWalletTransactionHistory>> InsertTransactionHistoryEntry(ITransaction transaction, string note, BlockId blockId,  WalletTransactionHistory.TransactionStatuses status, LockContext lockContext) {
 			this.EnsureWalletIsLoaded();
-			List<IWalletTransactionHistory> historyEntries = await base.InsertTransactionHistoryEntry(transaction, note, blockId, lockContext).ConfigureAwait(false);
+			List<IWalletTransactionHistory> historyEntries = await base.InsertTransactionHistoryEntry(transaction, note, blockId, status, lockContext).ConfigureAwait(false);
 
 			foreach(IWalletTransactionHistory historyEntry in historyEntries) {
 				if(historyEntry is INeuraliumWalletTransactionHistory neuraliumWalletTransactionHistory) {
@@ -153,33 +173,35 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 				}
 			}
 
+			await this.SendTotal(transaction.TransactionId.Account, lockContext).ConfigureAwait(false);
+
 			return historyEntries;
 		}
 
-		public override async Task<List<WalletTransactionHistoryHeaderAPI>> APIQueryWalletTransactionHistory(Guid accountUuid, LockContext lockContext) {
+		public override async Task<List<WalletTransactionHistoryHeaderAPI>> APIQueryWalletTransactionHistory(string accountCode, LockContext lockContext) {
 			this.EnsureWalletIsLoaded();
 
 			if(!this.IsWalletLoaded) {
 				throw new ApplicationException("Wallet is not loaded");
 			}
 
-			if(accountUuid == Guid.Empty) {
-				accountUuid = await this.GetAccountUuid(lockContext).ConfigureAwait(false);
+			if(string.IsNullOrWhiteSpace(accountCode)) {
+				accountCode = await this.GetAccountCode(lockContext).ConfigureAwait(false);
 			}
 
-			if(!await this.WalletFileInfo.Accounts[accountUuid].WalletTransactionHistoryInfo.CollectionExists<NeuraliumWalletTransactionHistory>(lockContext).ConfigureAwait(false)) {
+			if(!await this.WalletFileInfo.Accounts[accountCode].WalletTransactionHistoryInfo.CollectionExists<NeuraliumWalletTransactionHistory>(lockContext).ConfigureAwait(false)) {
 				return new List<WalletTransactionHistoryHeaderAPI>();
 			}
 
 			//TODO: merge correctly with base version of this method
-			NeuraliumWalletTransactionHistoryHeaderAPI[] results = await this.WalletFileInfo.Accounts[accountUuid].WalletTransactionHistoryInfo.RunQuery<NeuraliumWalletTransactionHistoryHeaderAPI, NeuraliumWalletTransactionHistory>(caches => caches.Select(t => {
+			NeuraliumWalletTransactionHistoryHeaderAPI[] results = await this.WalletFileInfo.Accounts[accountCode].WalletTransactionHistoryInfo.RunQuery<NeuraliumWalletTransactionHistoryHeaderAPI, NeuraliumWalletTransactionHistory>(caches => caches.Select(t => {
 
 				TransactionId transactionId = new TransactionId(t.TransactionId);
 				ComponentVersion<TransactionType> version = new ComponentVersion<TransactionType>(t.Version);
 
 				return new NeuraliumWalletTransactionHistoryHeaderAPI {
-					TransactionId = t.TransactionId, Sender = transactionId.Account.ToString(), Timestamp = TimeService.FormatDateTimeStandardUtc(t.Timestamp), Status = t.Status,
-					Version = new VersionAPI {TransactionType = version.Type.Value.Value, Major = version.Major.Value, Minor = version.Minor.Value}, Recipient = t.Recipient, Local = t.Local, Amount = t.Amount,
+					TransactionId = t.TransactionId, Sender = transactionId.Account.ToString(), Timestamp = TimeService.FormatDateTimeStandardUtc(t.Timestamp), Status = (byte)t.Status,
+					Version = new VersionAPI {TransactionType = version.Type.Value.Value, Major = version.Major.Value, Minor = version.Minor}, Recipient = t.Recipient, Local = t.Local, Amount = t.Amount,
 					Tip = t.Tip, Note = t.Note
 				};
 			}).OrderByDescending(t => t.Timestamp).ToList(), lockContext).ConfigureAwait(false);
@@ -188,28 +210,28 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 
 		}
 
-		public override async Task<WalletTransactionHistoryDetailsAPI> APIQueryWalletTransactionHistoryDetails(Guid accountUuid, string transactionId, LockContext lockContext) {
+		public override async Task<WalletTransactionHistoryDetailsAPI> APIQueryWalletTransactionHistoryDetails(string accountCode, string transactionId, LockContext lockContext) {
 			this.EnsureWalletIsLoaded();
 
 			if(!this.IsWalletLoaded) {
 				throw new ApplicationException("Wallet is not loaded");
 			}
 
-			if(accountUuid == Guid.Empty) {
-				accountUuid = await this.GetAccountUuid(lockContext).ConfigureAwait(false);
+			if(string.IsNullOrWhiteSpace(accountCode)) {
+				accountCode = await this.GetAccountCode(lockContext).ConfigureAwait(false);
 			}
 
-			if(!await this.WalletFileInfo.Accounts[accountUuid].WalletTransactionHistoryInfo.CollectionExists<NeuraliumWalletTransactionHistory>(lockContext).ConfigureAwait(false)) {
+			if(!await this.WalletFileInfo.Accounts[accountCode].WalletTransactionHistoryInfo.CollectionExists<NeuraliumWalletTransactionHistory>(lockContext).ConfigureAwait(false)) {
 				return new WalletTransactionHistoryDetailsAPI();
 			}
 
-			NeuraliumWalletTransactionHistoryDetailsAPI[] results = await this.WalletFileInfo.Accounts[accountUuid].WalletTransactionHistoryInfo.RunQuery<NeuraliumWalletTransactionHistoryDetailsAPI, NeuraliumWalletTransactionHistory>(caches => caches.Where(t => t.TransactionId == transactionId).Select(t => {
+			NeuraliumWalletTransactionHistoryDetailsAPI[] results = await this.WalletFileInfo.Accounts[accountCode].WalletTransactionHistoryInfo.RunQuery<NeuraliumWalletTransactionHistoryDetailsAPI, NeuraliumWalletTransactionHistory>(caches => caches.Where(t => t.TransactionId == transactionId).Select(t => {
 
 				ComponentVersion<TransactionType> version = new ComponentVersion<TransactionType>(t.Version);
 
 				return new NeuraliumWalletTransactionHistoryDetailsAPI {
-					TransactionId = t.TransactionId, Sender = new TransactionId(t.TransactionId).Account.ToString(), Timestamp = TimeService.FormatDateTimeStandardUtc(t.Timestamp), Status = t.Status,
-					Version = new VersionAPI {TransactionType = version.Type.Value.Value, Major = version.Major.Value, Minor = version.Minor.Value}, Recipient = t.Recipient, Contents = t.Contents, Local = t.Local,
+					TransactionId = t.TransactionId, Sender = new TransactionId(t.TransactionId).Account.ToString(), Timestamp = TimeService.FormatDateTimeStandardUtc(t.Timestamp), Status = (byte)t.Status,
+					Version = new VersionAPI {TransactionType = version.Type.Value.Value, Major = version.Major.Value, Minor = version.Minor}, Recipient = t.Recipient, Contents = t.Contents, Local = t.Local,
 					Amount = t.Amount, Tip = t.Tip, Note = t.Note
 				};
 			}).ToList(), lockContext).ConfigureAwait(false);
@@ -218,25 +240,30 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 
 		}
 
+		public async Task SendTotal(AccountId accountId, LockContext lockContext) {
+			TotalAPI total = await this.GetAccountBalance(accountId, true, lockContext).ConfigureAwait(false);
+			this.centralCoordinator.PostSystemEvent(NeuraliumSystemEventGenerator.NeuraliumAccountTotalUpdated(accountId.SequenceId, accountId.AccountType, total));
+		}
+		
 		public async Task<TotalAPI> GetAccountBalance(bool includeReserved, LockContext lockContext) {
-			return await this.GetAccountBalance((await this.GetActiveAccount(lockContext).ConfigureAwait(false)).AccountUuid, includeReserved, lockContext).ConfigureAwait(false);
+			return await this.GetAccountBalance((await this.GetActiveAccount(lockContext).ConfigureAwait(false)).AccountCode, includeReserved, lockContext).ConfigureAwait(false);
 		}
 
 		public async Task<TotalAPI> GetAccountBalance(AccountId accountId, bool includeReserved, LockContext lockContext) {
 
-			return await this.GetAccountBalance((await this.GetWalletAccount(accountId, lockContext).ConfigureAwait(false)).AccountUuid, includeReserved, lockContext).ConfigureAwait(false);
+			return await this.GetAccountBalance((await this.GetWalletAccount(accountId, lockContext).ConfigureAwait(false)).AccountCode, includeReserved, lockContext).ConfigureAwait(false);
 		}
 
-		public async Task<TotalAPI> GetAccountBalance(Guid accountUuid, bool includeReserved, LockContext lockContext) {
+		public async Task<TotalAPI> GetAccountBalance(string accountCode, bool includeReserved, LockContext lockContext) {
 			this.EnsureWalletIsLoaded();
 
 			TotalAPI result = new TotalAPI();
 
-			if(!this.WalletFileInfo.Accounts.ContainsKey(accountUuid)) {
+			if(!this.WalletFileInfo.Accounts.ContainsKey(accountCode)) {
 				return result;
 			}
 
-			IWalletAccount account = await this.GetWalletAccount(accountUuid, lockContext).ConfigureAwait(false);
+			IWalletAccount account = await this.GetWalletAccount(accountCode, lockContext).ConfigureAwait(false);
 
 			IWalletAccountSnapshot accountBase = await this.GetStandardAccountSnapshot(account.GetAccountId(), lockContext).ConfigureAwait(false);
 
@@ -245,10 +272,10 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			}
 
 			if(includeReserved) {
-				IWalletTransactionCacheFileInfo accountCacheBase = this.WalletFileInfo.Accounts[accountUuid].WalletTransactionCacheInfo;
+				var accountHistoryBase = this.WalletFileInfo.Accounts[accountCode].WalletTransactionHistoryInfo;
 
-				if(accountCacheBase is NeuraliumWalletTransactionCacheFileInfo neuraliumWalletTransactionCacheFileInfo) {
-					(decimal debit, decimal credit, decimal tip) results = await neuraliumWalletTransactionCacheFileInfo.GetTransactionAmounts(lockContext).ConfigureAwait(false);
+				if(accountHistoryBase is NeuraliumWalletTransactionHistoryFileInfo neuraliumWalletTransactionHistoryFileInfo) {
+					(decimal debit, decimal credit, decimal tip) results = await neuraliumWalletTransactionHistoryFileInfo.GetPendingTransactionAmounts(lockContext).ConfigureAwait(false);
 
 					result.ReservedDebit = results.debit + results.tip;
 					result.ReservedCredit = results.credit;
@@ -264,8 +291,8 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			return result;
 		}
 
-		public async Task<decimal> GetUsableAccountBalance(Guid accountUuid, LockContext lockContext) {
-			var balance = await this.GetAccountBalance(accountUuid, true, lockContext).ConfigureAwait(false);
+		public async Task<decimal> GetUsableAccountBalance(string accountCode, LockContext lockContext) {
+			var balance = await this.GetAccountBalance(accountCode, true, lockContext).ConfigureAwait(false);
 
 			return balance.Total - (balance.Frozen + balance.ReservedDebit);
 		}
@@ -307,7 +334,6 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 					neuraliumMiningStatistic.AverageBountyPerBlock = (double)(neuraliumWalletElectionsMiningStatistics.TotalBounty / neuraliumWalletElectionsMiningStatistics.BlocksElected);
 				}
 			}
-
 		}
 
 		public override async Task<Dictionary<AccountId, int>> ClearTimedOutTransactions(LockContext lockContext) {
@@ -321,31 +347,6 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			}
 
 			return totals;
-		}
-
-		public override async Task InsertLocalTransactionCacheEntry(ITransactionEnvelope transactionEnvelope, LockContext lockContext) {
-			await base.InsertLocalTransactionCacheEntry(transactionEnvelope, lockContext).ConfigureAwait(false);
-
-			AccountId targetAccountId = transactionEnvelope.Contents.Uuid.Account;
-
-			TotalAPI total = await this.GetAccountBalance(targetAccountId, true, lockContext).ConfigureAwait(false);
-			this.centralCoordinator.PostSystemEvent(NeuraliumSystemEventGenerator.NeuraliumAccountTotalUpdated(targetAccountId.SequenceId, targetAccountId.AccountType, total));
-		}
-
-		public override async Task UpdateLocalTransactionCacheEntry(TransactionId transactionId, WalletTransactionCache.TransactionStatuses status, long gossipMessageHash, LockContext lockContext) {
-			await base.UpdateLocalTransactionCacheEntry(transactionId, status, gossipMessageHash, lockContext).ConfigureAwait(false);
-
-			AccountId targetAccountId = transactionId.Account;
-
-			TotalAPI total = await this.GetAccountBalance(targetAccountId, true, lockContext).ConfigureAwait(false);
-			this.centralCoordinator.PostSystemEvent(NeuraliumSystemEventGenerator.NeuraliumAccountTotalUpdated(targetAccountId.SequenceId, targetAccountId.AccountType, total));
-		}
-
-		public override async Task RemoveLocalTransactionCacheEntry(TransactionId transactionId, LockContext lockContext) {
-			await base.RemoveLocalTransactionCacheEntry(transactionId, lockContext).ConfigureAwait(false);
-
-			TotalAPI total = await this.GetAccountBalance(transactionId.Account, true, lockContext).ConfigureAwait(false);
-			this.centralCoordinator.PostSystemEvent(NeuraliumSystemEventGenerator.NeuraliumAccountTotalUpdated(transactionId.Account.SequenceId, transactionId.Account.AccountType, total));
 		}
 
 		private async Task InsertNeuraliumTransactionTimelineEntry(ITransaction transaction, INeuraliumWalletTransactionHistory neuraliumWalletTransactionHistory, BlockId blockId, LockContext lockContext) {
@@ -363,7 +364,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 				throw new ApplicationException("Invalid account");
 			}
 
-			if(this.WalletFileInfo.Accounts[account.AccountUuid] is INeuraliumAccountFileInfo neuraliumAccountFileInfo) {
+			if(this.WalletFileInfo.Accounts[account.AccountCode] is INeuraliumAccountFileInfo neuraliumAccountFileInfo) {
 				NeuraliumWalletTimeline neuraliumWalletTimeline = new NeuraliumWalletTimeline();
 				INeuraliumWalletTimelineFileInfo neuraliumWalletTimelineFileInfo = neuraliumAccountFileInfo.WalletTimelineFileInfo;
 
@@ -382,8 +383,11 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 					neuraliumWalletTimeline.TimestampTotal = (await this.GetAccountBalance(account.GetAccountId(), false, lockContext).ConfigureAwait(false)).Total;
 				}
 
-				neuraliumWalletTimeline.SenderAccountId = transaction.TransactionId.Account;
-				neuraliumWalletTimeline.RecipientAccountIds = transaction.TargetAccountsSerialized;
+				var sender = transaction.TransactionId.Account;
+				neuraliumWalletTimeline.SenderAccountId = sender;
+				neuraliumWalletTimeline.RecipientAccountIds = transaction.TargetAccountsSerialized.Contains(",", StringComparison.InvariantCulture)
+					? Regex.Replace(transaction.TargetAccountsSerialized, $@"({sender})|(,{sender})", string.Empty)
+					: transaction.TargetAccountsSerialized;
 
 				if(neuraliumWalletTransactionHistory.Local) {
 
@@ -425,7 +429,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		protected override IAccountFileInfo CreateNewAccountFileInfo(AccountPassphraseDetails accountSecurityDetails) {
 			return new NeuraliumAccountFileInfo(accountSecurityDetails);
 		}
-
+		
 		protected override void FillWalletElectionsHistoryEntry(IWalletElectionsHistory walletElectionsHistory, SynthesizedBlock.SynthesizedElectionResult electionResult, AccountId electedAccountId) {
 
 			if(walletElectionsHistory is INeuraliumWalletElectionsHistory neuraliumWalletElectionsHistory && electionResult is NeuraliumSynthesizedBlock.NeuraliumSynthesizedElectionResult neuraliumSynthesizedElectionResult) {
@@ -445,7 +449,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 				if(transaction is INeuraliumTransferTransaction neuraliumTransferTransaction) {
 
 					neuraliumWalletTransactionHistory.Amount = neuraliumTransferTransaction.Amount;
-					neuraliumWalletTransactionHistory.MoneratyTransactionType = NeuraliumWalletTransactionHistory.MoneratyTransactionTypes.Debit;
+					neuraliumWalletTransactionHistory.BookkeepingType = Enums.BookkeepingTypes.Debit;
 				} else if(transaction is INeuraliumMultiTransferTransaction neuraliumMultiTransferTransaction) {
 
 					if(walletAccountTransactionHistory.Local) {
@@ -456,12 +460,12 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 						neuraliumWalletTransactionHistory.Amount = neuraliumMultiTransferTransaction.Recipients.SingleOrDefault(r => r.Recipient == recipientAccounts.Single().GetAccountId()).Amount;
 					}
 
-					neuraliumWalletTransactionHistory.MoneratyTransactionType = NeuraliumWalletTransactionHistory.MoneratyTransactionTypes.Debit;
+					neuraliumWalletTransactionHistory.BookkeepingType = Enums.BookkeepingTypes.Debit;
 					neuraliumWalletTransactionHistory.Recipient = string.Join(",", neuraliumMultiTransferTransaction.Recipients.Select(a => a.Recipient).OrderBy(a => a.ToLongRepresentation()));
 				} else if(transaction is INeuraliumRefillNeuraliumsTransaction neuraliumsTransaction) {
 					if(walletAccountTransactionHistory.Local) {
 						neuraliumWalletTransactionHistory.Amount = 1000;
-						neuraliumWalletTransactionHistory.MoneratyTransactionType = NeuraliumWalletTransactionHistory.MoneratyTransactionTypes.Credit;
+						neuraliumWalletTransactionHistory.BookkeepingType = Enums.BookkeepingTypes.Credit;
 					}
 				}
 
@@ -470,37 +474,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 				}
 			}
 		}
-
-		protected override void FillWalletTransactionCacheEntry(IWalletTransactionCache walletAccountTransactionCache, ITransactionEnvelope transactionEnvelope, AccountId targetAccountId) {
-			this.EnsureWalletIsLoaded();
-			base.FillWalletTransactionCacheEntry(walletAccountTransactionCache, transactionEnvelope, targetAccountId);
-
-			ITransaction transaction = transactionEnvelope.Contents.RehydratedTransaction;
-
-			if(walletAccountTransactionCache is INeuraliumWalletTransactionCache neuraliumWalletTransactionCache) {
-
-				bool ours = transaction.TransactionId.Account == targetAccountId;
-
-				//here we record the impact amount. + value increases our amount. - reduces
-				if(transaction is INeuraliumTransferTransaction neuraliumTransferTransaction) {
-					neuraliumWalletTransactionCache.Amount = neuraliumTransferTransaction.Amount;
-					neuraliumWalletTransactionCache.MoneratyTransactionType = NeuraliumWalletTransactionCache.MoneratyTransactionTypes.Debit;
-				} else if(transaction is INeuraliumMultiTransferTransaction neuraliumMultiTransferTransaction) {
-
-					neuraliumWalletTransactionCache.Amount = neuraliumMultiTransferTransaction.Amount;
-					neuraliumWalletTransactionCache.MoneratyTransactionType = NeuraliumWalletTransactionCache.MoneratyTransactionTypes.Debit;
-				} else if(transaction is INeuraliumRefillNeuraliumsTransaction neuraliumsTransaction) {
-
-					neuraliumWalletTransactionCache.Amount = 1000;
-					neuraliumWalletTransactionCache.MoneratyTransactionType = NeuraliumWalletTransactionCache.MoneratyTransactionTypes.Credit;
-				}
-
-				if(transaction is ITipTransaction tipTransaction) {
-					neuraliumWalletTransactionCache.Tip = tipTransaction.Tip;
-				}
-			}
-		}
-
+		
 		protected override void FillStandardAccountSnapshot(IWalletAccount account, IWalletStandardAccountSnapshot accountSnapshot) {
 			base.FillStandardAccountSnapshot(account, accountSnapshot);
 
@@ -536,17 +510,17 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 
 	#region external API methods
 
-		public async Task<TimelineHeader> GetTimelineHeader(Guid accountUuid, LockContext lockContext) {
+		public async Task<TimelineHeader> GetTimelineHeader(string accountCode, LockContext lockContext) {
 			this.EnsureWalletIsLoaded();
 
-			if(accountUuid == Guid.Empty) {
-				accountUuid = await this.GetAccountUuid(lockContext).ConfigureAwait(false);
+			if(string.IsNullOrWhiteSpace(accountCode)) {
+				accountCode = await this.GetAccountCode(lockContext).ConfigureAwait(false);
 			}
 
 			TimelineHeader timelineHeader = new TimelineHeader();
 
 			//TODO: merge correctly with base version of this method
-			if(this.WalletFileInfo.Accounts[accountUuid] is INeuraliumAccountFileInfo neuraliumAccountFileInfo) {
+			if(this.WalletFileInfo.Accounts[accountCode] is INeuraliumAccountFileInfo neuraliumAccountFileInfo) {
 
 				timelineHeader.FirstDay = TimeService.FormatDateTimeStandardUtc(await neuraliumAccountFileInfo.WalletTimelineFileInfo.GetFirstDay(lockContext).ConfigureAwait(false));
 				timelineHeader.NumberOfDays = await neuraliumAccountFileInfo.WalletTimelineFileInfo.GetDaysCount(lockContext).ConfigureAwait(false);
@@ -559,12 +533,12 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		/// <summary>
 		///     Creates a timeline where the days and their entries are adapted to the timezone of the provided firstday.
 		/// </summary>
-		/// <param name="accountUuid"></param>
+		/// <param name="accountCode"></param>
 		/// <param name="firstday"></param>
 		/// <param name="skip"></param>
 		/// <param name="take"></param>
 		/// <returns>A list of TimelineDay in descending order of days.</returns>
-		public async Task<List<TimelineDay>> GetTimelineSection(Guid accountUuid, DateTime firstday, LockContext lockContext, int skip = 0, int take = 1) {
+		public async Task<List<TimelineDay>> GetTimelineSection(string accountCode, DateTime firstday, LockContext lockContext, int skip = 0, int take = 1) {
 			this.EnsureWalletIsLoaded();
 
 			if(skip < 0) {
@@ -575,8 +549,8 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 				throw new ArgumentOutOfRangeException(nameof(take), "Must be bigger than or equal to 1.");
 			}
 
-			if(accountUuid == Guid.Empty) {
-				accountUuid = await this.GetAccountUuid(lockContext).ConfigureAwait(false);
+			if(string.IsNullOrWhiteSpace(accountCode)) {
+				accountCode = await this.GetAccountCode(lockContext).ConfigureAwait(false);
 			}
 
 			List<TimelineDay> results = new List<TimelineDay>();
@@ -589,7 +563,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			endOfFirstDay = endOfFirstDay.ToUniversalTime();
 			startOfLastDay = startOfLastDay.ToUniversalTime();
 
-			if(this.WalletFileInfo.Accounts[accountUuid] is INeuraliumAccountFileInfo neuraliumAccountFileInfo) {
+			if(this.WalletFileInfo.Accounts[accountCode] is INeuraliumAccountFileInfo neuraliumAccountFileInfo) {
 
 				//Get the entries between the end of first day and the start of last day. We compare everything in UTC.
 				NeuraliumWalletTimelineDay[] days = await neuraliumAccountFileInfo.WalletTimelineFileInfo.RunQuery<NeuraliumWalletTimelineDay, NeuraliumWalletTimelineDay>(d => d.Where(e => (endOfFirstDay >= e.Timestamp.ToUniversalTime()) && (e.Timestamp.ToUniversalTime() >= startOfLastDay)).ToList(), lockContext).ConfigureAwait(false);
@@ -633,18 +607,18 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		/// <summary>
 		///     here we apply the UBB to any applicable accounts that we have
 		/// </summary>
-		/// <param name="accountUuid"></param>
+		/// <param name="accountCode"></param>
 		/// <param name="bounty"></param>
 		/// <param name="blockId"></param>
 		/// <param name="lockContext"></param>
 		/// <returns></returns>
-		public async Task ApplyUniversalBasicBounties(Guid accountUuid, Amount bounty, BlockId blockId, LockContext lockContext) {
+		public async Task ApplyUniversalBasicBounties(string accountCode, Amount bounty, BlockId blockId, LockContext lockContext) {
 
-			IWalletAccount account = await this.GetWalletAccount(accountUuid, lockContext).ConfigureAwait(false);
+			IWalletAccount account = await this.GetWalletAccount(accountCode, lockContext).ConfigureAwait(false);
 
-			if(account?.Correlated ?? false) {
+			if(account?.VerificationLevel == Enums.AccountVerificationTypes.KYC) {
 
-				if(this.WalletFileInfo.Accounts[account.AccountUuid] is INeuraliumAccountFileInfo neuraliumAccountFileInfo) {
+				if(this.WalletFileInfo.Accounts[account.AccountCode] is INeuraliumAccountFileInfo neuraliumAccountFileInfo) {
 
 					IWalletAccountSnapshot snapshot = await (neuraliumAccountFileInfo?.WalletSnapshotInfo.WalletAccountSnapshot(lockContext)).ConfigureAwait(false);
 
@@ -673,7 +647,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		public override async Task<SynthesizedBlock> ConvertApiSynthesizedBlock(SynthesizedBlockAPI synthesizedBlockApi, LockContext lockContext) {
 			SynthesizedBlock synthesizedBlock = await base.ConvertApiSynthesizedBlock(synthesizedBlockApi, lockContext).ConfigureAwait(false);
 
-			AccountId accountId = synthesizedBlockApi.AccountId != null ? new AccountId(synthesizedBlockApi.AccountId) : new AccountId(synthesizedBlockApi.AccountHash);
+			AccountId accountId = synthesizedBlockApi.AccountId != null ? new AccountId(synthesizedBlockApi.AccountId) : new AccountId(synthesizedBlockApi.AccountCode);
 
 			if(synthesizedBlockApi is NeuraliumSynthesizedBlockApi neuraliumSynthesizedBlockApi && synthesizedBlock is NeuraliumSynthesizedBlock neuraliumSynthesizedBlock) {
 

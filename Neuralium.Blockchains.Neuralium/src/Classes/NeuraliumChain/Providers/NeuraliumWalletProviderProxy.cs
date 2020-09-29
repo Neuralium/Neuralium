@@ -34,29 +34,29 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			return this.ScheduleKeyedRead((prov, lc) => ((INeuraliumWalletProvider) prov).GetAccountBalance(includeReserved, lc), lockContext);
 		}
 
-		public Task<TotalAPI> GetAccountBalance(Guid accountUuid, bool includeReserved, LockContext lockContext) {
-			return this.ScheduleKeyedRead((prov, lc) => ((INeuraliumWalletProvider) prov).GetAccountBalance(accountUuid, includeReserved, lc), lockContext);
+		public Task<TotalAPI> GetAccountBalance(string accountCode, bool includeReserved, LockContext lockContext) {
+			return this.ScheduleKeyedRead((prov, lc) => ((INeuraliumWalletProvider) prov).GetAccountBalance(accountCode, includeReserved, lc), lockContext);
 		}
 
 		public Task<TotalAPI> GetAccountBalance(AccountId accountId, bool includeReserved, LockContext lockContext) {
 			return this.ScheduleKeyedRead((prov, lc) => ((INeuraliumWalletProvider) prov).GetAccountBalance(accountId, includeReserved, lc), lockContext);
 		}
 
-		public Task<decimal> GetUsableAccountBalance(Guid accountUuid, LockContext lockContext) {
-			return this.ScheduleKeyedRead((prov, lc) => ((INeuraliumWalletProvider) prov).GetUsableAccountBalance(accountUuid, lc), lockContext);
+		public Task<decimal> GetUsableAccountBalance(string accountCode, LockContext lockContext) {
+			return this.ScheduleKeyedRead((prov, lc) => ((INeuraliumWalletProvider) prov).GetUsableAccountBalance(accountCode, lc), lockContext);
 		}
 		
-		public Task<TimelineHeader> GetTimelineHeader(Guid accountUuid, LockContext lockContext) {
-			return this.ScheduleKeyedRead((prov, lc) => ((INeuraliumWalletProvider) prov).GetTimelineHeader(accountUuid, lc), lockContext);
+		public Task<TimelineHeader> GetTimelineHeader(string accountCode, LockContext lockContext) {
+			return this.ScheduleKeyedRead((prov, lc) => ((INeuraliumWalletProvider) prov).GetTimelineHeader(accountCode, lc), lockContext);
 		}
 
-		public Task<List<TimelineDay>> GetTimelineSection(Guid accountUuid, DateTime firstday, LockContext lockContext, int skip = 0, int take = 1) {
-			return this.ScheduleKeyedRead((prov, lc) => ((INeuraliumWalletProvider) prov).GetTimelineSection(accountUuid, firstday, lc, skip, take), lockContext);
+		public Task<List<TimelineDay>> GetTimelineSection(string accountCode, DateTime firstday, LockContext lockContext, int skip = 0, int take = 1) {
+			return this.ScheduleKeyedRead((prov, lc) => ((INeuraliumWalletProvider) prov).GetTimelineSection(accountCode, firstday, lc, skip, take), lockContext);
 		}
 
-		public Task ApplyUniversalBasicBounties(Guid accountUuid, Amount bounty, BlockId blockId, LockContext lockContext) {
+		public Task ApplyUniversalBasicBounties(string accountCode, Amount bounty, BlockId blockId, LockContext lockContext) {
 			return this.ScheduleTransaction((t, ct, lc) => {
-				return ((INeuraliumWalletProvider) this.walletProvider).ApplyUniversalBasicBounties(accountUuid, bounty, blockId, lc);
+				return ((INeuraliumWalletProvider) this.walletProvider).ApplyUniversalBasicBounties(accountCode, bounty, blockId, lc);
 
 			}, lockContext, 20, lc => {
 				// load wallet & key

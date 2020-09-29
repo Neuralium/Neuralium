@@ -20,12 +20,12 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.debug
 		public TestFactory(BlockchainServiceSet serviceSet) : base(serviceSet) {
 		}
 
-		public override ITargettedMessageSet<IBlockchainEventsRehydrationFactory> RehydrateMessage(SafeArrayHandle data, TargettedHeader header, IBlockchainEventsRehydrationFactory rehydrationFactory) {
-			IDataRehydrator dr = DataSerializationFactory.CreateRehydrator(data);
+		public override ITargettedMessageSet<IBlockchainEventsRehydrationFactory> Rehydrate(SafeArrayHandle data, TargettedHeader header, IBlockchainEventsRehydrationFactory rehydrationFactory) {
+			using IDataRehydrator dr = DataSerializationFactory.CreateRehydrator(data);
 
-			SafeArrayHandle messageBytes = NetworkMessageSet.ExtractMessageBytes(dr);
+			using SafeArrayHandle messageBytes = NetworkMessageSet.ExtractMessageBytes(dr);
 			NetworkMessageSet.ResetAfterHeader(dr);
-			IDataRehydrator messageRehydrator = DataSerializationFactory.CreateRehydrator(messageBytes);
+			using IDataRehydrator messageRehydrator = DataSerializationFactory.CreateRehydrator(messageBytes);
 
 			IBlockchainTargettedMessageSet messageSet = null;
 

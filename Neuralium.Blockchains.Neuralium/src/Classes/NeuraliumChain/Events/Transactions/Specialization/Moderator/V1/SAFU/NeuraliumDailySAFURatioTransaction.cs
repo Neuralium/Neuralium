@@ -4,6 +4,7 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Blocks.Seria
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Serialization;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Transactions.Specialization.Moderator;
+using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.Cryptography.Trees;
 using Neuralia.Blockchains.Core.General.Types;
 using Neuralia.Blockchains.Core.General.Types.Dynamic;
@@ -37,9 +38,9 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 		/// </summary>
 		public AdaptiveLong1_9 MaximumAmountDays { get; set; } = new AdaptiveLong1_9();
 
-		public override HashNodeList GetStructuresArray() {
+		public override HashNodeList GetStructuresArray(Enums.MutableStructureTypes types) {
 
-			HashNodeList nodeList = base.GetStructuresArray();
+			HashNodeList nodeList = base.GetStructuresArray(types);
 
 			nodeList.Add(this.SAFUDailyRatio);
 			nodeList.Add(this.MinimumSAFUQuantity);
@@ -57,7 +58,10 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 			jsonDeserializer.SetProperty("MaximumAmountDays", this.MaximumAmountDays);
 		}
 
-		public override ImmutableList<AccountId> TargetAccounts => new List<AccountId>().ToImmutableList();
+		public override Enums.TransactionTargetTypes TargetType => Enums.TransactionTargetTypes.All;
+		
+		public override AccountId[] ImpactedAccounts =>this.TargetAccounts;
+		public override AccountId[] TargetAccounts => System.Array.Empty<AccountId>();
 
 		protected override ComponentVersion<TransactionType> SetIdentity() {
 			return (NeuraliumTransactionTypes.Instance.NEURALIUM_SAFU_UPDATE_RATIO, 1, 0);

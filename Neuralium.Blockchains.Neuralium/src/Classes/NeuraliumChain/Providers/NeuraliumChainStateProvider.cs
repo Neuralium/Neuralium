@@ -31,7 +31,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 		//		protected override CHAIN_STATE_SNAPSHOT CreateNewEntry() {
 		//			CHAIN_STATE_SNAPSHOT sqliteEntry = new CHAIN_STATE_SNAPSHOT();
 		//
-		//			sqliteEntry.ChainInception = DateTime.MinValue;
+		//			sqliteEntry.ChainInception = DateTimeEx.MinValue;
 		//			sqliteEntry.BlockHeight = 0;
 		//
 		//			return sqliteEntry;
