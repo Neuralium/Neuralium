@@ -47,8 +47,8 @@ cd ../Neuralia.BouncyCastle
 rm "Neuralia.BouncyCastle.1.0.0.nupkg"
 ./pack.sh
 
-cp Neuralia.BouncyCastle.1.0.0.nupkg Neuralia.Blockchain/local-source/
-cp Neuralia.BouncyCastle.1.0.0.nupkg ../local-source/
+cp Neuralia.BouncyCastle.1.0.0.nupkg ../Neuralia.Blockchain/local-source/
+cp Neuralia.BouncyCastle.1.0.0.nupkg ../../local-source/
 
 
 
@@ -60,4 +60,3 @@ rm "Neuralia.Blockchain.1.0.0.nupkg"
 
 cp Neuralia.Blockchains.Common.1.0.0.nupkg ../../local-source/
 cp Neuralia.Blockchains.Core.1.0.0.nupkg ../../local-source/
-
