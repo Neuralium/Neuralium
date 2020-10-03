@@ -5,6 +5,12 @@ mkdir deps
 mkdir local-source
 cd deps
 
+rm Neuralia.NClap
+rm Neuralia.Open.Nat
+rm Neuralia.Blockchains.Tools
+rm Neuralia.BouncyCastle
+rm Neuralia.Blockchain
+
 git clone -b TESTNET https://github.com/Neuralia/Neuralia.NClap
 git clone -b TESTNET https://github.com/Neuralia/Neuralia.Open.Nat
 git clone -b TESTNET https://github.com/Neuralia/Neuralia.Blockchains.Tools
@@ -47,7 +53,7 @@ cd ../Neuralia.BouncyCastle
 rm "Neuralia.BouncyCastle.1.0.0.nupkg"
 ./pack.sh
 
-cp Neuralia.BouncyCastle.1.0.0.nupkg Neuralia.Blockchain/local-source/
+cp Neuralia.BouncyCastle.1.0.0.nupkg ../Neuralia.Blockchain/local-source/
 cp Neuralia.BouncyCastle.1.0.0.nupkg ../../local-source/
 
 
