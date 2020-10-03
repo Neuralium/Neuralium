@@ -25,7 +25,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Facto
 			return new NeuraliumSyncWalletWorkflow(this.centralCoordinator);
 		}
 
-		public override IClientAppointmentRequestWorkflow CreateAppointmentRequestWorkflow(Guid? requesterId, long? requesterIndex, DateTime? appointment, Enums.AppointmentRequestModes mode) {
+		public override IClientAppointmentRequestWorkflow CreateAppointmentRequestWorkflow(Guid? requesterId, int? requesterIndex, DateTime? appointment, Enums.AppointmentRequestModes mode) {
 			return new NeuraliumClientAppointmentRequestWorkflow(requesterId, requesterIndex, appointment, mode, this.centralCoordinator);
 		}
 
@@ -37,7 +37,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Facto
 			return (NeuraliumSyncWalletWorkflow) this.CreateSyncWalletWorkflow();
 		}
 		
-		public NeuraliumClientAppointmentRequestWorkflow CreateNeuraliumAppointmentRequestWorkflow(Guid? requesterId, long? requesterIndex, DateTime? appointment, Enums.AppointmentRequestModes mode) {
+		public NeuraliumClientAppointmentRequestWorkflow CreateNeuraliumAppointmentRequestWorkflow(Guid? requesterId, int? requesterIndex, DateTime? appointment, Enums.AppointmentRequestModes mode) {
 			return (NeuraliumClientAppointmentRequestWorkflow) this.CreateAppointmentRequestWorkflow(requesterId, requesterIndex, appointment, mode);
 		}
 	}

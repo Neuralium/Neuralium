@@ -22,7 +22,7 @@ namespace Neuralia.Blockchains.Core.P2p.Workflows.AppointmentRequest {
 	
 	public class NeuraliumClientAppointmentRequestWorkflow : ClientAppointmentRequestWorkflow<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider, NeuraliumAppointmentRequestTrigger, NeuraliumAppointmentRequestServerReply> {
 
-		public NeuraliumClientAppointmentRequestWorkflow(Guid? requesterId, long? requesterIndex, DateTime? appointment, Enums.AppointmentRequestModes mode, INeuraliumCentralCoordinator centralCoordinator) : base(requesterId, requesterIndex, appointment, mode, NeuraliumBlockchainTypes.NeuraliumInstance.Neuralium, centralCoordinator) {
+		public NeuraliumClientAppointmentRequestWorkflow(Guid? requesterId, int? requesterIndex, DateTime? appointment, Enums.AppointmentRequestModes mode, INeuraliumCentralCoordinator centralCoordinator) : base(requesterId, requesterIndex, appointment, mode, NeuraliumBlockchainTypes.NeuraliumInstance.Neuralium, centralCoordinator) {
 
 		}
 	}
