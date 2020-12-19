@@ -1,0 +1,6 @@
+ <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003"
+           ToolsVersion="3.5">
+      <PropertyGroup>
+    	<DefineConstants>MAINNET_LAUNCH_CODE;MAINNET</DefineConstants>
+      </PropertyGroup>
+  </Project>

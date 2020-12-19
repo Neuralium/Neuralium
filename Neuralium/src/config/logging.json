@@ -1,0 +1,53 @@
+{
+  "Logging": {
+    "IncludeScopes": false,
+    "Debug": {
+      "LogLevel": {
+        "Default": "Verbose",
+        "Microsoft": "Verbose"
+      }
+    },
+    "Console": {
+      "LogLevel": {
+        "Default": "Verbose",
+        "Microsoft": "Verbose"
+      }
+    }
+  },
+  "Serilog": {
+    "Using": [
+      "Serilog.Sinks.Console",
+      "Serilog.Sinks.File",
+      "Serilog.Enrichers.Thread",
+      "Serilog.Sinks.Async",
+      "Serilog.Exceptions"
+    ],
+    "MinimumLevel":{
+      "Default": "Verbose",
+      "Override": {
+        "Microsoft": "Verbose",
+        "System": "Verbose"
+      }
+    },
+    "WriteTo": [
+      {
+        "Name": "Async",
+        "Args": {
+          "configure": [
+            {
+              "Name": "Console",
+              "Args": {
+                "theme": "Serilog.Sinks.SystemConsole.Themes.AnsiConsoleTheme::Code, Serilog.Sinks.Console",
+                "outputTemplate": "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties}{NewLine}{Exception}"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "Enrich": ["WithThreadId" , "WithExceptionDetails"],
+    "Properties": {
+
+    }
+  }
+}

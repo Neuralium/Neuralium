@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+   <PropertyGroup>
+        <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
+        <OutputType>Library</OutputType>
+        <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+        <DefineConstants>$(DefineConstants);SILENT_EXCEPTIONS</DefineConstants>
+        <LangVersion>latest</LangVersion>
+        <RootNamespace>Neuralium.Api.Common</RootNamespace>
+        <AssemblyName>Neuralium.Api.Common</AssemblyName>
+        <TargetFrameworks>netstandard2.1;net5.0</TargetFrameworks>
+        
+    </PropertyGroup>
+
+
+    <ItemGroup>
+      <PackageReference Include="Neuralia.Blockchains.Components" Version="1.0.0" />
+      <PackageReference Include="Neuralia.Blockchains.Common" Version="1.0.0" />
+      <PackageReference Include="Neuralia.Blockchains.Core" Version="1.0.0" />
+    </ItemGroup>
+    <Import Project="$(MSBuildProjectDirectory)/../CommonSettings.targets" />
+
+</Project>

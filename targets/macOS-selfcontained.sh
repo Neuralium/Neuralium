@@ -5,7 +5,7 @@ cd ../
 dotnet restore --no-cache
 
 
-if  dotnet publish ./Neuralium/src/Neuralium.csproj --self-contained true /p:PublishTrimmed=true -c Release -o ./build -r osx-x64 ; then
+if  dotnet publish ./Neuralium/src/Neuralium.csproj --self-contained true -p:PublishTrimmed=true -p:PublishSingleFile=true -c Release -o ./build -r osx-x64 ; then
 dotnet clean ;
  echo "publish completed"
 else
