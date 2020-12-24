@@ -31,6 +31,7 @@ using Neuralia.Blockchains.Tools.Threading;
 using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.debugging.Test;
 using Neuralium.Core.Classes.Configuration;
 using Neuralium.Core.Classes.Services;
+using Nito.AsyncEx.Synchronous;
 using Serilog;
 
 namespace Neuralium.Core.Classes.Runtime {
@@ -110,6 +111,13 @@ namespace Neuralium.Core.Classes.Runtime {
 			this.applicationLifetime.ApplicationStopping.Register(() => {
 
 				// alert everyone shutdown has completed
+
+				try {
+					this.networkingService.Stop().WaitAndUnwrapException();
+				} catch {
+					
+				}
+
 				this.RunRpcCommand(() => this.rpcService.RpcProvider.ShutdownStarted());
 			});
 
@@ -463,8 +471,10 @@ namespace Neuralium.Core.Classes.Runtime {
 				}
 
 				try {
-					await this.networkingService.Stop().ConfigureAwait(false);
-					this.networkingService.Dispose();
+					if(!this.networkingService.IsDisposed) {
+						await this.networkingService.Stop().ConfigureAwait(false);
+						this.networkingService.Dispose();
+					}
 				} catch(Exception ex) {
 					NLog.Default.Verbose("error occured", ex);
 				}

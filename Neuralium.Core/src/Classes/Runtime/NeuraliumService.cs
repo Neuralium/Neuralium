@@ -54,8 +54,7 @@ namespace Neuralium.Core.Classes.Runtime {
 					}
 
 				}, this, waitTime, waitTime);
-
-#elif NET
+				
 #elif DEVNET
 			Console.BackgroundColor = ConsoleColor.Yellow;
 			Console.ForegroundColor = ConsoleColor.Red;
@@ -77,7 +76,22 @@ NLog.Default.Error(ex, "Timer exception");
 				}
 
 			}, this, waitTime, waitTime);
+#elif MAINNET_LAUNCH_CODE
+				this.CheckMainnetDelay();
 
+			TimeSpan waitTime = TimeSpan.FromHours(1);
+
+			this.pollingTimer = new Timer(state => {
+
+try{
+				this.CheckMainnetDelay();
+}
+				catch(Exception ex){
+					//TODO: do something?
+NLog.Default.Error(ex, "Timer exception");
+				}
+
+			}, this, waitTime, waitTime);
 #endif
 
 				// lets do the legal stuff. sucks but thats how it is now...
@@ -261,7 +275,7 @@ NLog.Default.Error(ex, "Timer exception");
 		private Timer pollingTimer;
 
 		private readonly AutoResetEvent autoResetEvent = new AutoResetEvent(false);
-		protected virtual void CheckDevnetDelay() {
+		protected virtual void CheckMainnetDelay() {
 			//TimeSpan allowDelay = TimeSpan.FromDays(5);
 			DateTime limit = new DateTime(2020, 12, 30, 23, 0, 0, DateTimeKind.Utc);
 
@@ -269,7 +283,7 @@ NLog.Default.Error(ex, "Timer exception");
 
 				Console.BackgroundColor = ConsoleColor.Black;
 				Console.ForegroundColor = ConsoleColor.Red;
-				NLog.Default.Fatal("This release has expired! It can not be used anymore. Please download a more recent version from https://www.neuralium.com.");
+				NLog.Default.Fatal("This release has expired! It can not be used anymore. Please download a more recent version from https://www.neuralium.com.  [EXPIRED MAINNET]");
 
 				throw new TrialTimeoutException();
 			}
