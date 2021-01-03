@@ -11,11 +11,11 @@ rm Neuralia.Blockchains.Tools
 rm Neuralia.BouncyCastle
 rm Neuralia.Blockchain
 
-git clone -b TESTNET https://github.com/Neuralia/Neuralia.NClap
-git clone -b TESTNET https://github.com/Neuralia/Neuralia.Open.Nat
-git clone -b TESTNET https://github.com/Neuralia/Neuralia.Blockchains.Tools
-git clone -b TESTNET https://github.com/Neuralia/Neuralia.BouncyCastle
-git clone -b TESTNET https://github.com/Neuralia/Neuralia.Blockchain
+git clone -b MAINNET https://github.com/Neuralia/Neuralia.NClap
+git clone -b MAINNET https://github.com/Neuralia/Neuralia.Open.Nat
+git clone -b MAINNET https://github.com/Neuralia/Neuralia.Blockchains.Tools
+git clone -b MAINNET https://github.com/Neuralia/Neuralia.BouncyCastle
+git clone -b MAINNET https://github.com/Neuralia/Neuralia.Blockchain
 
 cd Neuralia.NClap
 
