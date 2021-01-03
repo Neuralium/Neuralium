@@ -42,7 +42,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Factories {
 
 		public virtual Func<AppSettingsBase.SerializationTypes, IAppointmentRegistryContext> CreateAppointmentRegistryContextFunc => EntityFrameworkContext.CreateContext<AppointmentRegistrySqliteContext>;
 
-		public virtual Func<string, ICentralCoordinator, AppSettingsBase.SerializationTypes, IAppointmentRegistryDal> CreateAppointmentRegistryDalFunc => (folderPath, centralCoordinator, serializationType) => new AppointmentRegistrySqliteDal(folderPath, centralCoordinator, GlobalSettings.SoftwareVersion, this, serializationType);
+		public virtual Func<string, ICentralCoordinator, bool, AppSettingsBase.SerializationTypes, IAppointmentRegistryDal> CreateAppointmentRegistryDalFunc => (folderPath, centralCoordinator, enablePuzzleTHS, serializationType) => new AppointmentRegistrySqliteDal(folderPath, centralCoordinator, enablePuzzleTHS, GlobalSettings.SoftwareVersion, this, serializationType);
 
 		// here are replaceable injection functions
 
@@ -111,8 +111,8 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Factories {
 			return (APPOINTMENT_CONTEXT_CONTEXT) this.CreateAppointmentRegistryContextFunc(serializationType);
 		}
 		
-		public override APPOINTMENT_REGISTRY_DAL CreateAppointmentRegistryDal<APPOINTMENT_REGISTRY_DAL>(string folderPath, ICentralCoordinator centralCoordinator, AppSettingsBase.SerializationTypes serializationType) {
-			return (APPOINTMENT_REGISTRY_DAL) this.CreateAppointmentRegistryDalFunc(folderPath, centralCoordinator, serializationType);
+		public override APPOINTMENT_REGISTRY_DAL CreateAppointmentRegistryDal<APPOINTMENT_REGISTRY_DAL>(string folderPath, ICentralCoordinator centralCoordinator, bool enablePuzzleTHS, AppSettingsBase.SerializationTypes serializationType) {
+			return (APPOINTMENT_REGISTRY_DAL) this.CreateAppointmentRegistryDalFunc(folderPath, centralCoordinator, enablePuzzleTHS, serializationType);
 		}
 
 		public override STANDARD_ACCOUNT_SNAPSHOT_DAL CreateStandardAccountSnapshotDal<STANDARD_ACCOUNT_SNAPSHOT_DAL>(int groupSize, string folderPath, BlockchainServiceSet serviceSet, AppSettingsBase.SerializationTypes serializationType) {
@@ -176,8 +176,8 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Factories {
 		}
 
 		
-		public IAppointmentRegistryDal CreateAppointmentRegistryDal(string folderPath, ICentralCoordinator centralCoordinator, AppSettingsBase.SerializationTypes serializationType) {
-			return this.CreateAppointmentRegistryDal<IAppointmentRegistryDal>(folderPath, centralCoordinator, serializationType);
+		public IAppointmentRegistryDal CreateAppointmentRegistryDal(string folderPath, ICentralCoordinator centralCoordinator, bool enablePuzzleTHS, AppSettingsBase.SerializationTypes serializationType) {
+			return this.CreateAppointmentRegistryDal<IAppointmentRegistryDal>(folderPath, centralCoordinator, enablePuzzleTHS, serializationType);
 		}
 
 		public INeuraliumChainStateDal CreateChainStateDal(string folderPath, BlockchainServiceSet serviceSet, AppSettingsBase.SerializationTypes serializationType) {

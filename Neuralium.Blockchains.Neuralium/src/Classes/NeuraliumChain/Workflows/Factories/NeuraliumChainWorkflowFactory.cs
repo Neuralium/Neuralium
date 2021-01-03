@@ -80,9 +80,10 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Facto
 			return new NeuraliumPuzzleExecutionWorkflow(this.centralCoordinator, correlationContext);
 		}
 
-		public override ISendAppointmentVerificationResultsMessageWorkflow<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> CreateSendAppointmentVerificationResultsMessageWorkflow(List<IAppointmentRequesterResult> entries, Dictionary<long, bool> verificationResults, CorrelationContext correlationContext) {
-			return new NeuraliumSendAppointmentVerificationResultsMessageWorkflow(entries, verificationResults, this.centralCoordinator, correlationContext);
+		public override ISendAppointmentVerificationResultsMessageWorkflow<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider> CreateSendAppointmentVerificationResultsMessageWorkflow(DateTime appointment, CorrelationContext correlationContext) {
+			return new NeuraliumSendAppointmentVerificationResultsMessageWorkflow(appointment, this.centralCoordinator, correlationContext);
 		}
+		
 
 #if TESTNET || DEVNET
 		public virtual ICreateNeuraliumRefillTransactionWorkflow CreateRefillNeuraliumsWorkflow(string accountCode, CorrelationContext correlationContext, byte expiration = 0) {

@@ -135,7 +135,7 @@ namespace Neuralium.Core.Classes.General {
 		Task THSTrigger(ushort chainType);
 		Task THSBegin(ushort chainType, long difficulty, long targetNonce, long targetTotalDuration, long estimatedIterationTime, long estimatedRemainingTime, long startingNonce, long startingTotalNonce, long startingRound, long[] nonces, int[]solutions);
 		Task THSRound(ushort chainType, int round, long totalNonce, long lastNonce, int lastSolution);
-		Task THSIteration(ushort chainType, long nonce, long elapsed, long estimatedIterationTime, long estimatedRemainingTime, double benchmarkSpeedRatio);
+		Task THSIteration(ushort chainType, long[] nonces, long elapsed, long estimatedIterationTime, long estimatedRemainingTime, double benchmarkSpeedRatio);
 		Task THSSolution(ushort chainType, List<long> nonces, List<int> solutions, long difficulty);
 	}
 
@@ -666,7 +666,7 @@ namespace Neuralium.Core.Classes.General {
 					return this.HubContext?.Clients?.All?.THSRound(chainType.Value, (int) extraParameters[0], (long) extraParameters[1], (long) extraParameters[2], (int) extraParameters[3]);
 				}
 				if(eventType == NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.THSIteration) {
-					return this.HubContext?.Clients?.All?.THSIteration(chainType.Value, (long) extraParameters[0], (long)extraParameters[1], (long) extraParameters[2], (long) extraParameters[3], (double) extraParameters[4]);
+					return this.HubContext?.Clients?.All?.THSIteration(chainType.Value, (long[]) extraParameters[0], (long)extraParameters[1], (long) extraParameters[2], (long) extraParameters[3], (double) extraParameters[4]);
 				}
 				if(eventType == NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.THSSolution) {
 					var solutionSet = (THSSolutionSet) extraParameters[0];

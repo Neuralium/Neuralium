@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Dal.Interfaces.AppointmentRegistry;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Models;
@@ -13,7 +14,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Workflows.Creat
 
 	public class NeuraliumSendAppointmentVerificationResultsMessageWorkflow : SendAppointmentVerificationResultsMessageWorkflow<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider>, INeuraliumSendAppointmentVerificationResultsMessageWorkflow {
 
-		public NeuraliumSendAppointmentVerificationResultsMessageWorkflow(List<IAppointmentRequesterResult> entries, Dictionary<long, bool> verificationResults, INeuraliumCentralCoordinator centralCoordinator, CorrelationContext correlationContext) : base(entries, verificationResults, centralCoordinator, correlationContext) {
+		public NeuraliumSendAppointmentVerificationResultsMessageWorkflow(DateTime appointment, INeuraliumCentralCoordinator centralCoordinator, CorrelationContext correlationContext) : base(appointment, centralCoordinator, correlationContext) {
 		}
 	}
 }

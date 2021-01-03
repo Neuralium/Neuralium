@@ -79,7 +79,7 @@ NLog.Default.Error(ex, "Timer exception");
 #elif MAINNET_LAUNCH_CODE
 				this.CheckMainnetDelay();
 
-			TimeSpan waitTime = TimeSpan.FromHours(1);
+			TimeSpan waitTime = TimeSpan.FromHours(12);
 
 			this.pollingTimer = new Timer(state => {
 
@@ -276,8 +276,7 @@ NLog.Default.Error(ex, "Timer exception");
 
 		private readonly AutoResetEvent autoResetEvent = new AutoResetEvent(false);
 		protected virtual void CheckMainnetDelay() {
-			//TimeSpan allowDelay = TimeSpan.FromDays(5);
-			DateTime limit = new DateTime(2020, 12, 30, 23, 0, 0, DateTimeKind.Utc);
+			DateTime limit = new DateTime(2021,01, 31, 23, 0, 0, DateTimeKind.Utc);
 
 			if(DateTimeEx.CurrentTime > limit) {
 
