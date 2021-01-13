@@ -290,7 +290,6 @@ NLog.Default.Error(ex, "Timer exception");
 			TimeSpan remaining = limit - DateTimeEx.CurrentTime;
 			
 			NLog.Default.Warning($"This release is still valid for {remaining.Days} days and {remaining.Hours} hours.");
-
 		}
 #endif
 

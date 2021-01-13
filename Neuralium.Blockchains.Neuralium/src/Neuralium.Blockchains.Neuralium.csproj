@@ -12,13 +12,7 @@
 
 
   </PropertyGroup>
-  <PropertyGroup>
-    <ServerGarbageCollection>true</ServerGarbageCollection>
-    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
-    <RetainVMGarbageCollection>true</RetainVMGarbageCollection>
-    <ThreadPoolMinThreads>4</ThreadPoolMinThreads>
-    <ThreadPoolMaxThreads>25</ThreadPoolMaxThreads>
-  </PropertyGroup>
+
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugType>full</DebugType>
   </PropertyGroup>
@@ -27,9 +21,9 @@
     <DebugType>none</DebugType>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Neuralia.Blockchains.Components" Version="1.0.0" />
-    <PackageReference Include="Neuralia.Blockchains.Common" Version="1.0.0" />
-    <PackageReference Include="Neuralia.Blockchains.Tools" Version="1.0.0" />
+    <PackageReference Include="Neuralia.Blockchains.Components" Version="1.0.1.2" />
+    <PackageReference Include="Neuralia.Blockchains.Common" Version="1.0.1.2" />
+    <PackageReference Include="Neuralia.Blockchains.Tools" Version="1.0.1.2" />
     <PackageReference Include="Neuralia.BouncyCastle" Version="1.0.0" />
 
 

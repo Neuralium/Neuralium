@@ -225,6 +225,7 @@ namespace Neuralium.Core.Classes.Runtime {
 					if(writeTo.GetSection("Name").Value == "File") {
 						
 						var path = writeTo.GetSection("Args:path");
+						Console.WriteLine($"[Serilog-Debug] 'File' Logging section found, specified path is {path}.");
 						if(path != null && path.Value.ToLower() == "auto") {
 							
 							string systemFilesPath = GlobalsService.GetGeneralSystemFilesDirectoryPath(() => section.GetValue<string>(nameof(appSettingsTemplate.SystemFilesPath)));
@@ -232,6 +233,8 @@ namespace Neuralium.Core.Classes.Runtime {
 							string logsPath = Path.Combine(systemFilesPath, LOGS_FOLDER);
 				
 							FileExtensions.EnsureDirectoryStructure(logsPath);
+							
+							Console.WriteLine($"[Serilog-Debug] 'auto' path was used, logs will be written to in folder {logsPath}.");
 							
 							path.Value = Path.Combine(logsPath, "log-.txt");
 						}

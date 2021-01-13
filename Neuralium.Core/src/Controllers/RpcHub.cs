@@ -76,8 +76,8 @@ namespace Neuralium.Core.Controllers {
 			return this.rpcProvider.WalletKeyFileCopied(correlationId, chainType, keyCorrelationCode);
 		}
 
-		public Task<bool> TestP2pPort() {
-			return this.rpcProvider.TestP2pPort();
+		public Task<int> TestP2pPort(int testPort, bool callback) {
+			return this.rpcProvider.TestP2pPort(testPort, callback);
 		}
 
 		public Task<object> QuerySystemInfo() {
@@ -197,7 +197,7 @@ namespace Neuralium.Core.Controllers {
 		}
 
 		public Task<int> LoadWallet(ushort chainType, string passphrase = null) {
-			return this.rpcProvider.LoadWallet(chainType);
+			return this.rpcProvider.LoadWallet(chainType, passphrase);
 		}
 
 		/// <summary>

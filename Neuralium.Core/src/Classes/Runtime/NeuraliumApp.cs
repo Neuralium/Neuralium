@@ -210,7 +210,7 @@ namespace Neuralium.Core.Classes.Runtime {
 
 			GlobalSettings.Instance.SetValues<NeuraliumOptionsSetter>(this.PrepareSettings());
 
-			NLog.Default.Information($"Current software version: {GlobalSettings.SoftwareVersion}");
+			NLog.Default.Information($"Current software version: {GlobalSettings.BlockchainCompatibilityVersion}");
 		}
 
 		protected virtual GlobalSettings.GlobalSettingsParameters PrepareSettings() {
@@ -219,7 +219,8 @@ namespace Neuralium.Core.Classes.Runtime {
 			// thats our current version. manually set for now.
 
 			//FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(Assembly.GetAssembly(typeof(NeuraliumApp)).Location);
-			parameters.softwareVersion = new SoftwareVersion(BlockchainConstants.DefaultVersion, this.VersionValidationCallback);
+			parameters.blockchainVersion = new SoftwareVersion(BlockchainConstants.BlockchainCompatibilityVersion, BlockchainConstants.VersionValidationCallback);
+			parameters.releaseVersion = new SoftwareVersion(BlockchainConstants.ReleaseVersion, BlockchainConstants.VersionValidationCallback);
 			parameters.appSettings = this.appSettings;
 			parameters.cmdOptions = this.CmdOptions;
 			parameters.nodeInfo = new NodeInfo(Enums.GossipSupportTypes.Full, Enums.PeerTypes.FullNode);
@@ -227,19 +228,7 @@ namespace Neuralium.Core.Classes.Runtime {
 
 			return parameters;
 		}
-
-		/// <summary>
-		///     this is where we decide which versions are acceptable to us
-		/// </summary>
-		/// <param name="localVersion"></param>
-		/// <param name="other"></param>
-		/// <returns></returns>
-		private bool VersionValidationCallback(SoftwareVersion localVersion, SoftwareVersion other) {
-			SoftwareVersion minimumAcceptable = new SoftwareVersion(BlockchainConstants.DefaultVersion);
-
-			return (other <= localVersion) && (other >= minimumAcceptable);
-		}
-
+		
 		protected virtual async Task InitializeApp(LockContext lockContext) {
 
 			try {
@@ -324,7 +313,7 @@ namespace Neuralium.Core.Classes.Runtime {
 							SoftwareVersion version = new SoftwareVersion();
 							version.Rehydrate(rehydrator);
 
-							if(version < GlobalSettings.SoftwareVersion) {
+							if(version < GlobalSettings.BlockchainCompatibilityVersion) {
 								deleteObsoleteFolder = true;
 							}
 						}
@@ -367,7 +356,7 @@ namespace Neuralium.Core.Classes.Runtime {
 			try {
 				if(!File.Exists(testnetFlagFilePath)) {
 					using IDataDehydrator dehydrator = DataSerializationFactory.CreateDehydrator();
-					GlobalSettings.SoftwareVersion.Dehydrate(dehydrator);
+					GlobalSettings.BlockchainCompatibilityVersion.Dehydrate(dehydrator);
 
 					SafeArrayHandle resultBytes = dehydrator.ToArray();
 

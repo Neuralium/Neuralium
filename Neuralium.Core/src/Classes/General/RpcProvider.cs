@@ -59,7 +59,7 @@ namespace Neuralium.Core.Classes.General {
 
 		Task MiningStatusChanged(ushort chainType, bool isMining);
 
-		Task walletCreationStarted(int correlationId);
+		Task WalletCreationStarted(int correlationId);
 		Task WalletCreationEnded(int correlationId);
 
 		Task AccountCreationStarted(int correlationId);
@@ -185,13 +185,13 @@ namespace Neuralium.Core.Classes.General {
 			});
 		}
 
-		public Task<bool> TestP2pPort() {
+		public async Task<int> TestP2pPort(int testPort, bool callback) {
 			try {
 				INetworkingService networkingService = DIService.Instance.GetService<INetworkingService>();
 
 
 				if(networkingService?.IsStarted ?? false) {
-					return networkingService.TestP2pPort();
+					return (int) await networkingService.TestP2pPort((PortTester.TcpTestPorts)testPort, callback).ConfigureAwait(false);
 				}
 
 				throw new ApplicationException("Networking service not started");
@@ -213,7 +213,7 @@ namespace Neuralium.Core.Classes.General {
 			systemMode = 2;
 #endif
 
-				return Task.FromResult((object) new SystemInfoAPI {Version = GlobalSettings.SoftwareVersion.ToString(), Mode = systemMode, ConsoleEnabled = this.ConsoleMessagesEnabled});
+				return Task.FromResult((object) new SystemInfoAPI {ReleaseVersion = GlobalSettings.SoftwareReleaseVersion.ToString(), BlockchainVersion = GlobalSettings.BlockchainCompatibilityVersion.ToString(), Mode = systemMode, ConsoleEnabled = this.ConsoleMessagesEnabled});
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to Query system version");
 
