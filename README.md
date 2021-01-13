@@ -33,6 +33,9 @@ The actual command line interface for the Server node.
  - Neuralia.NClap
  - Neuralia.Open.Nat
 
+##### You can automatically download and pacjage the dependencies using the script:
+>./pack-dependencies.sh
+
 Then, simply invoke the right build file for your needs
 >cd targets
 > ./linux.sh
