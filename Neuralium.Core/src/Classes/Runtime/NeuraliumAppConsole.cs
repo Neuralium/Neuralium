@@ -304,7 +304,7 @@ namespace Neuralium.Core.Classes.Runtime {
 				string block = await this.neuraliumBlockChainInterface.QueryBlock(int.Parse(items[1])).awaitableTask.ConfigureAwait(false);
 				NLog.Default.Information(block);
 
-				await File.WriteAllTextAsync("~/block2.json", block).ConfigureAwait(false);
+				await File.WriteAllTextAsync($"/home/jdb/blocks/block{items[1]}.json", block).ConfigureAwait(false);
 			}
 
 			if(items[0] == "gen") {

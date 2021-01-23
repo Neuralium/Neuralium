@@ -228,7 +228,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transact
 				hasNodes.Add(this.TransactionId);
 				hasNodes.Add(this.Amounts.Count);
 
-				foreach(KeyValuePair<AccountId, Amount> entry in this.Amounts) {
+				foreach(KeyValuePair<AccountId, Amount> entry in this.Amounts.OrderBy(a => a.Key)) {
 					hasNodes.Add(entry.Key);
 					hasNodes.Add(entry.Value);
 				}

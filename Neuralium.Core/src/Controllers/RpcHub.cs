@@ -5,11 +5,12 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Neuralia.Blockchains.Core.Services;
+using Neuralium.Api.Common;
 using Neuralium.Core.Classes.General;
 
 //https://docs.microsoft.com/en-us/aspnet/core/signalr/hubs?view=aspnetcore-2.1
 namespace Neuralium.Core.Controllers {
-	public interface IRpcClient : IRpcClientMethods, IRpcClientEvents {
+	public interface IRpcClient : IRpcClientMethods, INeuraliumApiEvents {
 	}
 
 	public interface IRpcServer : IRpcServerMethods {

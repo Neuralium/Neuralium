@@ -276,7 +276,7 @@ NLog.Default.Error(ex, "Timer exception");
 
 		private readonly AutoResetEvent autoResetEvent = new AutoResetEvent(false);
 		protected virtual void CheckMainnetDelay() {
-			DateTime limit = new DateTime(2021,01, 31, 23, 0, 0, DateTimeKind.Utc);
+			DateTime limit = new DateTime(2021,02, 28, 23, 0, 0, DateTimeKind.Utc);
 
 			if(DateTimeEx.CurrentTime > limit) {
 

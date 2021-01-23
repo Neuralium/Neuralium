@@ -210,7 +210,8 @@ namespace Neuralium.Core.Classes.Runtime {
 
 			GlobalSettings.Instance.SetValues<NeuraliumOptionsSetter>(this.PrepareSettings());
 
-			NLog.Default.Information($"Current software version: {GlobalSettings.BlockchainCompatibilityVersion}");
+			NLog.Default.Information($"Current software release version: {GlobalSettings.SoftwareReleaseVersion}");
+			NLog.Default.Information($"Current software blockchain compatibility version: {GlobalSettings.BlockchainCompatibilityVersion}");
 		}
 
 		protected virtual GlobalSettings.GlobalSettingsParameters PrepareSettings() {
