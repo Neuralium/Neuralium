@@ -95,8 +95,8 @@ namespace Neuralium.Api.Common {
 		Task InvalidPuzzleEngineVersion(ushort chainType, int requiredVersion, int minimumSupportedVersion, int maximumSupportedVersion);
 
 		Task THSTrigger(ushort chainType);
-		Task THSBegin(ushort chainType, long difficulty, long targetNonce, long targetTotalDuration, long estimatedIterationTime, long estimatedRemainingTime, long startingNonce, long startingTotalNonce, long startingRound, long[] nonces, int[]solutions);
-		Task THSRound(ushort chainType, int round, long totalNonce, long lastNonce, int lastSolution);
+		Task THSBegin(ushort chainType, long difficulty, int rounds, long targetTotalDuration, long estimatedIterationTime, long estimatedRemainingTime, long startingNonce, int startingRound, long targetRoundNonce, long[] nonces, int[] solutions);
+		Task THSRound(ushort chainType, int round, long lastNonce, int lastSolution);
 		Task THSIteration(ushort chainType, long[] nonces, long elapsed, long estimatedIterationTime, long estimatedRemainingTime, double benchmarkSpeedRatio);
 		Task THSSolution(ushort chainType, List<long> nonces, List<int> solutions, long difficulty);
 	}

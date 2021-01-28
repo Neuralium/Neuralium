@@ -561,10 +561,10 @@ namespace Neuralium.Core.Classes.General {
 				}
 				if(eventType == NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.THSBegin) {
 
-					return this.HubContext?.Clients?.All?.THSBegin(chainType.Value, (long) extraParameters[0], (long) extraParameters[1], (long) extraParameters[2], (long) extraParameters[3], (long) extraParameters[4], (long) extraParameters[5], (long) extraParameters[6], (long) extraParameters[7], (long[]) extraParameters[8], (int[]) extraParameters[9]);
+					return this.HubContext?.Clients?.All?.THSBegin(chainType.Value, (long) extraParameters[0], (int) extraParameters[1], (long) extraParameters[2], (long) extraParameters[3], (long) extraParameters[4], (long) extraParameters[5], (int) extraParameters[6], (long) extraParameters[7], (long[]) extraParameters[8], (int[]) extraParameters[9]);
 				}
 				if(eventType == NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.THSRound) {
-					return this.HubContext?.Clients?.All?.THSRound(chainType.Value, (int) extraParameters[0], (long) extraParameters[1], (long) extraParameters[2], (int) extraParameters[3]);
+					return this.HubContext?.Clients?.All?.THSRound(chainType.Value, (int) extraParameters[0], (long) extraParameters[1], (int) extraParameters[2]);
 				}
 				if(eventType == NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.THSIteration) {
 					return this.HubContext?.Clients?.All?.THSIteration(chainType.Value, (long[]) extraParameters[0], (long)extraParameters[1], (long) extraParameters[2], (long) extraParameters[3], (double) extraParameters[4]);

@@ -24,9 +24,9 @@
   </ItemGroup>
   <ItemGroup>
 
-    <PackageReference Include="Neuralia.Blockchains.Components" Version="1.0.1.5" />
-    <PackageReference Include="Neuralia.Blockchains.Common" Version="1.0.1.5" />
-    <PackageReference Include="Neuralia.Blockchains.Tools" Version="1.0.1.5" />
+    <PackageReference Include="Neuralia.Blockchains.Components" Version="1.0.1.8" />
+    <PackageReference Include="Neuralia.Blockchains.Common" Version="1.0.1.8" />
+    <PackageReference Include="Neuralia.Blockchains.Tools" Version="1.0.1.8" />
     <PackageReference Include="Neuralia.BouncyCastle" Version="1.0.0" />
 
       <PackageReference Include="LiteDB" Version="5.0.10" />
