@@ -301,6 +301,9 @@ namespace Neuralium.Core.Classes.Runtime {
 			}
 
 			if(items[0] == "query") {
+				
+				var sss = await this.neuraliumBlockChainInterface.QueryDecomposedBlockJson(int.Parse(items[1])).awaitableTask.ConfigureAwait(false);
+
 				string block = await this.neuraliumBlockChainInterface.QueryBlock(int.Parse(items[1])).awaitableTask.ConfigureAwait(false);
 				NLog.Default.Information(block);
 

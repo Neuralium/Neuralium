@@ -294,7 +294,7 @@ namespace Neuralium.Core.Classes.Runtime {
 
 		protected virtual void InitEnvironment() {
 			if(!GlobalSettings.ApplicationSettings.SynclessMode) {
-				ThreadPool.SetMaxThreads(100, 200);
+				//ThreadPool.SetMaxThreads(100, 200);
 			}
 		}
 

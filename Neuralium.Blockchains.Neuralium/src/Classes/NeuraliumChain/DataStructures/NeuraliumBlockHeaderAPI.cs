@@ -67,7 +67,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.DataStructures 
 
 				var transactions = block.GetAllConfirmedTransactions();
 				foreach(var transaction in neuraliumElectedResults.Transactions) {
-					if(transactions[transaction] is ITipTransaction tipTransaction) {
+					if(transactions.ContainsKey(transaction) && transactions[transaction] is ITipTransaction tipTransaction) {
 						this.Tip += tipTransaction.Tip;
 					}
 				}
