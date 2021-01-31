@@ -780,6 +780,17 @@ namespace Neuralium.Core.Classes.General {
 				throw new ApplicationException("Failed to restore wallet");
 			}
 		}
+		
+		public Task<bool> AttemptWalletRescue(ushort chainType) {
+			try {
+				return this.GetChainInterface(chainType).AttemptWalletRescue().awaitableTask;
+
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed to attempt wallet rescue");
+
+				throw new ApplicationException("Failed to attempt wallet rescue");
+			}
+		}
 
 		public async Task<long> QueryBlockHeight(ushort chainType) {
 			try {

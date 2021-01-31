@@ -4,7 +4,7 @@
 [![Build Status](http://jenkins.neuralium.com/buildStatus/icon?job=Neuralium.Node-Linux-Arm64&subject=Linux-ARM64)](http://jenkins.neuralium.com/job/Neuralium.Node-ARM64/)
 [![Build Status](http://jenkins.neuralium.com/buildStatus/icon?job=Neuralium.Node-Win64&subject=Windows-x64)](http://jenkins.neuralium.com/job/Neuralium.Node-Win64/)
 
-##### Version:  MAINNET 1.0.1.9
+##### Version:  MAINNET 
 
 The Neuralium crypto token console server node
 

@@ -37,7 +37,8 @@ namespace Neuralium.Api.Common {
 		public Task<bool> Shutdown();
 		public Task<object> BackupWallet(ushort chainType);
 		public Task<bool> RestoreWalletFromBackup(ushort chainType, string backupsPath, string passphrase, string salt, string nonce, int iterations);
-
+		public Task<bool> AttemptWalletRescue(ushort chainType);
+		
 		public Task<int> QueryTotalConnectedPeersCount();
 		
 		public Task<List<object>> QueryPeerConnectionDetails();

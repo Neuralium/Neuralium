@@ -118,7 +118,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain {
 
 				string accountCode = (await this.centralCoordinator.ChainComponentProvider.WalletProvider.GetActiveAccount(lc).ConfigureAwait(false)).AccountCode;
 
-				using(ManualResetEventSlim resetEvent = new ManualResetEventSlim(false)) {
+				using(AsyncManualResetEventSlim resetEvent = new AsyncManualResetEventSlim(false)) {
 					ICreateNeuraliumTransferTransactionWorkflow workflow = this.NeuraliumChainFactoryProvider.WorkflowFactory.CreateSendNeuraliumsWorkflow(accountCode, new AccountId(targetAccountId), amount, tip, note, correlationContext, expiration);
 
 					workflow.Success += w => {
@@ -129,7 +129,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain {
 
 					this.centralCoordinator.PostWorkflow(workflow);
 
-					resetEvent.Wait();
+					await resetEvent.WaitAsync().ConfigureAwait(false);
 
 					return true;
 				}
@@ -160,7 +160,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain {
 					accountCode = (await this.centralCoordinator.ChainComponentProvider.WalletProvider.GetActiveAccount(lc).ConfigureAwait(false)).AccountCode;
 				}
 
-				using(ManualResetEventSlim resetEvent = new ManualResetEventSlim(false)) {
+				using(AsyncManualResetEventSlim resetEvent = new AsyncManualResetEventSlim(false)) {
 					ICreateNeuraliumRefillTransactionWorkflow workflow = this.NeuraliumChainFactoryProvider.WorkflowFactory.CreateRefillNeuraliumsWorkflow(accountCode, correlationContext, expiration);
 
 					workflow.Success += w => {

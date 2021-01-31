@@ -223,7 +223,7 @@ NLog.Default.Error(ex, "Timer exception");
 #if TESTNET
 		private Timer pollingTimer;
 
-		private readonly ManualResetEventSlim autoResetEvent = new ManualResetEventSlim(false);
+		private readonly AsyncManualResetEventSlim autoResetEvent = new AsyncManualResetEventSlim(false);
 		protected virtual void CheckTestnetDelay() {
 
 			//TODO: this needs review

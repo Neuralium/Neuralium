@@ -1,5 +1,6 @@
 #!/bin/bash
 
+dotnet nuget locals all --clear
 
 mkdir deps
 mkdir local-source

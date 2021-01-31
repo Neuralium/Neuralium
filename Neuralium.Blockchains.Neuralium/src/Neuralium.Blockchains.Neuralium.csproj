@@ -21,9 +21,9 @@
     <DebugType>none</DebugType>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Neuralia.Blockchains.Components" Version="1.0.1.9" />
-    <PackageReference Include="Neuralia.Blockchains.Common" Version="1.0.1.9" />
-    <PackageReference Include="Neuralia.Blockchains.Tools" Version="1.0.1.9" />
+    <PackageReference Include="Neuralia.Blockchains.Components" Version="1.0.1.10" />
+    <PackageReference Include="Neuralia.Blockchains.Common" Version="1.0.1.10" />
+    <PackageReference Include="Neuralia.Blockchains.Tools" Version="1.0.1.10" />
     <PackageReference Include="Neuralia.BouncyCastle" Version="1.0.0" />
 
 

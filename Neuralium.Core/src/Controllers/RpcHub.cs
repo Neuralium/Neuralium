@@ -137,6 +137,10 @@ namespace Neuralium.Core.Controllers {
 		public Task<bool> RestoreWalletFromBackup(ushort chainType, string backupsPath, string passphrase, string salt, string nonce, int iterations) {
 			return this.rpcProvider.RestoreWalletFromBackup(chainType, backupsPath, passphrase, salt, nonce, iterations);
 		}
+		
+		public Task<bool> AttemptWalletRescue(ushort chainType) {
+			return this.rpcProvider.AttemptWalletRescue(chainType);
+		}
 
 		/// <summary>
 		///     ping the server
