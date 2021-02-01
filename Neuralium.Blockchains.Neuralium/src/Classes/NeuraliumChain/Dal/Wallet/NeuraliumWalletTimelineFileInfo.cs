@@ -17,7 +17,6 @@ using Neuralia.Blockchains.Tools.Locking;
 namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 	public interface INeuraliumWalletTimelineFileInfo : IWalletFileInfo {
 		Task InsertTimelineEntry(NeuraliumWalletTimeline entry, LockContext lockContext);
-		Task UpgradeTimelineEntries(LockContext lockContext);
 
 		Task InsertUBBTimelineEntry(decimal amount, LockContext lockContext);
 		Task ConfirmLocalTimelineEntry(TransactionId transactionId, decimal? tip, BlockId blockId, LockContext lockContext);
@@ -120,37 +119,6 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Wallet {
 			}
 		}
 		
-		/// <summary>
-		/// Special method to upgrade faulty wallets. 
-		/// </summary>
-		/// <remarks>this can be removed i the future when all wallets have been updated</remarks>
-		/// <param name="lockContext"></param>
-		/// <returns></returns>
-		public async Task UpgradeTimelineEntries(LockContext lockContext) {
-			//TODO: this can be removed i the future when all wallets have been updated
-			using(LockHandle handle = await this.locker.LockAsync(lockContext).ConfigureAwait(false)) {
-				await this.RunDbOperation(async (dbdal, lc) => {
-
-					dbdal.Open(db => {
-						
-						if(dbdal.CollectionExists<NeuraliumWalletTimeline>(db)) {
-							var faulties = dbdal.Get<NeuraliumWalletTimeline>(e => e.CreditType == NeuraliumWalletTimeline.CreditTypes.Tranasaction).ToList();
-
-							foreach(var entry in faulties) {
-
-								entry.CreditType = NeuraliumWalletTimeline.CreditTypes.Transaction;
-								dbdal.Update(entry, db);
-							}
-						}
-					});
-
-				}, handle).ConfigureAwait(false);
-
-				await this.Save(handle).ConfigureAwait(false);
-			}
-		}
-
-
 		public async Task InsertTimelineEntry(NeuraliumWalletTimeline entry, LockContext lockContext) {
 			using(LockHandle handle = await this.locker.LockAsync(lockContext).ConfigureAwait(false)) {
 				await this.RunDbOperation(async (dbdal, lc) => {

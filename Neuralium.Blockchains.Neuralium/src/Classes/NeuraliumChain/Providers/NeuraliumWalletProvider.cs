@@ -699,7 +699,6 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 	#region external API methods
 
 		//TODO: this can be removed when wallets have all been updated!
-		private bool upgradedTimeline = false;
 		public async Task<TimelineHeader> GetTimelineHeader(string accountCode, LockContext lockContext) {
 			this.EnsureWalletIsLoaded();
 
@@ -710,24 +709,18 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			TimelineHeader timelineHeader = new TimelineHeader();
 			
 			if(this.WalletFileInfo.Accounts[accountCode] is INeuraliumAccountFileInfo neuraliumAccountFileInfo) {
-
-				if(GlobalSettings.ApplicationSettings.MobileMode && !this.upgradedTimeline) {
-					//TODO: this can be removed when wallets have all been updated!
-					await neuraliumAccountFileInfo.WalletTimelineFileInfo.UpgradeTimelineEntries(lockContext).ConfigureAwait(false);
-					this.upgradedTimeline = true;
-				}
-
+				
 				var days = (await neuraliumAccountFileInfo.WalletTimelineFileInfo.RunQuery<NeuraliumWalletTimelineDay, NeuraliumWalletTimelineDay>(d => d, lockContext).ConfigureAwait(false)).Select(d => d.Timestamp.ToUniversalTime()).OrderByDescending(d => d).Select(d => DateTime.SpecifyKind(d, DateTimeKind.Local).Date).ToArray();
 
 				if(days.Any()) {
 					timelineHeader.FirstDay = TimeService.FormatDateTimeStandardLocal(days.Max(d => d));
 					timelineHeader.LastDay = TimeService.FormatDateTimeStandardLocal(days.Min(d => d));
 
-					foreach(var year in days.GroupBy(d => d.Year).OrderByDescending(y => y)) {
+					foreach(var year in days.GroupBy(d => d.Year).OrderByDescending(y => y.Key)) {
 
 						Dictionary<int, int[]> monthEntries = new Dictionary<int, int[]>();
 
-						foreach(var month in year.GroupBy(d => d.Month).OrderByDescending(m => m)) {
+						foreach(var month in year.GroupBy(d => d.Month).OrderByDescending(m => m.Key)) {
 
 							monthEntries[month.Key] = month.Select(m => m.Day).OrderByDescending(d => d).ToArray();
 						}
