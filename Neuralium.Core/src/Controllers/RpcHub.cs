@@ -214,6 +214,14 @@ namespace Neuralium.Core.Controllers {
 			return this.rpcProvider.QueryBlockHeight(chainType);
 		}
 
+		public Task<int> QueryDigestHeight(ushort chainType) {
+			return this.rpcProvider.QueryDigestHeight(chainType);
+		}
+
+		public Task<bool> ResetWalletIndex(ushort chainType) {
+			return this.rpcProvider.ResetWalletIndex(chainType);
+		}
+
 		public Task<long> QueryLowestAccountBlockSyncHeight(ushort chainType) {
 			return this.rpcProvider.QueryLowestAccountBlockSyncHeight(chainType);
 		}

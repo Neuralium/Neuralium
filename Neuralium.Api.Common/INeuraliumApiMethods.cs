@@ -53,6 +53,8 @@ namespace Neuralium.Api.Common {
 		public Task<bool> WalletExists(ushort chainType);
 		public Task<int> LoadWallet(ushort chainType, string passphrase = null);
 		public Task<long> QueryBlockHeight(ushort chainType);
+		Task<int> QueryDigestHeight(ushort chainType);
+		Task<bool> ResetWalletIndex(ushort chainType);
 		public Task<long> QueryLowestAccountBlockSyncHeight(ushort chainType);
 		public Task<string> QueryBlock(ushort chainType, long blockId);
 		Task<object> QueryDecomposedBlock(ushort chainType, long blockId);

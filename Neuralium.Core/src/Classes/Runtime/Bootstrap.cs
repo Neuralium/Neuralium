@@ -261,14 +261,6 @@ namespace Neuralium.Core.Classes.Runtime {
 						//TODO: use a different logger for RPC than console
 						LoggerMinimumLevelConfiguration entry = loggerConfiguration.MinimumLevel;
 
-						AppSettingsBase.RpcLoggingLevels loggingLevel = section.GetValue<AppSettingsBase.RpcLoggingLevels>(nameof(appSettingsTemplate.RpcLoggingLevel));
-
-						// if(loggingLevel == AppSettingsBase.RpcLoggingLevels.Verbose) {
-						// 	loggerConfiguration = entry.Verbose();
-						// } else {
-						// 	loggerConfiguration = entry.Information();
-						// }
-
 						loggerConfiguration.Enrich.With(new ThreadIdEnricher()).WriteTo.RpcEventLogSink(this);
 					}
 				}

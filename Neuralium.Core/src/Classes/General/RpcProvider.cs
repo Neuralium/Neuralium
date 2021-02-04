@@ -811,6 +811,16 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 		
+		public async Task<bool> ResetWalletIndex(ushort chainType) {
+			try {
+				return await this.GetChainInterface(chainType).ResetWalletIndex().awaitableTask.ConfigureAwait(false);
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed to reset wallet index");
+
+				throw new HubException("Failed to reset wallet index");
+			}
+		}
+
 
 		public async Task<long> QueryLowestAccountBlockSyncHeight(ushort chainType) {
 			try {
@@ -1637,7 +1647,7 @@ namespace Neuralium.Core.Classes.General {
 		}
 
 		public class LongRunningEvents : IDisposable {
-			//public readonly ManualResetEventSlim AutoResetEvent;
+			//public readonly AsyncManualResetEventSlim AutoResetEvent;
 
 			private readonly TimeSpan spanTimeout;
 			public DateTime Timeout;
@@ -1645,7 +1655,7 @@ namespace Neuralium.Core.Classes.General {
 			public LongRunningEvents(TimeSpan timeout) {
 				this.spanTimeout = this.spanTimeout;
 
-				//this.AutoResetEvent = new ManualResetEventSlim(false);
+				//this.AutoResetEvent = new AsyncManualResetEventSlim(false);
 				this.SlideTimeout();
 			}
 

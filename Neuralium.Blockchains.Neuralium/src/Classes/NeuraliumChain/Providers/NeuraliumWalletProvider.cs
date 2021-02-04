@@ -46,6 +46,7 @@ using Neuralia.Blockchains.Core.Extensions;
 using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.General.Gated;
 using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.Moderator.V1.SAFU;
 using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.Moderator.V1.Security;
+using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Wallet;
 
 namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 
@@ -695,10 +696,44 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 				throw new ArgumentException(nameof(account), $"Field should be of type {nameof(INeuraliumAccountFileInfo)}");
 			}
 		}
+		
+		public override async Task<bool> ResetWalletIndex(LockContext lockContext) {
 
+			bool result = await base.ResetWalletIndex(lockContext).ConfigureAwait(false);
+
+			if(!result) {
+				return false;
+			}
+			var wallet = (INeuraliumUserWallet)(await this.WalletBase(lockContext).ConfigureAwait(false));
+			
+			foreach(var account in wallet.Accounts.Values) {
+
+				var iumAccount = (INeuraliumWalletAccount)account;
+				
+				
+				if(this.WalletFileInfo.Accounts[account.AccountCode] is INeuraliumAccountFileInfo neuraliumAccountFileInfo) {
+
+					IWalletAccountSnapshot snapshot = await (neuraliumAccountFileInfo?.WalletSnapshotInfo.WalletAccountSnapshot(lockContext)).ConfigureAwait(false);
+
+					if(snapshot == null) {
+						throw new ApplicationException("Account snapshot does not exist");
+					}
+
+					if(snapshot is INeuraliumWalletAccountSnapshot neuraliumWalletAccountSnapshot) {
+						neuraliumWalletAccountSnapshot.Balance = 0;
+						neuraliumWalletAccountSnapshot.AppliedAttributes.Clear();
+					}
+				}
+			}
+
+			return true;
+		}
+		
 	#region external API methods
 
 		//TODO: this can be removed when wallets have all been updated!
+		// BUT users might still restore old-wallet from old-backup and thus need this.
+		private bool upgradedTimeline = false;
 		public async Task<TimelineHeader> GetTimelineHeader(string accountCode, LockContext lockContext) {
 			this.EnsureWalletIsLoaded();
 
@@ -709,7 +744,15 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			TimelineHeader timelineHeader = new TimelineHeader();
 			
 			if(this.WalletFileInfo.Accounts[accountCode] is INeuraliumAccountFileInfo neuraliumAccountFileInfo) {
-				
+
+				if (GlobalSettings.ApplicationSettings.MobileMode && !this.upgradedTimeline)
+				{
+					//TODO: this can be removed when wallets have all been updated!
+					// BUT users might still restore old-wallet from old-backup and thus need this.
+					await neuraliumAccountFileInfo.WalletTimelineFileInfo.UpgradeTimelineEntries(lockContext).ConfigureAwait(false);
+					this.upgradedTimeline = true;
+				}
+
 				var days = (await neuraliumAccountFileInfo.WalletTimelineFileInfo.RunQuery<NeuraliumWalletTimelineDay, NeuraliumWalletTimelineDay>(d => d, lockContext).ConfigureAwait(false)).Select(d => d.Timestamp.ToUniversalTime()).OrderByDescending(d => d).Select(d => DateTime.SpecifyKind(d, DateTimeKind.Local).Date).ToArray();
 
 				if(days.Any()) {
