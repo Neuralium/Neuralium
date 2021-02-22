@@ -4,4 +4,8 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Wallet.Account 
 
 	public class NeuraliumWalletAccountKeyLog : WalletAccountKeyLog {
 	}
+	
+	public class NeuraliumWalletAccountKeyLogMetadata : WalletAccountKeyLogMetadata {
+	}
+	
 }

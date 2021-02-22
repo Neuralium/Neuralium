@@ -41,6 +41,7 @@ using Neuralia.Blockchains.Tools;
 using Neuralia.Blockchains.Tools.Locking;
 using System.Text.RegularExpressions;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Events.Serialization.Exceptions;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Providers.WalletProviderComponents;
 using Neuralia.Blockchains.Core.Configuration;
 using Neuralia.Blockchains.Core.Extensions;
 using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Events.Transactions.Specialization.General.Gated;
@@ -50,6 +51,17 @@ using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Wallet;
 
 namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 
+
+	public interface INeuraliumUtilityWalletProvider : IUtilityWalletProvider, INeuraliumWalletProviderKeysComponentUtility, INeuraliumWalletProviderAccountsComponentUtility {
+	}
+
+	public interface INeuraliumReadonlyWalletProvider : IReadonlyWalletProvider, INeuraliumWalletProviderKeysComponentReadonly, INeuraliumWalletProviderAccountsComponentReadonly {
+	}
+
+	public interface INeuraliumWalletProviderWrite : IWalletProviderWrite, INeuraliumWalletProviderKeysComponentWrite, INeuraliumWalletProviderAccountsComponentWrite {
+	}
+
+	
 	public interface INeuraliumWalletProvider : IWalletProvider {
 
 		Task<decimal> GetUsableAccountBalance(string accountCode, LockContext lockContext);
@@ -65,7 +77,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 	public interface INeuraliumWalletProviderInternal : INeuraliumWalletProvider, IWalletProviderInternal {
 	}
 
-	public class NeuraliumWalletProvider : WalletProvider<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider>, INeuraliumWalletProviderInternal {
+	public class NeuraliumWalletProvider : WalletProvider<INeuraliumCentralCoordinator, INeuraliumChainComponentProvider, NeuraliumWalletProvider, NeuraliumWalletProviderKeysComponent, NeuraliumWalletProviderAccountsComponent>, INeuraliumWalletProviderInternal {
 
 		public NeuraliumWalletProvider(INeuraliumCentralCoordinator centralCoordinator) : base(GlobalsService.TOKEN_CHAIN_NAME, centralCoordinator) {
 
@@ -73,7 +85,20 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 
 		public new INeuraliumWalletSerialisationFal SerialisationFal => (INeuraliumWalletSerialisationFal) base.SerialisationFal;
 
+		protected override NeuraliumWalletProviderKeysComponent CreateWalletProviderKeysComponent() {
+			return new NeuraliumWalletProviderKeysComponent();
+		}
+
+		protected override NeuraliumWalletProviderAccountsComponent CreateWalletProviderAccountsComponent() {
+			return new NeuraliumWalletProviderAccountsComponent();
+		}
+
 		protected override ICardUtils CardUtils => NeuraliumCardsUtils.Instance;
+
+		public override async Task EnsureWalletTransaction(long blockId, ITransaction transaction, bool own, LockContext lockContext) {
+
+			await base.EnsureWalletTransaction(blockId, transaction, own, lockContext).ConfigureAwait(false);
+		}
 
 		public override async Task<IWalletElectionsHistory> InsertElectionsHistoryEntry(SynthesizedBlock.SynthesizedElectionResult electionResult, SynthesizedBlock synthesizedBlock, AccountId electedAccountId, LockContext lockContext) {
 			this.EnsureWalletIsLoaded();
@@ -724,6 +749,10 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 						neuraliumWalletAccountSnapshot.AppliedAttributes.Clear();
 					}
 				}
+
+				var accountId = account.GetAccountId();
+				TotalAPI total = await this.GetAccountBalance(accountId, true, lockContext).ConfigureAwait(false);
+				this.centralCoordinator.PostSystemEvent(NeuraliumSystemEventGenerator.NeuraliumAccountTotalUpdated(accountId.SequenceId, accountId.AccountType, total));
 			}
 
 			return true;

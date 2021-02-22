@@ -96,7 +96,7 @@ NLog.Default.Error(ex, "Timer exception");
 
 				// lets do the legal stuff. sucks but thats how it is now...
 				this.VerifySoftwareLicenseAgreement();
-
+				
 				NLog.Default.Information("Daemon is starting....");
 
 				this.applicationLifetime.ApplicationStarted.Register(this.OnStarted);
@@ -223,7 +223,7 @@ NLog.Default.Error(ex, "Timer exception");
 #if TESTNET
 		private Timer pollingTimer;
 
-		private readonly AsyncManualResetEventSlim autoResetEvent = new AsyncManualResetEventSlim(false);
+		private readonly ManualResetEventSlim autoResetEvent = new ManualResetEventSlim(false);
 		protected virtual void CheckTestnetDelay() {
 
 			//TODO: this needs review
@@ -276,7 +276,7 @@ NLog.Default.Error(ex, "Timer exception");
 
 		private readonly AutoResetEvent autoResetEvent = new AutoResetEvent(false);
 		protected virtual void CheckMainnetDelay() {
-			DateTime limit = new DateTime(2021,02, 28, 23, 0, 0, DateTimeKind.Utc);
+			DateTime limit = new DateTime(2021,03, 31, 23, 0, 0, DateTimeKind.Utc);
 
 			if(DateTimeEx.CurrentTime > limit) {
 

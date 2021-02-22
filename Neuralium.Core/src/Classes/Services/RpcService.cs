@@ -160,42 +160,54 @@ namespace Neuralium.Core.Classes.Services {
 
 					options.AddServerHeader = false;
 					IPAddress listenAddress = IPAddress.Loopback;
-
+					
 					if(GlobalSettings.ApplicationSettings.RpcBindMode == AppSettingsBase.RpcBindModes.Any) {
 						listenAddress = IPAddress.Any;
+					}
+					else if(GlobalSettings.ApplicationSettings.RpcBindMode == AppSettingsBase.RpcBindModes.Custom && !string.IsNullOrWhiteSpace(GlobalSettings.ApplicationSettings.RpcBindingAddress)) {
+						listenAddress = IPAddress.Parse(GlobalSettings.ApplicationSettings.RpcBindingAddress);
 					}
 
 					options.Listen(listenAddress, port, listenOptions => {
 						if(GlobalSettings.ApplicationSettings.RpcTransport == AppSettingsBase.RpcTransports.Secured) {
 
 							X509Certificate2 rpcCertificate = null;
+							string directory = Path.GetDirectoryName(GlobalSettings.ApplicationSettings.TlsCertificate);
+							string file = Path.GetFileName(GlobalSettings.ApplicationSettings.TlsCertificate);
 
+							if(string.IsNullOrWhiteSpace(directory)) {
+								directory = Bootstrap.GetExecutingDirectoryName();
+							}
+							string certfile = Path.Combine(directory, file);
+							
 							if(string.IsNullOrWhiteSpace(GlobalSettings.ApplicationSettings.TlsCertificate)) {
 								// generate a certificate file
-								rpcCertificate = new TlsProvider(2048, TlsProvider.HashStrength.Sha256).Build().localCertificate;
-							} else {
-								// Ok, load our certificate file
-								string directory = Path.GetDirectoryName(GlobalSettings.ApplicationSettings.TlsCertificate);
-								string file = Path.GetFileName(GlobalSettings.ApplicationSettings.TlsCertificate);
+								NLog.Default.Information($"Generating a {GlobalSettings.ApplicationSettings.TlsCertificateStrength} bits TLS certificate...");
+								var certificates = new TlsProvider(GlobalSettings.ApplicationSettings.TlsCertificateStrength, TlsProvider.HashStrength.Sha256).Build();
+								
+								rpcCertificate = certificates.localCertificate;
+								File.WriteAllBytes(certfile, rpcCertificate.RawData);
+								File.WriteAllBytes(certfile+".root", certificates.rootCertificate.RawData);
+								
+								NLog.Default.Information($"TLS certificate generated successfully and saved at {certfile}.");
+							} 
+							
+							// Ok, load our certificate file
 
-								if(string.IsNullOrWhiteSpace(directory)) {
-									directory = Bootstrap.GetExecutingDirectoryName();
-								}
-
-								string certfile = Path.Combine(directory, file);
-
-								if(!File.Exists(certfile)) {
-									throw new ApplicationException($"The TLS certificate file path did not exist: '{certfile}'");
-								}
-
-								rpcCertificate = new X509Certificate2(File.ReadAllBytes(certfile), "");
+							if(!File.Exists(certfile)) {
+								throw new ApplicationException($"The TLS certificate file path did not exist: '{certfile}'");
 							}
 
+							rpcCertificate = new X509Certificate2(File.ReadAllBytes(certfile), "");
+							
 							listenOptions.UseHttps(rpcCertificate);
+							NLog.Default.Information($"RPC service configured in secure TLS mode.");
+
 						}
+
 					});
 
-					options.Limits.MaxConcurrentConnections = 10;
+					options.Limits.MaxConcurrentConnections = 3;
 
 				});
 

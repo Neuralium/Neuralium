@@ -75,6 +75,10 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Factories {
 		public override WalletAccountKeyLog CreateNewWalletAccountKeyLog() {
 			return new NeuraliumWalletAccountKeyLog();
 		}
+		
+		public override WalletAccountKeyLogMetadata CreateNewWalletAccountKeyLogMetadata() {
+			return new NeuraliumWalletAccountKeyLogMetadata();
+		}
 
 		public override IWalletGenerationCache CreateNewWalletAccountGenerationCache() {
 			return new NeuraliumWalletGenerationCache();

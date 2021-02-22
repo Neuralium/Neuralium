@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -6,6 +7,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Castle.Core;
 using Neuralium.Blockchains.Neuralium.Classes;
 using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain;
 using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.DataStructures.Timeline;
@@ -14,6 +16,7 @@ using Neuralia.Blockchains.Common.Classes.Blockchains.Common;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.DataStructures;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.DataStructures.ExternalAPI;
 using Neuralia.Blockchains.Common.Classes.Blockchains.Common.DataStructures.ExternalAPI.Wallet;
+using Neuralia.Blockchains.Common.Classes.Blockchains.Common.Tools.Appointments;
 using Neuralia.Blockchains.Components.Transactions.Identifiers;
 using Neuralia.Blockchains.Core;
 using Neuralia.Blockchains.Core.Configuration;
@@ -74,7 +77,13 @@ namespace Neuralium.Core.Classes.General {
 		private readonly Dictionary<int, LongRunningEvents> longRunningEvents = new Dictionary<int, LongRunningEvents>();
 
 		//private Timer maintenanceTimer;
-
+		private readonly string configDotJsonPath;
+		
+		public RpcProvider(string configDotJsonPath = "")
+		{
+			this.configDotJsonPath = configDotJsonPath;
+		}
+		
 		public bool ConsoleMessagesEnabled { get; private set; }
 
 		public IHubContext<RPC_HUB, RCP_CLIENT> HubContext { get; set; }
@@ -150,6 +159,194 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
+		private static bool IsSimple(Type type)
+		{
+			if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+			{
+				// nullable type, check if the nested type is simple.
+				return IsSimple(type.GetGenericArguments()[0]);
+			}
+			return type.IsPrimitive
+			       || type == typeof(string)
+			       || type == typeof(decimal);
+		}
+
+		private static object ConvertEnumValuesToString(dynamic value)
+		{
+			var type = value.GetType();
+
+			if (IsSimple(type))
+				return value;
+
+			if (type.IsEnum)
+				return value.ToString();
+
+
+			if (value is IList && type.IsGenericType)
+			{
+				List<object> list = new();
+				for (int i = 0; i < value.Count; i++)
+					list.Add(ConvertEnumValuesToString(value[i]));
+				return list;
+			}
+
+			if(type.IsClass)
+			{
+				Dictionary<string, object> properties = new();
+				foreach (var property in type.GetProperties())
+				{
+					var v = property.GetValue(value);
+					if (v != null)
+						v = ConvertEnumValuesToString(v);
+					properties[property.Name] = v;
+				}
+
+				return properties;
+			}
+
+			NLog.Default.Error($"Unexpected type {type}");
+			
+			return null;
+		}
+		private static readonly HashSet<Type> NumericTypes = new HashSet<Type>
+		{
+			typeof(int),  typeof(double),  typeof(decimal),
+			typeof(long), typeof(short),   typeof(sbyte),
+			typeof(byte), typeof(ulong),   typeof(ushort),  
+			typeof(uint), typeof(float)
+		};
+		
+		public static bool ImplementsGenericInterface(Type type, Type interfaceType)
+		{
+			return type
+				.GetTypeInfo()
+				.ImplementedInterfaces
+				.Any(x => x.GetTypeInfo().IsGenericType && x.GetGenericTypeDefinition() == interfaceType);
+		}
+		
+		private static Pair<string, object> FindDomain(Type type)
+		{
+
+			type = Nullable.GetUnderlyingType(type) ?? type;
+			
+			if (NumericTypes.Contains(type))
+			{
+				return new Pair<string, object>("number", null);
+			}
+
+			switch (Type.GetTypeCode(type))
+			{
+				case TypeCode.Boolean : return new Pair<string, object>("boolean", null);
+				case TypeCode.String :  return new Pair<string, object>("string", null);
+				case TypeCode.DateTime : return new Pair<string, object>("number", null);
+			}
+
+
+			if (type.IsEnum)
+			{
+				return new Pair<string, object>("enum", Enum.GetNames(type));
+			}
+			
+
+
+			if (type.IsGenericType && ImplementsGenericInterface(type, typeof(IList<>)))
+			{
+				var innerType = type.GetGenericArguments()[0];
+				return new Pair<string, object>("list", FindDomain(innerType));
+			}
+
+			if (type.IsClass)
+			{
+				Dictionary<string, object> properties = new();
+
+				foreach (var property in type.GetProperties())
+				{
+					properties[property.Name] = FindDomain(property.PropertyType);
+				}
+
+				return new Pair<string, object>("object", properties);
+			}
+
+			throw new HubException($"{nameof(FindDomain)}: Unexpected type: {type}");
+		}
+		
+		public Task<object> ReadAppSettingDomain(string name)
+		{
+			try
+			{
+				object result;
+				
+				if (name == "*")
+					return Task.FromResult((object) FindDomain(GlobalSettings.ApplicationSettings.GetType()));
+				else
+				{
+					var property = GlobalSettings.ApplicationSettings.GetType().GetProperty(name);
+					
+					if(property == null)
+						throw new HubException($"{nameof(ReadAppSettingDomain)}: Bad property name '{name}'");
+
+					return Task.FromResult((object) FindDomain(property.PropertyType));
+					
+				}
+
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, $"{nameof(ReadAppSettingDomain)}: Failed to get AppSettings domain for property '{name}'");
+				throw;
+			}
+		}
+		public Task<object> ReadAppSetting(string name)
+		{
+			try
+			{
+				if (name == "*")
+					return Task.FromResult(ConvertEnumValuesToString(GlobalSettings.ApplicationSettings));
+
+				var property = GlobalSettings.ApplicationSettings.GetType().GetProperty(name);
+				
+				if(property == null)
+					throw new HubException($"{nameof(ReadAppSetting)}: Bad property name '{name}'");
+
+				return Task.FromResult(ConvertEnumValuesToString(property.GetValue(GlobalSettings.ApplicationSettings)));
+				
+
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, $"{nameof(ReadAppSetting)}: Failed to get AppSettings for property '{name}'");
+				throw;
+			}
+		}
+		
+		public Task<bool> WriteAppSetting(string name, string value)
+		{
+			try
+			{
+				var property = GlobalSettings.ApplicationSettings.GetType().GetProperty(name);
+				
+				if(property == null)
+					throw new HubException($"{nameof(WriteAppSetting)}: Bad property name: {name}");
+
+				dynamic deserialized = Newtonsoft.Json.JsonConvert.DeserializeObject(value, property?.PropertyType);
+				
+				if(deserialized == null)
+					throw new HubException($"{nameof(WriteAppSetting)}: Invalid value format (deserialization failed) : {value}");
+				
+				var json = System.IO.File.ReadAllText(this.configDotJsonPath);
+				dynamic jsonObj = Newtonsoft.Json.JsonConvert.DeserializeObject < Newtonsoft.Json.Linq.JObject > (json);
+
+				jsonObj["AppSettings"][name] = Newtonsoft.Json.JsonConvert.SerializeObject(deserialized);
+
+				string output = Newtonsoft.Json.JsonConvert.SerializeObject(jsonObj, Newtonsoft.Json.Formatting.Indented);
+
+				System.IO.File.WriteAllText(this.configDotJsonPath, output);
+
+				return Task.FromResult(true);
+
+			} catch(Exception ex)
+			{
+				string msg = $"{nameof(WriteAppSetting)}: Failed to set AppSettings value named {name} with value {value}";
+				NLog.Default.Error(ex, msg);
+				throw new HubException(ex.Message + msg);
+			}
+		}
 		public Task<bool> ConfigurePortMappingMode(bool useUPnP, bool usePmP, int natDeviceIndex)
 		{
 			try {
@@ -852,6 +1049,20 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
+		public async Task<byte[]> GenerateSecureHash(byte[] parameter, ushort chainType)
+        {
+			try
+			{
+				return await this.GetChainInterface(chainType).GenerateSecureHash(parameter).awaitableTask.ConfigureAwait(false);
+			}
+			catch (Exception ex)
+			{
+				NLog.Default.Error(ex, "Failed to generate a secure hash from the wallet api");
+
+				throw new HubException("Failed to generate a secure hash from the wallet");
+			}
+		}
+
 		public async Task<object> QueryBlockChainInfo(ushort chainType) {
 			try {
 				return await this.GetChainInterface(chainType).QueryBlockChainInfo().awaitableTask.ConfigureAwait(false);
@@ -1190,6 +1401,18 @@ namespace Neuralium.Core.Classes.General {
 				NLog.Default.Error(ex, "Failed to query wallet sync status");
 
 				throw new HubException("Failed to query wallet sync status");
+			}
+		}
+		
+		public async Task<string> GenerateTestPuzzle() {
+			try {
+				
+				return await AppointmentPuzzleEngineFactory.GenerateTestPuzzle().ConfigureAwait(false);
+
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed to generate test puzzle");
+
+				throw new HubException("Failed to generate test puzzles");
 			}
 		}
 		
@@ -1647,7 +1870,7 @@ namespace Neuralium.Core.Classes.General {
 		}
 
 		public class LongRunningEvents : IDisposable {
-			//public readonly AsyncManualResetEventSlim AutoResetEvent;
+			//public readonly ManualResetEventSlim AutoResetEvent;
 
 			private readonly TimeSpan spanTimeout;
 			public DateTime Timeout;
@@ -1655,7 +1878,7 @@ namespace Neuralium.Core.Classes.General {
 			public LongRunningEvents(TimeSpan timeout) {
 				this.spanTimeout = this.spanTimeout;
 
-				//this.AutoResetEvent = new AsyncManualResetEventSlim(false);
+				//this.AutoResetEvent = new ManualResetEventSlim(false);
 				this.SlideTimeout();
 			}
 

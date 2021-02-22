@@ -32,7 +32,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Sqlite.Acco
 
 		public Task ApplyUniversalBasicBounties(Amount amount) {
 
-			return this.RunOnAllAsync<NeuraliumStandardAccountSnapshotSqliteContext>(db => {
+			return this.RunOnAllAsync<NeuraliumStandardAccountSnapshotSqliteContext>((db, lc) => {
 
 				// we use direct SQL as it will be much more efficient than a per entity update
 

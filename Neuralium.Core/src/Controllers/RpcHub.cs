@@ -49,6 +49,10 @@ namespace Neuralium.Core.Controllers {
 			return this.rpcProvider.QueryWalletSynced(chainType);
 		}
 
+		public Task<string> GenerateTestPuzzle() {
+			return this.rpcProvider.GenerateTestPuzzle();
+		}
+
 		public override async Task OnConnectedAsync() {
 			await this.Groups.AddToGroupAsync(this.Context.ConnectionId, "SignalR Users").ConfigureAwait(false);
 			await base.OnConnectedAsync().ConfigureAwait(false);
@@ -187,6 +191,11 @@ namespace Neuralium.Core.Controllers {
 
 		public Task<object> QueryWalletInfo(ushort chainType) {
 			return this.rpcProvider.QueryWalletInfo(chainType);
+		}
+
+		public Task<byte[]> GenerateSecureHash(byte[] parameter, ushort chainType)
+		{
+			return this.rpcProvider.GenerateSecureHash(parameter, chainType);
 		}
 
 		public Task<object> QueryBlockChainInfo(ushort chainType) {
@@ -408,6 +417,21 @@ namespace Neuralium.Core.Controllers {
 
 		public Task<bool> RestoreWalletNarballBackup(string source, string dest) {
 			return this.rpcProvider.RestoreWalletNarballBackup(source, dest);
+		}
+
+		public Task<object> ReadAppSetting(string name)
+		{
+			return this.rpcProvider.ReadAppSetting(name);
+		}
+
+		public Task<bool> WriteAppSetting(string name, string value)
+		{
+			return this.rpcProvider.WriteAppSetting(name, value);
+		}
+
+		public Task<object> ReadAppSettingDomain(string name)
+		{
+			return this.rpcProvider.ReadAppSettingDomain(name);
 		}
 
 		public Task<object> QueryAccountTotalNeuraliums(string accountCode) {

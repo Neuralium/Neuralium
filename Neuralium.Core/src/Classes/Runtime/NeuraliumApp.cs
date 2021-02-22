@@ -210,6 +210,8 @@ namespace Neuralium.Core.Classes.Runtime {
 
 			GlobalSettings.Instance.SetValues<NeuraliumOptionsSetter>(this.PrepareSettings());
 
+			NLog.Default.Debug($"Current OS: {System.Runtime.InteropServices.RuntimeInformation.OSDescription} - ({Environment.OSVersion})");
+			NLog.Default.Debug($"Current Architecture: {System.Runtime.InteropServices.RuntimeInformation.OSArchitecture}");
 			NLog.Default.Information($"Current software release version: {GlobalSettings.SoftwareReleaseVersion}");
 			NLog.Default.Information($"Current software blockchain compatibility version: {GlobalSettings.BlockchainCompatibilityVersion}");
 		}
@@ -266,8 +268,11 @@ namespace Neuralium.Core.Classes.Runtime {
 				await this.StartChains(lockContext).ConfigureAwait(false);
 
 				if(this.appSettings.P2PEnabled) {
+					NLog.Default.Information("P2p enabled");
 					this.delayedTriggerComponent.IncrementTotal();
 					await this.StartNetworking(this.delayedTriggerComponent.IncrementInitedComponetsCount).ConfigureAwait(false);
+				} else {
+					NLog.Default.Information("P2p disabled");
 				}
 
 				this.delayedTriggerComponent.Start();

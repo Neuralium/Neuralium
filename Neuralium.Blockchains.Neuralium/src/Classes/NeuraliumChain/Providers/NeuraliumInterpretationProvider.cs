@@ -142,7 +142,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			return new NeuraliumSynthesizedBlock();
 		}
 
-		protected override async Task<SynthesizedBlock> SynthesizeBlock(IBlock block, AccountCache accountCache, Dictionary<TransactionId, ITransaction> blockConfirmedTransactions, LockContext lockContext) {
+		protected override async Task<SynthesizedBlock> SynthesizeBlock(IBlock block, InterpretationProvider.AccountCache accountCache, Dictionary<TransactionId, ITransaction> blockConfirmedTransactions, LockContext lockContext) {
 			SynthesizedBlock synthesizedBlock = await base.SynthesizeBlock(block, accountCache, blockConfirmedTransactions, lockContext).ConfigureAwait(false);
 
 			if(synthesizedBlock is NeuraliumSynthesizedBlock neuraliumSynthesizedBlock && block is INeuraliumBlock neuraliumBlock) {
@@ -152,7 +152,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 			return synthesizedBlock;
 		}
 
-		protected override SynthesizedBlock.SynthesizedElectionResult SynthesizeElectionResult(SynthesizedBlock synthesizedBlock, IFinalElectionResults result, IBlock block, AccountCache accountCache, Dictionary<TransactionId, ITransaction> blockConfirmedTransactions) {
+		protected override SynthesizedBlock.SynthesizedElectionResult SynthesizeElectionResult(SynthesizedBlock synthesizedBlock, IFinalElectionResults result, IBlock block, InterpretationProvider.AccountCache accountCache, Dictionary<TransactionId, ITransaction> blockConfirmedTransactions) {
 			SynthesizedBlock.SynthesizedElectionResult synthesizedElectionResult = base.SynthesizeElectionResult(synthesizedBlock, result, block, accountCache, blockConfirmedTransactions);
 
 			if(synthesizedElectionResult is NeuraliumSynthesizedBlock.NeuraliumSynthesizedElectionResult neuraliumSynthesizedElectionResult && result is INeuraliumFinalElectionResults neuraliumFinalElectionResults) {

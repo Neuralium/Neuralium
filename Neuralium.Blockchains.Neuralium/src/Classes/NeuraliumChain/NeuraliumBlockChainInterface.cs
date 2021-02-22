@@ -160,7 +160,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain {
 					accountCode = (await this.centralCoordinator.ChainComponentProvider.WalletProvider.GetActiveAccount(lc).ConfigureAwait(false)).AccountCode;
 				}
 
-				using(AsyncManualResetEventSlim resetEvent = new AsyncManualResetEventSlim(false)) {
+				using(ManualResetEventSlim resetEvent = new ManualResetEventSlim(false)) {
 					ICreateNeuraliumRefillTransactionWorkflow workflow = this.NeuraliumChainFactoryProvider.WorkflowFactory.CreateRefillNeuraliumsWorkflow(accountCode, correlationContext, expiration);
 
 					workflow.Success += w => {

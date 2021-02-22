@@ -70,7 +70,7 @@ namespace Neuralium.Core.Classes.Runtime {
 			services.AddSingleton<IGlobalsService, GlobalsService>();
 
 			services.AddSingleton<IRpcService, RpcService<RpcHub<IRpcClient>, IRpcClient>>();
-			services.AddSingleton<IRpcProvider>(x => new RpcProvider<RpcHub<IRpcClient>, IRpcClient>());
+			services.AddSingleton<IRpcProvider>(x => new RpcProvider<RpcHub<IRpcClient>, IRpcClient>(this.GetConfigurationFilePath(false)));
 
 			services.AddSingleton<NeuraliumOptions, NeuraliumOptions>(x => this.cmdOptions);
 
@@ -219,26 +219,35 @@ namespace Neuralium.Core.Classes.Runtime {
 
 				var logging = hostingContext.Configuration.GetSection("Serilog").GetSection("WriteTo").GetChildren();
 				
-				foreach(var writeTo in logging)
-				{
+				foreach(var writeTo in logging) {
+					IConfigurationSection path = null;
 					// here we replace the path to the logs to the base folder
 					if(writeTo.GetSection("Name").Value == "File") {
-						
-						var path = writeTo.GetSection("Args:path");
+
+						path = writeTo.GetSection("Args:path");
 						Console.WriteLine($"[Serilog-Debug] 'File' Logging section found, specified path is {path}.");
+
 						if(path != null && path.Value.ToLower() == "auto") {
-							
+
+							string filename = "log-.txt";
+							var filenameKey = writeTo.GetSection("Args:filename");
+
+							if(filenameKey?.Value != null) {
+								filename = filenameKey.Value;
+							}
+
 							string systemFilesPath = GlobalsService.GetGeneralSystemFilesDirectoryPath(() => section.GetValue<string>(nameof(appSettingsTemplate.SystemFilesPath)));
-				
+
 							string logsPath = Path.Combine(systemFilesPath, LOGS_FOLDER);
-				
+
 							FileExtensions.EnsureDirectoryStructure(logsPath);
-							
+
 							Console.WriteLine($"[Serilog-Debug] 'auto' path was used, logs will be written to in folder {logsPath}.");
-							
-							path.Value = Path.Combine(logsPath, "log-.txt");
+
+							path.Value = Path.Combine(logsPath, filename);
 						}
-					}
+					} 
+					
 				}
 				// ConfigurationAssemblySource.AlwaysScanDllFiles is required because of a bug in serilog. it should be fixed version 3.2 and over and can be removed.
 				// https://github.com/serilog/serilog-settings-configuration/issues/239

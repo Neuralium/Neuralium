@@ -11,15 +11,7 @@ using Neuralia.Blockchains.Tools.Locking;
 
 namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Providers {
 
-	public interface INeuraliumUtilityWalletProvider : IUtilityWalletProvider {
-	}
-
-	public interface INeuraliumReadonlyWalletProvider : IReadonlyWalletProvider {
-	}
-
-	public interface INeuraliumWalletProviderWrite : IWalletProviderWrite {
-	}
-
+	
 	public interface INeuraliumWalletProviderProxy : IWalletProviderProxy, INeuraliumUtilityWalletProvider, INeuraliumReadonlyWalletProvider, INeuraliumWalletProviderWrite, INeuraliumWalletProvider {
 	}
 

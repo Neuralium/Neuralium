@@ -23,7 +23,7 @@ namespace Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.Dal.Sqlite.Chai
 		}
 
 		public List<(TransactionId transactionIds, decimal tip)> GetTransactionsAndTip() {
-			return this.PerformOperation(db => {
+			return this.PerformOperation((db, lc) => {
 
 				return db.PublicTransactions.Select(t => new Tuple<TransactionId, decimal>(TransactionId.FromCompactString(t.TransactionId), t.Tip)).ToList();
 			}).Select(e => (e.Item1, e.Item2)).ToList();
