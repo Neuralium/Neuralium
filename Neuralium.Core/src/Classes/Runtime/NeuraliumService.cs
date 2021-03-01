@@ -271,26 +271,6 @@ NLog.Default.Error(ex, "Timer exception");
 			NLog.Default.Warning($"This DEVNET release is still valid for {remaining.Days} days and {remaining.Hours} hours.");
 
 		}
-#elif MAINNET_LAUNCH_CODE
-		private Timer pollingTimer;
-
-		private readonly AutoResetEvent autoResetEvent = new AutoResetEvent(false);
-		protected virtual void CheckMainnetDelay() {
-			DateTime limit = new DateTime(2021,03, 31, 23, 0, 0, DateTimeKind.Utc);
-
-			if(DateTimeEx.CurrentTime > limit) {
-
-				Console.BackgroundColor = ConsoleColor.Black;
-				Console.ForegroundColor = ConsoleColor.Red;
-				NLog.Default.Fatal("This release has expired! It can not be used anymore. Please download a more recent version from https://www.neuralium.com.  [EXPIRED MAINNET]");
-
-				throw new TrialTimeoutException();
-			}
-
-			TimeSpan remaining = limit - DateTimeEx.CurrentTime;
-			
-			NLog.Default.Warning($"This release is still valid for {remaining.Days} days and {remaining.Hours} hours.");
-		}
 #endif
 
 	#region Dispose

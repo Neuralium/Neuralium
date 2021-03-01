@@ -8,6 +8,8 @@ namespace Neuralium.Api.Common {
 
 	public interface INeuraliumApiMethods {
 
+		
+		Task<bool> Login(string user, string password);
 		Task<bool> ToggleServerMessages(bool enable);
 		Task EnterWalletPassphrase(int correlationId, ushort chainType, int keyCorrelationCode, string passphrase, bool setKeysToo = false);
 		Task EnterKeyPassphrase(int correlationId, ushort chainType, int keyCorrelationCode, string passphrase);
@@ -36,12 +38,12 @@ namespace Neuralium.Api.Common {
 		Task<bool> SyncBlockchain(ushort chainType, bool force);
 		Task<bool> Shutdown();
 		Task<object> BackupWallet(ushort chainType);
-		Task<bool> RestoreWalletFromBackup(ushort chainType, string backupsPath, string passphrase, string salt, string nonce, int iterations);
+		Task<bool> RestoreWalletFromBackup(ushort chainType, string backupsPath, string passphrase, string salt, string nonce, int iterations, bool legacyBase32);
 		Task<bool> AttemptWalletRescue(ushort chainType);
 		
 		Task<int> QueryTotalConnectedPeersCount();
-		
 		Task<List<object>> QueryPeerConnectionDetails();
+		Task<bool> DynamicPeerOperation(string ip, int port, int operation);
 		
 		Task<bool> QueryMiningPortConnectable();
 		Task<object> QueryChainStatus(ushort chainType);
@@ -95,6 +97,7 @@ namespace Neuralium.Api.Common {
 		Task<bool> IsMiningEnabled(ushort chainType);
 		Task<bool> IsMiningAllowed(ushort chainType);
 		Task<bool> QueryBlockchainSynced(ushort chainType);
+		Task RequestSyncBlockchain(ushort chainType);
 		Task<bool> QueryWalletSynced(ushort chainType);
 		Task<string> GenerateTestPuzzle();
 		Task<object> QueryAccountTotalNeuraliums(string accountCode);

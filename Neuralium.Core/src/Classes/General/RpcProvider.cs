@@ -1,13 +1,20 @@
+//#define TRACE_RPC_CALLS
+
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Reflection;
+using System.Security.Authentication;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Castle.Core;
+using Microsoft.AspNetCore.Http;
 using Neuralium.Blockchains.Neuralium.Classes;
 using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain;
 using Neuralium.Blockchains.Neuralium.Classes.NeuraliumChain.DataStructures.Timeline;
@@ -28,6 +35,7 @@ using Neuralia.Blockchains.Core.Network;
 using Neuralia.Blockchains.Core.P2p.Connections;
 using Neuralia.Blockchains.Core.Services;
 using Neuralia.Blockchains.Core.Tools;
+using Neuralia.Blockchains.Core.Types;
 using Neuralia.Blockchains.Tools;
 using Neuralia.Blockchains.Tools.Cryptography;
 using Neuralia.Blockchains.Tools.Data;
@@ -45,12 +53,14 @@ namespace Neuralium.Core.Classes.General {
 	public interface IRpcServerMethods : INeuraliumApiMethods {
 	}
 
-	
-
 	public interface IRpcClientEventsExtended : INeuraliumApiEvents {
 	}
 
 	public interface IRpcProvider : IRpcServerMethods, IRpcClientMethods {
+
+		Task<T> SecureCall<T>(HttpRequest request, Func<Task<T>> action);
+		Task SecureCall(HttpRequest request, Func<Task> action);
+
 		public bool ConsoleMessagesEnabled { get; }
 
 		public Task ValueOnChainEventRaised(CorrelationContext correlationContext, BlockchainSystemEventType eventType, BlockchainType chainType, object[] extraParameters);
@@ -78,17 +88,106 @@ namespace Neuralium.Core.Classes.General {
 
 		//private Timer maintenanceTimer;
 		private readonly string configDotJsonPath;
-		
-		public RpcProvider(string configDotJsonPath = "")
-		{
+
+		public RpcProvider(string configDotJsonPath = "") {
 			this.configDotJsonPath = configDotJsonPath;
 		}
-		
+
 		public bool ConsoleMessagesEnabled { get; private set; }
 
 		public IHubContext<RPC_HUB, RCP_CLIENT> HubContext { get; set; }
 
 		public IRpcService<RPC_HUB, RCP_CLIENT> RpcService { get; set; }
+
+		private readonly ConcurrentDictionary<string, bool> LoggedUsers = new ConcurrentDictionary<string, bool>();
+
+		public Task<bool> Login(string user, string password) {
+
+			bool result = true;
+
+			if(GlobalSettings.ApplicationSettings.RpcAuthentication == AppSettingsBase.RpcSecurityModes.Basic) {
+				result = false;
+				var entry = GlobalSettings.ApplicationSettings.RpcUserPasswords.SingleOrDefault(e => string.Compare(e.User, user, StringComparison.InvariantCultureIgnoreCase) == 0);
+
+				if(entry != null && entry.Password == password) {
+					this.LoggedUsers.TryAdd(user, true);
+					result = true;
+				}
+			}
+
+			return Task.FromResult(result);
+		}
+
+		/// <summary>
+		/// here we verify if the user is authenticated, if required
+		/// </summary>
+		/// <param name="request"></param>
+		/// <exception cref="InvalidCredentialException"></exception>
+		private void VerifyUser(HttpRequest request) {
+
+			if(GlobalSettings.ApplicationSettings.RpcAuthentication == AppSettingsBase.RpcSecurityModes.Basic) {
+				if(request.Query.Any(e => e.Key == "access_token")) {
+					var entry = request.Query.Single(e => e.Key == "access_token");
+
+					if(!this.LoggedUsers.ContainsKey(entry.Value)) {
+
+						IPMarshall.ValidationInstance.Quarantine(IPAddress.Parse(request.Host.Host), IPMarshall.QuarantineReason.PermanentBan, DateTimeEx.CurrentTime.AddDays(1), "", 3, TimeSpan.FromMinutes(5));
+
+						throw new InvalidCredentialException();
+					}
+				}
+			}
+		}
+
+		
+
+#if TRACE_RPC_CALLS
+public async Task<T> SecureCall<T>(HttpRequest request, Func<Task<T>> action) {
+			StackTrace stackTrace = new StackTrace();
+			string method = stackTrace.GetFrame(4).GetMethod().Name;
+
+			Console.WriteLine($"Enter: {method}");
+
+			try {
+				
+
+				return await action().ConfigureAwait(false);
+			} finally {
+				Console.WriteLine($"Exit: {method}");
+			}
+#else
+		public Task<T> SecureCall<T>(HttpRequest request, Func<Task<T>> action) {
+			
+			this.VerifyUser(request);
+			
+			return action();
+#endif
+
+		}
+
+		
+#if TRACE_RPC_CALLS
+public async Task SecureCall(HttpRequest request, Func<Task> action) {
+			StackTrace stackTrace = new StackTrace();
+			string method = stackTrace.GetFrame(4).GetMethod().Name;
+
+			Console.WriteLine($"Enter: {method}");
+
+			try {
+				this.VerifyUser(request);
+
+				await action().ConfigureAwait(false);
+			} finally {
+				Console.WriteLine($"Exit: {method}");
+			}
+#else
+		public Task SecureCall(HttpRequest request, Func<Task> action) {
+			
+			this.VerifyUser(request);
+			
+			return action();
+#endif
+		}
 
 		public Task<bool> ToggleServerMessages(bool enable) {
 
@@ -102,9 +201,9 @@ namespace Neuralium.Core.Classes.General {
 		public async Task<int> TestP2pPort(int testPort, bool callback) {
 			try {
 				INetworkingService networkingService = DIService.Instance.GetService<INetworkingService>();
-				
-				return (int) await networkingService.TestP2pPort((PortTester.TcpTestPorts)testPort, callback).ConfigureAwait(false);
-					
+
+				return (int) await networkingService.TestP2pPort((PortTester.TcpTestPorts) testPort, callback).ConfigureAwait(false);
+
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to test for p2p port");
 
@@ -147,10 +246,10 @@ namespace Neuralium.Core.Classes.General {
 			return Task.FromResult("pong");
 		}
 
-		public async Task<object> GetPortMappingStatus()
-		{
+		public async Task<object> GetPortMappingStatus() {
 			try {
 				IPortMappingService portMappingService = DIService.Instance.GetService<IPortMappingService>();
+
 				return await portMappingService.GetPortMappingStatus().ConfigureAwait(false);
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed tto get port mappings");
@@ -159,45 +258,51 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
-		private static bool IsSimple(Type type)
-		{
-			if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
-			{
+		private static bool IsSimple(Type type) {
+			if(type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>)) {
 				// nullable type, check if the nested type is simple.
 				return IsSimple(type.GetGenericArguments()[0]);
 			}
-			return type.IsPrimitive
-			       || type == typeof(string)
-			       || type == typeof(decimal);
+
+			return type.IsPrimitive || type == typeof(string) || type == typeof(decimal);
 		}
 
-		private static object ConvertEnumValuesToString(dynamic value)
-		{
+		private static object ConvertEnumValuesToString(dynamic value) {
 			var type = value.GetType();
 
-			if (IsSimple(type))
+			if(IsSimple(type))
 				return value;
 
-			if (type.IsEnum)
+			if(type.IsEnum)
 				return value.ToString();
 
-
-			if (value is IList && type.IsGenericType)
+			if(value is IList && type.IsGenericType) 
 			{
 				List<object> list = new();
-				for (int i = 0; i < value.Count; i++)
+
+				for(int i = 0; i < value.Count; i++)
+					list.Add(ConvertEnumValuesToString(value[i]));
+
+				return list;
+			}
+
+			if (value is Array)
+			{
+				List<object> list = new();
+				for (int i = 0; i < value.Length; i++)
 					list.Add(ConvertEnumValuesToString(value[i]));
 				return list;
 			}
 
-			if(type.IsClass)
-			{
+			if(type.IsClass) {
 				Dictionary<string, object> properties = new();
-				foreach (var property in type.GetProperties())
-				{
+
+				foreach(var property in type.GetProperties()) {
 					var v = property.GetValue(value);
-					if (v != null)
+
+					if(v != null)
 						v = ConvertEnumValuesToString(v);
+
 					properties[property.Name] = v;
 				}
 
@@ -205,62 +310,71 @@ namespace Neuralium.Core.Classes.General {
 			}
 
 			NLog.Default.Error($"Unexpected type {type}");
-			
+
 			return null;
 		}
-		private static readonly HashSet<Type> NumericTypes = new HashSet<Type>
-		{
-			typeof(int),  typeof(double),  typeof(decimal),
-			typeof(long), typeof(short),   typeof(sbyte),
-			typeof(byte), typeof(ulong),   typeof(ushort),  
-			typeof(uint), typeof(float)
+
+		private static readonly HashSet<Type> NumericTypes = new HashSet<Type> {
+			typeof(int), typeof(double), typeof(decimal), typeof(long),
+			typeof(short), typeof(sbyte), typeof(byte), typeof(ulong),
+			typeof(ushort), typeof(uint), typeof(float)
 		};
-		
-		public static bool ImplementsGenericInterface(Type type, Type interfaceType)
-		{
-			return type
-				.GetTypeInfo()
-				.ImplementedInterfaces
-				.Any(x => x.GetTypeInfo().IsGenericType && x.GetGenericTypeDefinition() == interfaceType);
+
+		public static bool ImplementsGenericInterface(Type type, Type interfaceType) {
+			return type.GetTypeInfo().ImplementedInterfaces.Any(x => x.GetTypeInfo().IsGenericType && x.GetGenericTypeDefinition() == interfaceType);
 		}
-		
-		private static Pair<string, object> FindDomain(Type type)
-		{
+
+		private static Pair<string, object> FindDomain(Type type) {
 
 			type = Nullable.GetUnderlyingType(type) ?? type;
-			
-			if (NumericTypes.Contains(type))
-			{
+
+			if(NumericTypes.Contains(type)) {
 				return new Pair<string, object>("number", null);
 			}
 
-			switch (Type.GetTypeCode(type))
-			{
-				case TypeCode.Boolean : return new Pair<string, object>("boolean", null);
-				case TypeCode.String :  return new Pair<string, object>("string", null);
-				case TypeCode.DateTime : return new Pair<string, object>("number", null);
+			switch(Type.GetTypeCode(type)) {
+				case TypeCode.Boolean:  return new Pair<string, object>("boolean", null);
+				case TypeCode.String:   return new Pair<string, object>("string", null);
+				case TypeCode.DateTime: return new Pair<string, object>("number", null);
 			}
 
-
-			if (type.IsEnum)
-			{
+			if(type.IsEnum) {
 				return new Pair<string, object>("enum", Enum.GetNames(type));
 			}
-			
 
-
-			if (type.IsGenericType && ImplementsGenericInterface(type, typeof(IList<>)))
+			if (type.IsArray)
 			{
-				var innerType = type.GetGenericArguments()[0];
-				return new Pair<string, object>("list", FindDomain(innerType));
+				return new Pair<string, object>("list", FindDomain(type.GetElementType()));
 			}
 
+			if (type.IsGenericType)
+			{
+				var types = type.GetGenericArguments();
+				
+				if(types.Length > 1)
+					throw new HubException($"{nameof(FindDomain)}: Unexpected type: {type}");
+				
+				var innerType = types[0];
+				if (ImplementsGenericInterface(type, typeof(IList<>)))
+					return new Pair<string, object>("list", FindDomain(innerType));
+				
+				throw new HubException($"{nameof(FindDomain)}: Unexpected type: {type}");
+			}
+			
+			if (type.IsArray)
+			{
+				var innerType = type.GetGenericArguments()[0];
+				if (ImplementsGenericInterface(type, typeof(IList<>)) || ImplementsGenericInterface(type, typeof(IList)))
+					return new Pair<string, object>("list", FindDomain(innerType));
+				
+				throw new HubException($"{nameof(FindDomain)}: Unexpected type: {type}");
+			}
+			
 			if (type.IsClass)
 			{
 				Dictionary<string, object> properties = new();
 
-				foreach (var property in type.GetProperties())
-				{
+				foreach(var property in type.GetProperties()) {
 					properties[property.Name] = FindDomain(property.PropertyType);
 				}
 
@@ -269,68 +383,60 @@ namespace Neuralium.Core.Classes.General {
 
 			throw new HubException($"{nameof(FindDomain)}: Unexpected type: {type}");
 		}
-		
-		public Task<object> ReadAppSettingDomain(string name)
-		{
-			try
-			{
-				object result;
+
+		public Task<object> ReadAppSettingDomain(string name) {
+			try {
 				
-				if (name == "*")
+				if(name == "*")
 					return Task.FromResult((object) FindDomain(GlobalSettings.ApplicationSettings.GetType()));
-				else
-				{
-					var property = GlobalSettings.ApplicationSettings.GetType().GetProperty(name);
-					
-					if(property == null)
-						throw new HubException($"{nameof(ReadAppSettingDomain)}: Bad property name '{name}'");
-
-					return Task.FromResult((object) FindDomain(property.PropertyType));
-					
-				}
+				var property = GlobalSettings.ApplicationSettings.GetType().GetProperty(name);
+			
+				if(property == null)
+					throw new HubException($"{nameof(this.ReadAppSettingDomain)}: Bad property name '{name}'");
+			
+				return Task.FromResult((object) FindDomain(property.PropertyType));
+				
 
 			} catch(Exception ex) {
-				NLog.Default.Error(ex, $"{nameof(ReadAppSettingDomain)}: Failed to get AppSettings domain for property '{name}'");
+				NLog.Default.Error(ex, $"{nameof(this.ReadAppSettingDomain)}: Failed to get AppSettings domain for property '{name}'");
+
 				throw;
 			}
 		}
-		public Task<object> ReadAppSetting(string name)
-		{
-			try
-			{
-				if (name == "*")
+
+		public Task<object> ReadAppSetting(string name) {
+			try {
+				if(name == "*")
 					return Task.FromResult(ConvertEnumValuesToString(GlobalSettings.ApplicationSettings));
-
+			
 				var property = GlobalSettings.ApplicationSettings.GetType().GetProperty(name);
-				
+			
 				if(property == null)
-					throw new HubException($"{nameof(ReadAppSetting)}: Bad property name '{name}'");
-
+					throw new HubException($"{nameof(this.ReadAppSetting)}: Bad property name '{name}'");
+			
 				return Task.FromResult(ConvertEnumValuesToString(property.GetValue(GlobalSettings.ApplicationSettings)));
-				
-
+			
 			} catch(Exception ex) {
-				NLog.Default.Error(ex, $"{nameof(ReadAppSetting)}: Failed to get AppSettings for property '{name}'");
+				NLog.Default.Error(ex, $"{nameof(this.ReadAppSetting)}: Failed to get AppSettings for property '{name}'");
+			
 				throw;
 			}
 		}
-		
-		public Task<bool> WriteAppSetting(string name, string value)
-		{
-			try
-			{
+
+		public Task<bool> WriteAppSetting(string name, string value) {
+			try {
 				var property = GlobalSettings.ApplicationSettings.GetType().GetProperty(name);
-				
+
 				if(property == null)
-					throw new HubException($"{nameof(WriteAppSetting)}: Bad property name: {name}");
+					throw new HubException($"{nameof(this.WriteAppSetting)}: Bad property name: {name}");
 
 				dynamic deserialized = Newtonsoft.Json.JsonConvert.DeserializeObject(value, property?.PropertyType);
-				
+
 				if(deserialized == null)
-					throw new HubException($"{nameof(WriteAppSetting)}: Invalid value format (deserialization failed) : {value}");
-				
+					throw new HubException($"{nameof(this.WriteAppSetting)}: Invalid value format (deserialization failed) : {value}");
+
 				var json = System.IO.File.ReadAllText(this.configDotJsonPath);
-				dynamic jsonObj = Newtonsoft.Json.JsonConvert.DeserializeObject < Newtonsoft.Json.Linq.JObject > (json);
+				dynamic jsonObj = Newtonsoft.Json.JsonConvert.DeserializeObject<Newtonsoft.Json.Linq.JObject>(json);
 
 				jsonObj["AppSettings"][name] = Newtonsoft.Json.JsonConvert.SerializeObject(deserialized);
 
@@ -340,17 +446,18 @@ namespace Neuralium.Core.Classes.General {
 
 				return Task.FromResult(true);
 
-			} catch(Exception ex)
-			{
-				string msg = $"{nameof(WriteAppSetting)}: Failed to set AppSettings value named {name} with value {value}";
+			} catch(Exception ex) {
+				string msg = $"{nameof(this.WriteAppSetting)}: Failed to set AppSettings value named {name} with value {value}";
 				NLog.Default.Error(ex, msg);
+
 				throw new HubException(ex.Message + msg);
 			}
 		}
-		public Task<bool> ConfigurePortMappingMode(bool useUPnP, bool usePmP, int natDeviceIndex)
-		{
+
+		public Task<bool> ConfigurePortMappingMode(bool useUPnP, bool usePmP, int natDeviceIndex) {
 			try {
 				IPortMappingService portMappingService = DIService.Instance.GetService<IPortMappingService>();
+
 				return portMappingService.ConfigurePortMappingMode(useUPnP, usePmP, natDeviceIndex);
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to get port mappings");
@@ -369,7 +476,7 @@ namespace Neuralium.Core.Classes.General {
 					mode = networkingService.ConnectionStore.PublicIpMode;
 				}
 
-				return Task.FromResult((byte)mode);
+				return Task.FromResult((byte) mode);
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to Query public IP Mode");
 
@@ -381,7 +488,7 @@ namespace Neuralium.Core.Classes.General {
 			try {
 				GlobalSettings.Instance.SetLocale(locale);
 				NLog.Default.Information($"Locale changed to {locale}");
-				
+
 				return Task.CompletedTask;
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to set locale");
@@ -401,6 +508,7 @@ namespace Neuralium.Core.Classes.General {
 				throw new HubException("Failed to query chain status");
 			}
 		}
+
 		public Task<List<object>> QueryPeerConnectionDetails() {
 			try {
 				INetworkingService networkingService = DIService.Instance.GetService<INetworkingService>();
@@ -409,11 +517,37 @@ namespace Neuralium.Core.Classes.General {
 					return Task.FromResult(networkingService.ConnectionStore.PeerConnectionsDetails.ToArray().ToList<object>());
 
 				return Task.FromResult(new List<object>());
-			} catch(Exception ex)
-			{
-				var message = $"{nameof(QueryPeerConnectionDetails)} Failed";
+			} catch(Exception ex) {
+				var message = $"{nameof(this.QueryPeerConnectionDetails)} Failed";
 				NLog.Default.Error(ex, message);
+
 				throw new HubException(message);
+			}
+		}
+
+		public Task<bool> DynamicPeerOperation(string ip, int port, int operation) {
+			try {
+				INetworkingService networkingService = DIService.Instance.GetService<INetworkingService>();
+
+				if(port == -1)
+					port = GlobalsService.DEFAULT_PORT;
+
+				NodeAddressInfo node = new(ip, port, NodeInfo.Unknown) {IsConnectable = true};
+
+				var existing = networkingService.ConnectionStore.AvailablePeerNodesCopy.Where(n => n.EqualsIp(node)).ToList();
+
+				if(existing.Any())
+					node = existing.First();
+
+				if(networkingService?.IsStarted ?? false) {
+					return Task.FromResult(networkingService.IPCrawler.PerformDynamicPeerOperation(networkingService.ConnectionsManagerBase, node, (IIPCrawler.DynamicPeerOperations) operation));
+				}
+
+				return Task.FromResult(false);
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed to Query total peers count API");
+
+				throw new HubException("Failed to Query total peers count");
 			}
 		}
 
@@ -493,7 +627,7 @@ namespace Neuralium.Core.Classes.General {
 		public Task ValueOnChainEventRaised(CorrelationContext correlationContext, BlockchainSystemEventType eventType, BlockchainType chainType, object[] parameters) {
 
 			object[] extraParameters = parameters?.ToArray() ?? Array.Empty<object>();
-			
+
 			// this is an instant call
 			if(BlockchainSystemEventTypes.Instance.IsValueBaseset(eventType)) {
 				if(eventType == BlockchainSystemEventTypes.Instance.WalletSyncStarted) {
@@ -557,24 +691,27 @@ namespace Neuralium.Core.Classes.General {
 					return this.HubContext?.Clients?.All?.DigestInserted(chainType.Value, (int) extraParameters[0], (DateTime) extraParameters[1], (string) extraParameters[2]);
 
 				}
-				
+
 				if(eventType == BlockchainSystemEventTypes.Instance.Message) {
 
 					// alert the client of the event
-					return this.HubContext?.Clients?.All?.Message(chainType.Value, ((ReportableMessageType)extraParameters[0]).Value, extraParameters[1].ToString(), null);
+					return this.HubContext?.Clients?.All?.Message(chainType.Value, ((ReportableMessageType) extraParameters[0]).Value, extraParameters[1].ToString(), null);
 				}
+
 				if(eventType == BlockchainSystemEventTypes.Instance.Alert) {
 
 					// alert the client of the event
 					var exception = (ReportableException) extraParameters[0];
-					return this.HubContext?.Clients?.All?.Alert(chainType.Value, exception.ErrorType.Value, exception.Message, (int)exception.PriorityLevel, (int)exception.ReportLevel, exception.Parameters);
+
+					return this.HubContext?.Clients?.All?.Alert(chainType.Value, exception.ErrorType.Value, exception.Message, (int) exception.PriorityLevel, (int) exception.ReportLevel, exception.Parameters);
 				}
+
 				if(eventType == BlockchainSystemEventTypes.Instance.ImportantWalletUpdate) {
 
 					// alert the client of the event
 					return this.HubContext?.Clients?.All?.ImportantWalletUpdate(chainType.Value);
 				}
-				
+
 				if(eventType == BlockchainSystemEventTypes.Instance.ConnectableStatusChanged) {
 
 					// alert the client of the event
@@ -649,6 +786,7 @@ namespace Neuralium.Core.Classes.General {
 					return this.HubContext?.Clients?.All?.RequestCopyWalletKeyFile(correlationContext?.CorrelationId ?? 0, chainType.Value, (int) extraParameters[0], (string) extraParameters[1], extraParameters[2].ToString(), (int) extraParameters[3]);
 
 				}
+
 				//
 				// if(eventType == BlockchainSystemEventTypes.Instance.AccountPublicationTHSNonceIteration) {
 				//
@@ -667,7 +805,7 @@ namespace Neuralium.Core.Classes.General {
 				if(eventType == BlockchainSystemEventTypes.Instance.TransactionError) {
 
 					// alert the client of the event
-					return this.HubContext?.Clients?.All?.TransactionError(correlationContext?.CorrelationId ?? 0,chainType.Value,  (extraParameters[0]?.ToString()??""), (List<ushort>) extraParameters[1]);
+					return this.HubContext?.Clients?.All?.TransactionError(correlationContext?.CorrelationId ?? 0, chainType.Value, (extraParameters[0]?.ToString() ?? ""), (List<ushort>) extraParameters[1]);
 
 				}
 
@@ -681,14 +819,14 @@ namespace Neuralium.Core.Classes.General {
 				if(eventType == BlockchainSystemEventTypes.Instance.KeyGenerationStarted) {
 
 					// alert the client of the event
-					return this.HubContext?.Clients?.All?.KeyGenerationStarted(correlationContext?.CorrelationId ?? 0,chainType.Value,  (string) extraParameters[0], (int) extraParameters[1], (int) extraParameters[2]);
+					return this.HubContext?.Clients?.All?.KeyGenerationStarted(correlationContext?.CorrelationId ?? 0, chainType.Value, (string) extraParameters[0], (int) extraParameters[1], (int) extraParameters[2]);
 
 				}
 
 				if(eventType == BlockchainSystemEventTypes.Instance.KeyGenerationEnded) {
 
 					// alert the client of the event
-					return this.HubContext?.Clients?.All?.KeyGenerationEnded(correlationContext?.CorrelationId ?? 0,chainType.Value,  (string) extraParameters[0], (int) extraParameters[1], (int) extraParameters[2]);
+					return this.HubContext?.Clients?.All?.KeyGenerationEnded(correlationContext?.CorrelationId ?? 0, chainType.Value, (string) extraParameters[0], (int) extraParameters[1], (int) extraParameters[2]);
 
 				}
 
@@ -718,59 +856,67 @@ namespace Neuralium.Core.Classes.General {
 					// alert the client of the event
 					return this.HubContext?.Clients?.All?.TransactionHistoryUpdated((ushort) extraParameters[0]);
 				}
-				
+
 				if(eventType == BlockchainSystemEventTypes.Instance.ElectionContextCached) {
 
 					// alert the client of the event
 					return this.HubContext?.Clients?.All?.ElectionContextCached((ushort) extraParameters[0], (long) extraParameters[1], (long) extraParameters[2], (long) extraParameters[3]);
 				}
-				
+
 				if(eventType == BlockchainSystemEventTypes.Instance.ElectionProcessingCompleted) {
 
 					// alert the client of the event
 					return this.HubContext?.Clients?.All?.ElectionProcessingCompleted((ushort) extraParameters[0], (long) extraParameters[1], (int) extraParameters[2]);
 				}
-				
+
 				if(eventType == BlockchainSystemEventTypes.Instance.Error) {
 
 					// alert the client of the event
-					return this.HubContext?.Clients?.All?.Error(correlationContext?.CorrelationId ?? 0, (ushort) extraParameters[0], extraParameters[1]?.ToString()??"");
+					return this.HubContext?.Clients?.All?.Error(correlationContext?.CorrelationId ?? 0, (ushort) extraParameters[0], extraParameters[1]?.ToString() ?? "");
 				}
+
 				if(eventType == BlockchainSystemEventTypes.Instance.AppointmentPuzzleBegin) {
 
 					// alert the client of the event
 					return this.HubContext?.Clients?.All?.AppointmentPuzzleBegin(chainType.Value, (int) extraParameters[0], ((List<string>) extraParameters[1]), ((List<string>) extraParameters[2]));
 				}
+
 				if(eventType == BlockchainSystemEventTypes.Instance.AppointmentVerificationCompleted) {
 
 					// alert the client of the event
 
-					return this.HubContext?.Clients?.All?.AppointmentVerificationCompleted(chainType.Value, (bool) extraParameters[0], ((long?) extraParameters[1])?.ToString()??"");
+					return this.HubContext?.Clients?.All?.AppointmentVerificationCompleted(chainType.Value, (bool) extraParameters[0], ((long?) extraParameters[1])?.ToString() ?? "");
 				}
+
 				if(eventType == BlockchainSystemEventTypes.Instance.InvalidPuzzleEngineVersion) {
 
 					// alert the client of the event
 					return this.HubContext?.Clients?.All?.InvalidPuzzleEngineVersion(chainType.Value, (int) extraParameters[0], (int) extraParameters[1], (int) extraParameters[2]);
 				}
-				
+
 				if(eventType == NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.THSTrigger) {
 					return this.HubContext?.Clients?.All?.THSTrigger(chainType.Value);
 				}
+
 				if(eventType == NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.THSBegin) {
 
 					return this.HubContext?.Clients?.All?.THSBegin(chainType.Value, (long) extraParameters[0], (int) extraParameters[1], (long) extraParameters[2], (long) extraParameters[3], (long) extraParameters[4], (long) extraParameters[5], (int) extraParameters[6], (long) extraParameters[7], (long[]) extraParameters[8], (int[]) extraParameters[9]);
 				}
+
 				if(eventType == NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.THSRound) {
 					return this.HubContext?.Clients?.All?.THSRound(chainType.Value, (int) extraParameters[0], (long) extraParameters[1], (int) extraParameters[2]);
 				}
+
 				if(eventType == NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.THSIteration) {
-					return this.HubContext?.Clients?.All?.THSIteration(chainType.Value, (long[]) extraParameters[0], (long)extraParameters[1], (long) extraParameters[2], (long) extraParameters[3], (double) extraParameters[4]);
+					return this.HubContext?.Clients?.All?.THSIteration(chainType.Value, (long[]) extraParameters[0], (long) extraParameters[1], (long) extraParameters[2], (long) extraParameters[3], (double) extraParameters[4]);
 				}
+
 				if(eventType == NeuraliumBlockchainSystemEventTypes.NeuraliumInstance.THSSolution) {
 					var solutionSet = (THSSolutionSet) extraParameters[0];
-					return this.HubContext?.Clients?.All?.THSSolution(chainType.Value,solutionSet.Solutions.Select(e => e.nonce).ToList(), solutionSet.Solutions.Select(e => e.solution).ToList(), (long) extraParameters[1]);
+
+					return this.HubContext?.Clients?.All?.THSSolution(chainType.Value, solutionSet.Solutions.Select(e => e.nonce).ToList(), solutionSet.Solutions.Select(e => e.solution).ToList(), (long) extraParameters[1]);
 				}
-				
+
 				NLog.Default.Debug($"Event {eventType.Value} was not explicitly handled");
 
 				if(correlationContext != null) {
@@ -852,7 +998,7 @@ namespace Neuralium.Core.Classes.General {
 			// 		return action?.Invoke(correlationContext.Value, autoEvent);
 			// 	}
 			// }
-			
+
 			return Task.FromResult(true);
 		}
 
@@ -937,7 +1083,7 @@ namespace Neuralium.Core.Classes.General {
 			try {
 				var operatingMode = await this.GetChainInterface(chainType).GetCurrentOperatingMode().awaitableTask.ConfigureAwait(false);
 
-				return (int)operatingMode;
+				return (int) operatingMode;
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to get operating mode");
 
@@ -967,9 +1113,9 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
-		public Task<bool> RestoreWalletFromBackup(ushort chainType, string backupsPath, string passphrase, string salt, string nonce, int iterations) {
+		public Task<bool> RestoreWalletFromBackup(ushort chainType, string backupsPath, string passphrase, string salt, string nonce, int iterations, bool legacyBase32) {
 			try {
-				return this.GetChainInterface(chainType).RestoreWalletFromBackup(backupsPath, passphrase, salt, nonce, iterations).awaitableTask;
+				return this.GetChainInterface(chainType).RestoreWalletFromBackup(backupsPath, passphrase, salt, nonce, iterations, legacyBase32).awaitableTask;
 
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to restore wallet");
@@ -977,7 +1123,7 @@ namespace Neuralium.Core.Classes.General {
 				throw new ApplicationException("Failed to restore wallet");
 			}
 		}
-		
+
 		public Task<bool> AttemptWalletRescue(ushort chainType) {
 			try {
 				return this.GetChainInterface(chainType).AttemptWalletRescue().awaitableTask;
@@ -998,6 +1144,7 @@ namespace Neuralium.Core.Classes.General {
 				throw new HubException("Failed to query block heights");
 			}
 		}
+
 		public async Task<int> QueryDigestHeight(ushort chainType) {
 			try {
 				return await this.GetChainInterface(chainType).QueryDigestHeight().awaitableTask.ConfigureAwait(false);
@@ -1007,7 +1154,7 @@ namespace Neuralium.Core.Classes.General {
 				throw new HubException("Failed to query block heights");
 			}
 		}
-		
+
 		public async Task<bool> ResetWalletIndex(ushort chainType) {
 			try {
 				return await this.GetChainInterface(chainType).ResetWalletIndex().awaitableTask.ConfigureAwait(false);
@@ -1017,7 +1164,6 @@ namespace Neuralium.Core.Classes.General {
 				throw new HubException("Failed to reset wallet index");
 			}
 		}
-
 
 		public async Task<long> QueryLowestAccountBlockSyncHeight(ushort chainType) {
 			try {
@@ -1049,14 +1195,10 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
-		public async Task<byte[]> GenerateSecureHash(byte[] parameter, ushort chainType)
-        {
-			try
-			{
+		public async Task<byte[]> GenerateSecureHash(byte[] parameter, ushort chainType) {
+			try {
 				return await this.GetChainInterface(chainType).GenerateSecureHash(parameter).awaitableTask.ConfigureAwait(false);
-			}
-			catch (Exception ex)
-			{
+			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to generate a secure hash from the wallet api");
 
 				throw new HubException("Failed to generate a secure hash from the wallet");
@@ -1116,7 +1258,7 @@ namespace Neuralium.Core.Classes.General {
 				throw new HubException("Failed to clear appointment");
 			}
 		}
-		
+
 		public async Task<object> CanPublishAccount(ushort chainType, string accountCode) {
 			try {
 				return await this.GetChainInterface(chainType).CanPublishAccount(accountCode).awaitableTask.ConfigureAwait(false);
@@ -1136,12 +1278,12 @@ namespace Neuralium.Core.Classes.General {
 				throw new HubException("Failed to set SMS confirmation code");
 			}
 		}
-		
+
 		public Task SetSMSConfirmationCodeString(ushort chainType, string accountCode, string confirmationCode) {
 			if(long.TryParse(confirmationCode, out long code)) {
 				return this.SetSMSConfirmationCode(chainType, accountCode, code);
 			}
-			
+
 			throw new HubException("Invalid confirmation code");
 		}
 
@@ -1157,7 +1299,7 @@ namespace Neuralium.Core.Classes.General {
 
 		public async Task<int> CreateNewWallet(ushort chainType, string accountName, int accountType, bool encryptWallet, bool encryptKey, bool encryptKeysIndividually, ImmutableDictionary<string, string> passphrases, bool publishAccount) {
 			try {
-				return await this.CreateClientLongRunningEvent((correlationContext, resetEvent) => this.GetChainInterface(chainType).CreateNewWallet(correlationContext, accountName, (Enums.AccountTypes)accountType, encryptWallet, encryptKey, encryptKeysIndividually, passphrases?.ToImmutableDictionary(e => int.Parse(e.Key), e => e.Value), publishAccount).awaitableTask).ConfigureAwait(false);
+				return await this.CreateClientLongRunningEvent((correlationContext, resetEvent) => this.GetChainInterface(chainType).CreateNewWallet(correlationContext, accountName, (Enums.AccountTypes) accountType, encryptWallet, encryptKey, encryptKeysIndividually, passphrases?.ToImmutableDictionary(e => int.Parse(e.Key), e => e.Value), publishAccount).awaitableTask).ConfigureAwait(false);
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to load wallet");
 
@@ -1230,7 +1372,7 @@ namespace Neuralium.Core.Classes.General {
 				throw new HubException("Failed to load wallet account details");
 			}
 		}
-		
+
 		public async Task<object> QueryWalletAccountAppointmentDetails(ushort chainType, string accountCode) {
 			try {
 				return await this.GetChainInterface(chainType).QueryWalletAccountAppointmentDetails(accountCode).awaitableTask.ConfigureAwait(false);
@@ -1240,7 +1382,6 @@ namespace Neuralium.Core.Classes.General {
 				throw new HubException("Failed to load wallet account appointment details");
 			}
 		}
-		
 
 		public async Task<string> QueryWalletAccountPresentationTransactionId(ushort chainType, string accountCode) {
 			try {
@@ -1276,7 +1417,7 @@ namespace Neuralium.Core.Classes.General {
 
 		public async Task<int> CreateStandardAccount(ushort chainType, string accountName, int accountType, bool publishAccount, bool encryptKeys, bool encryptKeysIndividually, ImmutableDictionary<string, string> passphrases) {
 			try {
-				return await this.CreateClientLongRunningEvent((correlationContext, resetEvent) => this.GetChainInterface(chainType).CreateStandardAccount(correlationContext, accountName, (Enums.AccountTypes)accountType, publishAccount, encryptKeys, encryptKeysIndividually, passphrases?.ToImmutableDictionary(e => int.Parse(e.Key), e => e.Value)).awaitableTask).ConfigureAwait(false);
+				return await this.CreateClientLongRunningEvent((correlationContext, resetEvent) => this.GetChainInterface(chainType).CreateStandardAccount(correlationContext, accountName, (Enums.AccountTypes) accountType, publishAccount, encryptKeys, encryptKeysIndividually, passphrases?.ToImmutableDictionary(e => int.Parse(e.Key), e => e.Value)).awaitableTask).ConfigureAwait(false);
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to create account");
 
@@ -1393,6 +1534,17 @@ namespace Neuralium.Core.Classes.General {
 			}
 		}
 
+		public async Task RequestSyncBlockchain(ushort chainType) {
+			try {
+				await this.GetChainInterface(chainType).RequestSyncBlockchain().awaitableTask.ConfigureAwait(false);
+
+			} catch(Exception ex) {
+				NLog.Default.Error(ex, "Failed to request sync");
+
+				throw new HubException("Failed to request sync");
+			}
+		}
+
 		public async Task<bool> QueryWalletSynced(ushort chainType) {
 			try {
 				return await this.GetChainInterface(chainType).QueryWalletSynced().awaitableTask.ConfigureAwait(false);
@@ -1403,10 +1555,10 @@ namespace Neuralium.Core.Classes.General {
 				throw new HubException("Failed to query wallet sync status");
 			}
 		}
-		
+
 		public async Task<string> GenerateTestPuzzle() {
 			try {
-				
+
 				return await AppointmentPuzzleEngineFactory.GenerateTestPuzzle().ConfigureAwait(false);
 
 			} catch(Exception ex) {
@@ -1415,7 +1567,7 @@ namespace Neuralium.Core.Classes.General {
 				throw new HubException("Failed to generate test puzzles");
 			}
 		}
-		
+
 		public async Task<string> QueryDecomposedBlockJson(ushort chainType, long blockId) {
 			try {
 				return await this.GetChainInterface(chainType).QueryDecomposedBlockJson(blockId).awaitableTask.ConfigureAwait(false);
@@ -1426,7 +1578,7 @@ namespace Neuralium.Core.Classes.General {
 				throw new HubException("Failed to query block");
 			}
 		}
-		
+
 		public async Task<object> QueryDecomposedBlock(ushort chainType, long blockId) {
 			try {
 				return await this.GetChainInterface(chainType).QueryDecomposedBlock(blockId).awaitableTask.ConfigureAwait(false);
@@ -1461,7 +1613,7 @@ namespace Neuralium.Core.Classes.General {
 				throw new HubException("Failed to query block");
 			}
 		}
-		
+
 		public async Task<string> GetBlockSizeAndHash(ushort chainType, long blockId) {
 			try {
 				var result = await this.GetChainInterface(chainType).GetBlockSizeAndHash(blockId).awaitableTask.ConfigureAwait(false);
@@ -1470,7 +1622,7 @@ namespace Neuralium.Core.Classes.General {
 					return null;
 				}
 
-				return JsonSerializer.Serialize(new GetBlockSizeAndHashAPI{Hash = result.Value.hash.ToExactByteArrayCopy(), Channels = result.Value.sizes.Entries.Select(e => e.Key.ToString()).ToArray(), Sizes = result.Value.sizes.Entries.Select(e => e.Value).ToArray()});
+				return JsonSerializer.Serialize(new GetBlockSizeAndHashAPI {Hash = result.Value.hash.ToExactByteArrayCopy(), Channels = result.Value.sizes.Entries.Select(e => e.Key.ToString()).ToArray(), Sizes = result.Value.sizes.Entries.Select(e => e.Value).ToArray()});
 
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to query block");
@@ -1478,7 +1630,7 @@ namespace Neuralium.Core.Classes.General {
 				throw new HubException("Failed to query block");
 			}
 		}
-		
+
 		public async Task<byte[]> QueryCompressedBlock(ushort chainType, long blockId) {
 			try {
 				return await this.GetChainInterface(chainType).QueryCompressedBlock(blockId).awaitableTask.ConfigureAwait(false);
@@ -1502,7 +1654,6 @@ namespace Neuralium.Core.Classes.General {
 				throw new HubException("Failed to query block binary transactions");
 			}
 		}
-		
 
 		public async Task<object> QueryElectionContext(ushort chainType, long blockId) {
 			try {
@@ -1532,8 +1683,9 @@ namespace Neuralium.Core.Classes.General {
 		public async Task<object> QueryMiningStatistics(ushort chainType) {
 			try {
 				var result = (await this.GetChainInterface(chainType).QueryMiningStatistics(null).awaitableTask.ConfigureAwait(false));
-				return (object)result;
-				
+
+				return (object) result;
+
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to query block mining statistics");
 
@@ -1555,7 +1707,7 @@ namespace Neuralium.Core.Classes.General {
 		public async Task<long> QueryCurrentDifficulty(ushort chainType) {
 			try {
 				return (await this.GetChainInterface(chainType).QueryCurrentDifficulty().awaitableTask.ConfigureAwait(false));
-				
+
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to query block mining difficulty");
 
@@ -1573,7 +1725,7 @@ namespace Neuralium.Core.Classes.General {
 				throw new HubException("Failed to create next xmss key");
 			}
 		}
-		
+
 		public async Task<byte[]> SignXmssMessage(ushort chainType, string accountCode, byte[] message) {
 			try {
 				SafeArrayHandle signature = await this.GetChainInterface(chainType).SignXmssMessage(accountCode, SafeArrayHandle.WrapAndOwn(message)).awaitableTask.ConfigureAwait(false);
@@ -1594,7 +1746,7 @@ namespace Neuralium.Core.Classes.General {
 		public async Task SetPuzzleAnswers(ushort chainType, List<int> answers) {
 			try {
 				await this.GetChainInterface(chainType).SetPuzzleAnswers(answers).awaitableTask.ConfigureAwait(false);
-				
+
 			} catch(Exception ex) {
 				NLog.Default.Error(ex, "Failed to set puzzle answer");
 

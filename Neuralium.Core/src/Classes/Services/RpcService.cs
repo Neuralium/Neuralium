@@ -208,7 +208,6 @@ namespace Neuralium.Core.Classes.Services {
 					});
 
 					options.Limits.MaxConcurrentConnections = 3;
-
 				});
 
 				this.ConfigureWebHost(webBuilder);
@@ -241,12 +240,18 @@ namespace Neuralium.Core.Classes.Services {
 #endif
 					hubOptions.ClientTimeoutInterval = TimeSpan.FromMinutes(1);
 					hubOptions.KeepAliveInterval = TimeSpan.FromSeconds(30);
+					hubOptions.StreamBufferCapacity = 30;
+					// this option is important to allow parallel invocations, otherwise everything is sequential and can deadlock
+					hubOptions.MaximumParallelInvocationsPerClient = 10;
 
 				}).AddJsonProtocol(options => {
 					options.PayloadSerializerOptions.WriteIndented = false;
 				});
 
 			}).Configure(app => {
+				
+				app.UseAuthentication();
+				
 				app.UseRouting();
 
 				app.UseEndpoints(endpoints => {

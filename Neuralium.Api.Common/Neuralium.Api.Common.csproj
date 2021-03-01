@@ -14,9 +14,9 @@
 
 
     <ItemGroup>
-      <PackageReference Include="Neuralia.Blockchains.Components" Version="1.0.1.19" />
-      <PackageReference Include="Neuralia.Blockchains.Common" Version="1.0.1.19" />
-      <PackageReference Include="Neuralia.Blockchains.Core" Version="1.0.1.19" />
+      <PackageReference Include="Neuralia.Blockchains.Components" Version="1.0.1.23" />
+      <PackageReference Include="Neuralia.Blockchains.Common" Version="1.0.1.23" />
+      <PackageReference Include="Neuralia.Blockchains.Core" Version="1.0.1.23" />
     </ItemGroup>
     <Import Project="$(MSBuildProjectDirectory)/../CommonSettings.targets" />
 

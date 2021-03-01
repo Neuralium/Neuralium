@@ -265,9 +265,11 @@ namespace Neuralium.Core.Classes.Runtime {
 
 			if(items[0] == "test") {
 
-				
-				this.neuraliumBlockChainInterface.Test(items[1]);
-
+				string para = "";
+				if(items.Length > 1) {
+					para = items[1];
+				}
+				this.neuraliumBlockChainInterface.Test(para);
 				
 
 				// var s = await this.neuraliumBlockChainInterface.QueryDecomposedBlock(2).awaitableTask.ConfigureAwait(false);
